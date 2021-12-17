@@ -15,8 +15,19 @@ from fig_dash.ui.tab import DashTabWidget
 # from PyQt5.QtWidgets import QAction, QWidget, QTabWidget, QToolBar, QTabBar, QLabel, QSplitter, QVBoxLayout, QHBoxLayout, QToolButton, QPushButton, QGraphicsView, QGraphicsEffect, QScrollArea, QLineEdit, QFrame, QSizePolicy, QMessageBox, QTreeView, QRubberBand,  QFileSystemModel, QGraphicsDropShadowEffect, QTextEdit
 class DashWindow(QMainWindow):
     '''The main window for fig-dash.'''
-    def __init__(self):
+    def __init__(self, **kwargs):
         super(DashWindow, self).__init__()
         self.tabs = DashTabWidget(self)
-        self.tabs.addTab(QWidget(), "Untitled 1")
+        self.tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         self.setCentralWidget(self.tabs)
+        self.setWindowTitle("Dash Window")
+
+        x = kwargs.get("x", 0)
+        y = kwargs.get("y", 0)
+        w = kwargs.get("w", 100)
+        h = kwargs.get("h", 100)
+        self.setGeometry(x, y, w, h)
+        
+        maximize_by_default = kwargs.get("maximize_by_default", True)
+        if maximize_by_default:
+            self.showMaximized()

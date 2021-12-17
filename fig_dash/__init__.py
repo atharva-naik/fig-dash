@@ -19,7 +19,7 @@ class DashUI(QApplication):
             QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         super(DashUI, self).__init__(argv)
         self.desktop = self.desktop()
-        self.window = DashWindow()
+        self.window = DashWindow(**kwargs)
         self.setCursor()
 
     def notify(self, obj, event):

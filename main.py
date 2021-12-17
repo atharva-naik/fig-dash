@@ -4,10 +4,10 @@ import sys
 from fig_dash import DashUI
 
 
-def main():
-    ui = DashUI(sys.argv)
+def main(**kwargs):
+    ui = DashUI(sys.argv, **kwargs)
     ui.launch()
 
 
 if __name__ == '__main__':
-    main()
+    main(maximize_by_default=False)
