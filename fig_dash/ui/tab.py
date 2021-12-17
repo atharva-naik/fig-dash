@@ -15,5 +15,6 @@ class DashTabWidget(QTabWidget):
     def __init__(self, parent: Union[None, QWidget]):
         super(DashTabWidget, self).__init__(parent)
         self.dropdownBtn = TabsDropdown(self)
+        self.setTabsClosable(True)
         self.setCornerWidget(self.dropdownBtn)
     
