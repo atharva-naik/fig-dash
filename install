@@ -1,0 +1,3 @@
+# intsall all dependencies
+sudo apt-get install python-alsaaudio
+pip install -r requirements.txt
