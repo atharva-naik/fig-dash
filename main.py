@@ -10,4 +10,8 @@ def main(**kwargs):
 
 
 if __name__ == '__main__':
-    main(maximize_by_default=False)
+    main(
+        x=100, y=100, w=1000, h=850,
+        maximize_by_default=False,
+        resources="/home/atharva/GUI/fig-dash/resources",
+    )

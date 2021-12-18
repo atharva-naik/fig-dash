@@ -6,12 +6,14 @@ from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtWidgets import QApplication
 # fig-dash imports.
+from fig_dash.assets import FigD
 from fig_dash._ui import DashWindow
 # Contains all the fig dashboard code.
 
 
 class DashUI(QApplication):
     def __init__(self, argv, **kwargs):
+        FigD(kwargs.get("resources", "resources"))
         if hasattr(Qt, 'AA_EnableHighDpiScaling'):
             print("high resolution")
             QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
@@ -20,13 +22,19 @@ class DashUI(QApplication):
         super(DashUI, self).__init__(argv)
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
+        self.setWindowFlags("frameless", "ontop")
         self.setCursor()
+
+    def setWindowFlags(self, *flags):
+        self.window.setFlags(*flags)
 
     def notify(self, obj, event):
         if event.type() == QEvent.WindowDeactivate:
-            print("bluring background")
+            # print("bluring background")
+            pass
         if event.type() == QEvent.WindowActivate:
-            print("unbluring background")
+            # print("unbluring background")
+            pass
         return super().notify(obj, event)
 
     def launch(self):
