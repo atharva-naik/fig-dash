@@ -22,6 +22,8 @@ class DashUI(QApplication):
         super(DashUI, self).__init__(argv)
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
+        width = self.window.width()
+        self.window.tabs.dropdown.initPos(width=width)
         self.setWindowFlags("frameless", "ontop")
         self.setCursor()
 

@@ -6,7 +6,7 @@ from typing import Union, Tuple, List
 from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import Qt, QT_VERSION_STR
+from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR
 from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QVBoxLayout
 # fig-dash imports.
 from fig_dash.ui.tab import DashTabWidget
@@ -19,15 +19,16 @@ class DashWindow(QMainWindow):
     def __init__(self, **kwargs):
         super(DashWindow, self).__init__()
 
-        self.centralWidget = self.initCentralWidget()
-        self.setCentralWidget(self.centralWidget)
-        self.setWindowTitle("Dash Window")
-
         x = kwargs.get("x", 0)
         y = kwargs.get("y", 0)
         w = kwargs.get("w", 100)
         h = kwargs.get("h", 100)
         self.setGeometry(x, y, w, h)
+        self.firstResizeOver = False
+
+        self.centralWidget = self.initCentralWidget()
+        self.setCentralWidget(self.centralWidget)
+        self.setWindowTitle("Dash Window")
         
         maximize_by_default = kwargs.get("maximize_by_default", True)
         if maximize_by_default:
@@ -35,6 +36,8 @@ class DashWindow(QMainWindow):
         # add title bar.
         self.titlebar = TitleBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
+        # install event filter.
+        self.installEventFilter(self)
 
     def initTabWidget(self):
         tabs = DashTabWidget(self)
@@ -59,3 +62,25 @@ class DashWindow(QMainWindow):
         code = f"self.setWindowFlags({flag_str})"
         # print(code)
         exec(code)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Resize:
+            if self.firstResizeOver:
+                width = self.width() 
+                self.tabs.dropdown.rePos(
+                    width=width,
+                    offset=170,
+                )
+            # TODO: really ugly jugaad. Fix this.
+            if self.firstResizeOver == False:
+                self.firstResizeOver = True
+        return super(DashWindow, self).eventFilter(obj, event)
+
+    def moveEvent(self, event):
+        super(DashWindow, self).moveEvent(event)
+        dropdown = self.tabs.dropdownBtn.dropdown
+        if dropdown:
+            diff = event.pos() - event.oldPos()
+            geo = dropdown.geometry()
+            geo.moveTopLeft(geo.topLeft() + diff)
+            dropdown.setGeometry(geo)
