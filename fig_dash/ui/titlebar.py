@@ -30,7 +30,8 @@ QToolBar {
     /* border-top-left-radius: 5px; */
     /* border-top-right-radius: 5px; */
     /* background: #000; */
-    background: url({{ TITLEBAR_BACKGROUND_URL }})
+    background: #000;
+    /* background: url({{ TITLEBAR_BACKGROUND_URL }}) */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
 }
 ''')
