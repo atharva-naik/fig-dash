@@ -179,25 +179,33 @@ class DashTabWidget(QTabWidget):
         url = browser.url().toString()
         dash_window.navbar.searchbar.setText(url)
         self.setTabText(i, "  "+browser.page().title())
-        # icon = browser.page().icon()
-        browser.setIcon(tabs=self, i=i)
-        browser.setScrollbar(scrollbar_style)
         browser.setZoomFactor(browser.currentZoomFactor)
+        browser.setScrollbar(scrollbar_style)
+        browser.setSelectionStyle()
+        browser.setIcon(tabs=self, i=i)
         # print(icon.isNull())
         # if not icon.isNull(): 
             # self.setTabIcon(i, icon)    
     def openUrl(self, url: str="https://google.com"):
         qurl = QUrl(url)
         browser = Browser(self)
+        browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser, FigD.Icon("browser.svg"), "  "+url.strip())
         self.setTabText(i, "  "+url.strip())
-        browser.connectTabWidget(self)
         browser.loadFinished.connect(
             lambda _, i = i, browser = browser:
 				self.setupTabForBrowser(i, browser)
         )
         self.setCurrentIndex(i)
+
+    def reloadUrl(self, i: int):
+        currentWidget = self.currentWidget()
+        try:
+            currentWidget.reload()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"tab-{i} is not a browser instance") 
 
     def loadUrl(self, i: int, url: str):
         qurl = QUrl(url)

@@ -49,7 +49,7 @@ QTabBar::tab {
     margin-left: 1px;
     margin-right: 1px;
     font-size: 18px;
-    /* width: 300px; */
+    max-width: 300px;
 }
 QTabBar::tab:hover {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34);
@@ -95,6 +95,7 @@ class DashWindow(QMainWindow):
 
     def initTabWidget(self):
         tabs = DashTabWidget(self)
+        tabs.connectWindow(self)
         tabs.openUrl("https://github.com/atharva-naik")
         # for i in range(5):
         #     tabs.openUrl("https://google.com")
@@ -131,6 +132,7 @@ class DashWindow(QMainWindow):
         # add search bar.
         self.navbar = DashNavBar(self)
         self.navbar.setFixedHeight(30)
+        self.navbar.connectTabWidget(self.tabs)
         # vertical splitter.
         self.h_split = QSplitter(Qt.Horizontal)
         self.h_split.addWidget(self.tabs)

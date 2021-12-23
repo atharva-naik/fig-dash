@@ -5,8 +5,9 @@ from typing import Union
 from fig_dash import FigD
 from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
+from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QSize, QPoint
-from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QHBoxLayout, QAction
+from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
 dash_searchbar_style = jinja2.Template('''
@@ -16,6 +17,7 @@ QLineEdit {
     font-size: 16px;
     padding-top: 5px;
     padding-bottom: 5px;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2: 1, stop: 0 orange, stop: 0.3 #eee, stop: 0.5 #fff, stop: 0.7 #eee, stop: 1 orange);
     border-radius: {{ BORDER_RADIUS }};
 }
 QLabel {
@@ -51,6 +53,12 @@ class DashSearchBar(QLineEdit):
         self.label.hide()
         self.textEdited.connect(self.formatQueryOrUrl)
         self.returnPressed.connect(self.search)
+        # apply glow effect.
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(5,0)
+        glow_effect.setColor(QColor(235, 156, 52))
+        self.setGraphicsEffect(glow_effect)
 
     def search(self):
         url = self.text()
@@ -176,8 +184,17 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.settingsBtn)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        # self.setFixedHeight(50)
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(0,3)
+        glow_effect.setColor(QColor(235, 156, 52))
+        self.setGraphicsEffect(glow_effect)
         # layout.addStretch(1)
+    def connectTabWidget(self, tabWidget):
+        self.tabWidget = tabWidget
+        self.reloadBtn.clicked.connect(tabWidget.reloadUrl)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):
 #         super(DashSearchBar, self).__init__(parent)

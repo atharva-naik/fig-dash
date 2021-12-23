@@ -33,6 +33,15 @@ scrollbar_style = '''*::-webkit-scrollbar {
     background-color: transparent;
     /* background: rgba(235, 235, 235, 0.1); */
 }'''
+selection_style = '''
+::selection {
+	color: #fff;
+    background-color: rgb(235,95,52);
+}
+::selection:window-inactive {
+	color: #000;
+    background-color: rgb(235,204,52);
+}'''
 class Browser(QWebEngineView):
     def __init__(self, parent: Union[None, QWidget]):
         super(Browser, self).__init__(parent)
@@ -58,23 +67,28 @@ class Browser(QWebEngineView):
     def append(self, url: Union[str, QUrl]):
         '''append url to browsing history.'''
         try:
-            browsingHistory = self.window.browsingHistory
+            try: url = url.toString()
+            except AttributeError as e: pass
+            if len(self.dash_window.browsingHistory) > 0 and self.dash_window.browsingHistory[-1] == url:
+                return
+            else:
+                self.dash_window.browsingHistory.append(url)
+                print(f"\x1b[31;1m{self.dash_window.browsingHistory}\x1b[0m")
         except AttributeError as e:
             print("not connected to a DashWindow")
-            return
-        try:
-            browsingHistory.append(url.toString())
-        except AttributeError as e:
-            browsingHistory.append(url)
-        print(f"\x1b[31;1m{browsingHistory}\x1b[0m")
+            return    
 
     def updateTabTitle(self):
         self.append(self.url())
         try:
+            # change title ofthe tab that contains this browser only.
+            if self != self.tabWidget.currentWidget(): return
             i = self.tabWidget.currentIndex()
+            if i < 0: return
+            print(f"updating title for tab-{i}")
             self.loadFinished.connect(
-                lambda: self.tabWidget.setTabTitle(
-                    i, self.page.title()
+                lambda: self.tabWidget.setupTabForBrowser(
+                    i=i, browser=self,
                 )
             )
         except AttributeError as e:
@@ -87,15 +101,23 @@ class Browser(QWebEngineView):
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget 
         self.urlChanged.connect(self.updateTabTitle)
-        try: self.window = tabWidget.dash_window
+        try: self.dash_window = tabWidget.dash_window
         except AttributeError as e:
             print("TabWidget not connected to DashWindow") 
 
     def setScrollbar(self, style: str=scrollbar_style):
         code = f'''Style = `{scrollbar_style}`
-let newStyle = document.createElement('style');
-newStyle.innerHTML = Style
-document.head.appendChild(newStyle);'''
+newScrollbarStyle = document.createElement('style');
+newScrollbarStyle.innerHTML = Style
+document.head.appendChild(newScrollbarStyle);'''
+        self.page().runJavaScript(code)
+
+    def setSelectionStyle(self, style: str=selection_style):
+        code = f'''Style = `{style}`
+newSelectStyle = document.createElement('style');
+newSelectStyle.innerHTML = Style
+document.head.appendChild(newSelectStyle);
+'''
         self.page().runJavaScript(code)
 
     def iconSetCallback(self, html: str):
