@@ -1,3 +1,4 @@
 # intsall all dependencies
 sudo apt-get install python-alsaaudio
+sudo apt-get install gpick
 pip install -r requirements.txt

@@ -5,13 +5,32 @@ import jinja2
 from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QFileInfo, Qt, QPoint, QMimeDatabase
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
+from fig_dash.ui.browser import Browser
 
 
+scrollbar_style = '''*::-webkit-scrollbar {
+    width: 10px;
+    height: 7px;
+}    
+*::-webkit-scrollbar-track {
+    background-color: rgba(235, 235, 235, 0.1);
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: #292929;
+}
+*::-webkit-scrollbar-thumb:hover {
+    background-color: #FF0082;
+}
+*::-webkit-scrollbar-corner {
+    background-color: transparent;
+    /* background: rgba(235, 235, 235, 0.1); */
+}'''
 class TabsSearchDropdown(QWidget):
     def __init__(self, btn):
         super(TabsSearchDropdown, self).__init__()
@@ -24,24 +43,24 @@ class TabsSearchDropdown(QWidget):
         layout.addWidget(self.searchbar)
         layout.addWidget(QLabel("this is something"))
         self.setLayout(layout)
-        self.setFixedWidth(300)
-
-    def initPos(self, width: int, offset: int=200):
-        geo = self.geometry()
-        pos = self.btn.pos()
-        w, h = geo.width(), geo.height()
-        x, y = pos.x()+width-offset, pos.y()+h/2
-        print(f"setGeometry({x}, {y}, {w}, {h})")
-        self.setGeometry(x, y, w, h)
-
-    def rePos(self, width: int, offset: int=200):
-        geo = self.geometry()
-        pos = self.btn.pos()
-        w, h = geo.width(), geo.height()
-        x, y = pos.x()-180, pos.y()+h/2
-        # print(f"setGeometry({x}, {y}, {w}, {h})")
-        self.setGeometry(x, y, w, h)
-
+        # self.setFixedWidth(300)
+    def toggle(self):
+        if self.isVisible(): self.hide()
+        else: self.show()
+    # def initPos(self, width: int, offset: int=200):
+    #     geo = self.geometry()
+    #     pos = self.btn.pos()
+    #     w, h = geo.width(), geo.height()
+    #     x, y = pos.x()+width-offset, pos.y()+h/2
+    #     print(f"setGeometry({x}, {y}, {w}, {h})")
+    #     self.setGeometry(x, y, w, h)
+    # def rePos(self, width: int, offset: int=200):
+    #     geo = self.geometry()
+    #     pos = self.btn.pos()
+    #     w, h = geo.width(), geo.height()
+    #     x, y = pos.x()-180, pos.y()+h/2
+    #     # print(f"setGeometry({x}, {y}, {w}, {h})")
+    #     self.setGeometry(x, y, w, h)
     def initSearchBar(self):
         searchbar = QLineEdit(self)
         searchAction = QAction()
@@ -54,7 +73,7 @@ class TabsSearchDropdown(QWidget):
         self.show()
     # def Move(self, x: int, y: int):
     #     self.setGeometry(x-100, y+100, 100, 100)
-tab_search_btn_style = jinja2.Template('''
+tab_btn_style = jinja2.Template('''
 QToolButton {
     border: 0px;
     border-radius: 15px;
@@ -67,9 +86,9 @@ class TabsSearchBtn(QToolButton):
         super(TabsSearchBtn, self).__init__(parent)
         self.setObjectName("TabsSearchBtn")
         self.dropdown = TabsSearchDropdown(btn=self)
-        self.clicked.connect(self.dropdown.Show)
+        self.clicked.connect(self.dropdown.toggle)
         self.setIcon(FigD.Icon("tabbar/dropdown.svg"))
-        self.setStyleSheet(tab_search_btn_style.render())
+        self.setStyleSheet(tab_btn_style.render())
     #     contextMenu = self.initDropdown()
     #     contextMenu.exec_(self.mapToGlobal(event.pos()))        
     # def contextMenuEvent(self, event):
@@ -78,6 +97,43 @@ class TabsSearchBtn(QToolButton):
     #     action = contextMenu.exec_(self.mapToGlobal(event.pos()))
     #     if action == quitAct:
     #         self.close()
+class TabPlusBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TabPlusBtn, self).__init__(parent)
+        self.setObjectName("TabPlusBtn")
+        self.setIcon(FigD.Icon("tabbar/new_tab.svg"))
+        self.setStyleSheet(tab_btn_style.render())    
+
+
+class TabCornerWidget(QWidget):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TabCornerWidget, self).__init__(parent)
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        # self.layout.setSpacing(0)
+        # self.layout.addStretch(1)
+        self.dropdownBtn = TabsSearchBtn(self)
+        self.dropdown = self.dropdownBtn.dropdown
+        self.plusBtn = TabPlusBtn(self)
+
+        self.layout.addWidget(self.initBlank())
+        self.layout.addWidget(self.plusBtn)
+        self.layout.addWidget(self.dropdownBtn)
+        self.layout.addWidget(self.initBlank())
+        # self.layout.addStretch(1)
+        self.setLayout(self.layout)
+
+    def initBlank(self):
+        btn = QToolButton(self)
+        btn.setStyleSheet('''
+        QToolButton {
+            border: 0px;
+            color: transparent;
+        }''')
+        btn.setMaximumWidth(5)
+
+        return btn
+
 dash_tab_widget_style = jinja2.Template('''
 QTabWidget {
     background: #292929;
@@ -89,17 +145,70 @@ class DashTabWidget(QTabWidget):
     def __init__(self, parent: Union[None, QWidget]):
         self.mimetype_db = QMimeDatabase()
         super(DashTabWidget, self).__init__(parent)
-        self.dropdownBtn = TabsSearchBtn(self)
-        self.dropdown = self.dropdownBtn.dropdown
+        # tab corner widget.
+        tabCornerWidget = TabCornerWidget(self)
+        self.dropdownBtn = tabCornerWidget.dropdownBtn
+        self.dropdown = tabCornerWidget.dropdown
+        self.plusBtn = tabCornerWidget.plusBtn
+        self.plusBtn.clicked.connect(lambda: self.openUrl())
         self.icon_provider = QFileIconProvider()
+        
+        self.tabbar = TabBar()
+        self.setTabBar(self.tabbar)
+
         self.setTabsClosable(True)
-        self.setElideMode(True)
+        self.setElideMode(Qt.ElideRight)
+        self.tabCloseRequested.connect(self.removeTab)
         self.setMovable(True)
-        self.setCornerWidget(self.dropdownBtn)
+        self.setCornerWidget(tabCornerWidget)
         self.setObjectName("DashTabWidget")
-        # print(dash_tab_widget_style.render())
         self.setStyleSheet(dash_tab_widget_style.render())
         self.tabIcons = []
+        # print(dash_tab_widget_style.render())
+    def connectWindow(self, window):
+        self.dash_window = window
+
+    def connectDropdown(self, splitter):
+        splitter.addWidget(self.dropdown)
+        self.splitter = splitter
+        self.dropdown.hide()
+
+    def setupTabForBrowser(self, i: int, browser):
+        try: dash_window = self.dash_window
+        except AttributeError as e: return
+        url = browser.url().toString()
+        dash_window.navbar.searchbar.setText(url)
+        self.setTabText(i, "  "+browser.page().title())
+        # icon = browser.page().icon()
+        browser.setIcon(tabs=self, i=i)
+        browser.setScrollbar(scrollbar_style)
+        browser.setZoomFactor(browser.currentZoomFactor)
+        # print(icon.isNull())
+        # if not icon.isNull(): 
+            # self.setTabIcon(i, icon)    
+    def openUrl(self, url: str="https://google.com"):
+        qurl = QUrl(url)
+        browser = Browser(self)
+        browser.setUrl(qurl)
+        i = self.addTab(browser, FigD.Icon("browser.svg"), "  "+url.strip())
+        self.setTabText(i, "  "+url.strip())
+        browser.connectTabWidget(self)
+        browser.loadFinished.connect(
+            lambda _, i = i, browser = browser:
+				self.setupTabForBrowser(i, browser)
+        )
+        self.setCurrentIndex(i)
+
+    def loadUrl(self, i: int, url: str):
+        qurl = QUrl(url)
+        self.setCurrentIndex(i)
+        browser = self.currentWidget()
+        browser.setUrl(qurl)
+        self.setTabText(i, "  "+url.strip())
+        browser.loadFinished.connect(
+            lambda _, i = i, browser = browser:
+				self.setupTabForBrowser(i, browser)
+        )
 
     def openFile(self, path: str):
         iconName = self.getIconName(path)
@@ -109,7 +218,8 @@ class DashTabWidget(QTabWidget):
         label = QLabel()
         label.setText(open(path).read())
         title = collapseuser(path)
-        self.addTab(label, self.tabIcons[-1], title)
+        i = self.addTab(label, self.tabIcons[-1], title)
+        self.setCurrentIndex(i)
 
     def getIconName(self, path: str):
         file_info = QFileInfo(path)
@@ -118,3 +228,51 @@ class DashTabWidget(QTabWidget):
         iconName = mimeType.iconName() 
         # print(iconName, QIcon.fromTheme(iconName))
         return iconName
+
+
+class TabBar(QTabBar):
+    """Tab bar that has a plus button floating to the right of the tabs."""
+    # plusClicked = pyqtSignal()
+    def __init__(self):
+        super(TabBar, self).__init__()
+        # # Plus Button
+        # self.plusButton = QPushButton("+")
+        # self.plusButton.setParent(self)
+        # self.plusButton.setFixedSize(20, 20)  # Small Fixed size
+        # self.plusButton.clicked.connect(self.plusClicked.emit)
+        # self.movePlusButton() # Move to the correct location
+        # # end Constructor
+    # def sizeHint(self):
+    #     """Return the size of the TabBar with increased width for the plus button."""
+    #     sizeHint = QTabBar.sizeHint(self) 
+    #     width = sizeHint.width()
+    #     height = sizeHint.height()
+    #     return QSize(width+50, height)
+    def resizeEvent(self, event):
+        """Resize the widget and make sure the plus button is in the correct location."""
+        super(TabBar, self).resizeEvent(event)
+        # self.movePlusButton()
+    # def tabLayoutChange(self):
+    #     """This virtual handler is called whenever the tab layout changes.
+    #     If anything changes make sure the plus button is in the correct location.
+    #     """
+    #     super().tabLayoutChange()
+
+    #     self.movePlusButton()
+    # # end tabLayoutChange
+
+    # def movePlusButton(self):
+    #     """Move the plus button to the correct location."""
+    #     # Find the width of all of the tabs
+    #     size = sum([self.tabRect(i).width() for i in range(self.count())])
+    #     # size = 0
+    #     # for i in range(self.count()):
+    #     #     size += self.tabRect(i).width()
+
+    #     # Set the plus button location in a visible area
+    #     h = self.geometry().top()
+    #     w = self.width()
+    #     if size > w: # Show just to the left of the scroll buttons
+    #         self.plusButton.move(w-30, h)
+    #     else:
+    #         self.plusButton.move(size, h)

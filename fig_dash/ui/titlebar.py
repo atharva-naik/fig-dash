@@ -73,7 +73,7 @@ class TitleBar(QToolBar):
         )
         # window title
         self.title = QLabel()
-        self.title.setText("ScriptO: New Project")
+        self.title.setText("Fig Dashboard")
         self.title.setStyleSheet("color: #fff; font-size: 16px; font-weight: bold;")
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)

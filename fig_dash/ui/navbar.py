@@ -50,20 +50,29 @@ class DashSearchBar(QLineEdit):
         self.label.move(30, 0)
         self.label.hide()
         self.textEdited.connect(self.formatQueryOrUrl)
+        self.returnPressed.connect(self.search)
+
+    def search(self):
+        url = self.text()
+        dash_navbar = self.parent()
+        central_widget = dash_navbar.parent()
+        dash_window = central_widget.parent()
+        tabs = dash_window.tabs
+        i = tabs.currentIndex()
+        tabs.loadUrl(i, url)
 
     def formatQueryOrUrl(self, query_or_url: str):
-        qou = UrlOrQuery(query_or_url)
-        
-        if qou.isUrl: 
-            if qou.protocol == "http": 
-                qou.set_colors("red", "black", "grey")
-            else: 
-                qou.set_colors("green", "black", "grey")
-            self.label.show()
-        else: 
-            self.label.hide()
-        self.label.setText(str(qou))
-
+        pass
+        # qou = UrlOrQuery(query_or_url)
+        # if qou.isUrl: 
+        #     if qou.protocol == "http": 
+        #         qou.set_colors("red", "black", "grey")
+        #     else: 
+        #         qou.set_colors("green", "black", "grey")
+        #     self.label.show()
+        # else: 
+        #     self.label.hide()
+        # self.label.setText(str(qou))
     def resizeEvent(self, event):
         self.label.setFixedHeight(self.height())
         self.label.setFixedWidth(self.width())
@@ -148,14 +157,16 @@ class DashNavBar(QWidget):
         self.accountBtn = DashBarBtn(
             icon="navbar/account.png",
             tip="open account settings",
-            style=dash_bar_btn_style
+            style=dash_bar_btn_style,
+            size=(24,24)
         )
         layout.addWidget(self.accountBtn)
         # history.
         self.historyBtn = DashBarBtn(
             icon="navbar/history.svg",
             tip="open search history",
-            style=dash_bar_btn_style
+            style=dash_bar_btn_style,
+            size=(24,24)
         )
         layout.addWidget(self.historyBtn)
         # settings.
@@ -165,6 +176,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.settingsBtn)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         # layout.addStretch(1)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):

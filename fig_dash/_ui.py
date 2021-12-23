@@ -8,7 +8,7 @@ from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy
 # fig-dash imports.
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
@@ -49,6 +49,7 @@ QTabBar::tab {
     margin-left: 1px;
     margin-right: 1px;
     font-size: 18px;
+    /* width: 300px; */
 }
 QTabBar::tab:hover {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34);
@@ -70,14 +71,14 @@ class DashWindow(QMainWindow):
     '''The main window for fig-dash.'''
     def __init__(self, **kwargs):
         super(DashWindow, self).__init__()
+        self.browsingHistory = []
 
         x = kwargs.get("x", 0)
         y = kwargs.get("y", 0)
         w = kwargs.get("w", 100)
         h = kwargs.get("h", 100)
         self.setGeometry(x, y, w, h)
-        self.firstResizeOver = False
-
+        # self.firstResizeOver = False
         self.centralWidget = self.initCentralWidget()
         self.setCentralWidget(self.centralWidget)
         self.setWindowTitle("Dash Window")
@@ -94,10 +95,12 @@ class DashWindow(QMainWindow):
 
     def initTabWidget(self):
         tabs = DashTabWidget(self)
-        tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
-        # tabs.openFile("/home/atharva/GUI/fig-dash/requirements.txt")
-        # tabs.openFile("/home/atharva/GUI/fig-dash/setup.py")
-
+        tabs.openUrl("https://github.com/atharva-naik")
+        # for i in range(5):
+        #     tabs.openUrl("https://google.com")
+        tabs.connectWindow(self)
+        # tabs.openUrl("https://google.com")
+        # tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         return tabs
 
     def initCentralWidget(self):
@@ -113,41 +116,51 @@ class DashWindow(QMainWindow):
         topLayout = QHBoxLayout()
         topLayout.setContentsMargins(0, 0, 0, 0)
         self.topbar.setLayout(topLayout)
+        # self.topbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.topbar.setFixedHeight(35)
         # tabbar.
         self.tabbar = self.tabs.tabBar()
         self.tabbar.setStyleSheet(dash_tabbar_style.render())
         topLayout.addWidget(self.tabbar)
-        topLayout.addStretch(1)
+        spacer = QWidget()
+        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        topLayout.addWidget(spacer)
         # corner widget.
-        self.tabbar_dropdown = self.tabs.cornerWidget()
-        topLayout.addWidget(self.tabbar_dropdown)
-
-        layout.addWidget(self.topbar)
+        topLayout.addWidget(self.tabs.cornerWidget())
+        # topLayout.addWidget(self.tabs.dropdownBtn)
         # add search bar.
         self.navbar = DashNavBar(self)
-        layout.addWidget(self.navbar)
-        layout.addWidget(self.tabs)
-
+        self.navbar.setFixedHeight(30)
+        # vertical splitter.
+        self.h_split = QSplitter(Qt.Horizontal)
+        self.h_split.addWidget(self.tabs)
+        self.tabs.connectDropdown(self.h_split)
+        # self.h_split.setFixedHeight(500)
+        # central vertical splitter.
+        layout.insertWidget(0, self.h_split)
+        layout.insertWidget(0, self.navbar)
+        layout.insertWidget(0, self.topbar)
+        # layout.addStretch(1)
         return centralWidget
 
     def setFlags(self, *flags):
         flag_map = {"frameless": "Qt.FramelessWindowHint", "ontop": "Qt.WindowStaysOnTopHint"}
         flag_str = "|".join([flag_map[flag] for flag in flags])
         code = f"self.setWindowFlags({flag_str})"
-        # print(code)
         exec(code)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
-            if self.firstResizeOver:
-                width = self.width() 
-                self.tabs.dropdown.rePos(
-                    width=width,
-                    offset=170,
-                )
+            pass
+            # if self.firstResizeOver:
+            #     width = self.width() 
+            #     self.tabs.dropdown.rePos(
+            #         width=width,
+            #         offset=170,
+            #     )
             # TODO: really ugly jugaad. Fix this.
-            if self.firstResizeOver == False:
-                self.firstResizeOver = True
+            # if self.firstResizeOver == False:
+            #     self.firstResizeOver = True
         return super(DashWindow, self).eventFilter(obj, event)
 
     def moveEvent(self, event):
