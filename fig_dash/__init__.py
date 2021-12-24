@@ -4,7 +4,7 @@ import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import QEvent, Qt
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash._ui import DashWindow
@@ -20,13 +20,18 @@ class DashUI(QApplication):
         if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
             QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         super(DashUI, self).__init__(argv)
+        QFontDatabase.addApplicationFont(
+            FigD.font("datetime/digital-7.ttf")
+        )
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
         width = self.window.width()
+        self.trayIcon = QSystemTrayIcon(QIcon(kwargs.get("icon")), self)
+        self.trayIcon.show()
         # self.window.tabs.dropdown.initPos(width=width)
         self.setWindowFlags("frameless", "ontop")
         self.setCursor()
-
+        # self.window.setWindowIcon(QIcon(kwargs.get("icon")))
     def setWindowFlags(self, *flags):
         self.window.setFlags(*flags)
 

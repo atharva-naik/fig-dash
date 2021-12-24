@@ -1,4 +1,5 @@
-import sys
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import jinja2
 from typing import Union
 # fig-dash imports.
@@ -7,7 +8,7 @@ from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QSize, QPoint
-from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QHBoxLayout, QAction, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
 dash_searchbar_style = jinja2.Template('''
@@ -53,15 +54,21 @@ class DashSearchBar(QLineEdit):
         self.label.hide()
         self.textEdited.connect(self.formatQueryOrUrl)
         self.returnPressed.connect(self.search)
+        # completion for search.
+        self.completer = QCompleter()
+        self.searchHistory = []
+        self.setCompleter(self.completer)
         # apply glow effect.
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
-        glow_effect.setOffset(5,0)
+        glow_effect.setOffset(2,0)
         glow_effect.setColor(QColor(235, 156, 52))
         self.setGraphicsEffect(glow_effect)
 
     def search(self):
         url = self.text()
+        self.searchHistory.append(url)
+        self.completer = QCompleter(self.searchHistory)
         dash_navbar = self.parent()
         central_widget = dash_navbar.parent()
         dash_window = central_widget.parent()
@@ -195,6 +202,8 @@ class DashNavBar(QWidget):
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget
         self.reloadBtn.clicked.connect(tabWidget.reloadUrl)
+        self.nextBtn.clicked.connect(tabWidget.nextUrl)
+        self.prevBtn.clicked.connect(tabWidget.prevUrl)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):
 #         super(DashSearchBar, self).__init__(parent)

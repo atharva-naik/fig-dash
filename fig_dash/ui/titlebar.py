@@ -6,8 +6,10 @@ import jinja2
 from typing import Union
 # fig-dash imports.
 from fig_dash import FigD
+from fig_dash.api.system.battery import Battery
 # PyQt5 imports
-from PyQt5.QtCore import Qt, QSize, QPoint
+from PyQt5.QtGui import QIcon, QImage, QPixmap
+from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton, QMainWindow, QSizePolicy
 
 
@@ -22,17 +24,39 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton
 #     /* background: url('''+f"'{FigD.icon('''titlebar/texture.png''')}'"+''');  */
 #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
 # }
+battery = jinja2.Template('''
+<svg xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:rgb(200,255,0);stop-opacity:0.8" />
+        <stop offset="100%" style="stop-color:rgb(0,255,0);stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:rgb(255,255,0);stop-opacity:0.8" />
+        <stop offset="100%" style="stop-color:rgb(255,145,66);stop-opacity:1" />
+        </linearGradient>
+        <linearGradient id="grad3" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:rgb(255,170,0);stop-opacity:0.8" />
+        <stop offset="100%" style="stop-color:rgb(255,0,0);stop-opacity:1" />
+        </linearGradient>
+    </defs>
+    <g>
+      <rect x="0" y="0" stroke="#fff" stroke-width="1" width="26" height="16" fill="url(#{{ color }})" rx="3"></rect>
+      <text x="4" y="11.5" font-family="Arial" font-size="12" fill="#000">{{ level }}</text>
+      <rect x="26" y="5" stroke="#fff" stroke-width="1" width="3" height="6" fill="gray"></rect>
+    </g>
+</svg>''')
 title_bar_style = jinja2.Template('''
 QToolBar {
     margin: 0px; 
     border: 0px; 
     color: #fff;
-    /* border-top-left-radius: 5px; */
-    /* border-top-right-radius: 5px; */
     /* background: #000; */
-    background: #000;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
     /* background: url({{ TITLEBAR_BACKGROUND_URL }}) */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
 }
 ''')
 title_btn_style = '''
@@ -45,6 +69,82 @@ QToolButton:hover {
     /* background: rgba(255, 223, 97, 0.5); */
 }   
 '''
+class BatteryIndicator(QToolButton):
+    def __init__(self, parent: Union[QWidget, None]=None):
+        super(BatteryIndicator, self).__init__(parent)
+        self.level = 0
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(1000)
+        self.battery = battery
+        self.backend = Battery()
+        self.setFixedSize(QSize(30,30))
+        self.setStyleSheet('''
+        QToolButton {
+            border: 0px;
+        }''')
+        self.pluggedIcon = QToolButton(self)
+
+    def getColor(self, level):
+        if level < 33:
+            return "grad3"
+        elif level < 66:
+            return "grad2"
+        else:
+            return "grad1"
+
+    def setBattery(self, level: int):
+        level = max(min(level, 100), 0)
+        color = self.getColor(level)
+        svg_bytes = bytes(self.battery.render(
+            color=color,
+            level=level,
+        ), encoding='utf-8')
+        self._battery_image = QImage.fromData(svg_bytes)
+        self._battery_pixmap = QPixmap.fromImage(self._battery_image)
+        self.setIcon(QIcon(self._battery_pixmap))
+        self.setIconSize(QSize(30,30))
+
+    def update(self):
+        plugged, percent = self.backend()
+        if plugged: 
+            self.pluggedIcon.setIcon(FigD.Icon("titlebar/plug.svg"))
+        else:
+            self.pluggedIcon.setIcon(QIcon(None))
+        self.setBattery(int(percent))
+
+
+class FullScreenBtn(QToolButton):
+    def __init__(self, parent: Union[QWidget, None]=None, **kwargs):
+        super(FullScreenBtn, self).__init__(parent)
+        self.setToolTip("toggle fullscreen button")
+        self.fs_icon = FigD.Icon(kwargs.get("fs_icon"))
+        self.efs_icon = FigD.Icon(kwargs.get("efs_icon"))
+        self.is_fullscreen = False
+        self.setIcon(self.fs_icon)
+        self.setIconSize(QSize(22,22))
+        self.clicked.connect(self.toggle)
+        self.setStyleSheet(title_btn_style)
+
+    def fullscreen(self):
+        print("fullscreen mode")
+        self.window().showFullScreen()
+        self.setIcon(self.efs_icon)
+        self.is_fullscreen = True
+
+    def exit_fullscreen(self):
+        print("exiting fullscreen mode")
+        self.window().showNormal()
+        self.setIcon(self.fs_icon)
+        self.is_fullscreen = False
+
+    def toggle(self):
+        if self.is_fullscreen:
+            self.exit_fullscreen()
+        else: 
+            self.fullscreen()
+
+
 class TitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None):
         super(TitleBar, self).__init__("Titlebar", parent)
@@ -71,25 +171,101 @@ class TitleBar(QToolBar):
             tip="maximize window",
             callback=self.callback if parent is None else self.maximize
         )
+        # widget bar toggle button
+        self.widgetsToggleBtn = self.initTitleBtn(
+            "titlebar/widgets_bar.svg", 
+            tip="toggle dashboard widgets visibility",
+            callback=self.callback if parent is None else parent.floatmenu.toggle 
+        )
+        self.viewSourceBtn = self.initTitleBtn(
+            "titlebar/source.svg", 
+            tip="view the source of the webpage.",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.saveSourceBtn = self.initTitleBtn(
+            "titlebar/save.svg", 
+            tip="save the source of the webpage.",
+            callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.zoomInBtn = self.initTitleBtn(
+            "titlebar/zoom_in.svg", 
+            tip="zoom in",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.zoomOutBtn = self.initTitleBtn(
+            "titlebar/zoom_out.svg", 
+            tip="zoom out",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.fullscreenBtn = FullScreenBtn(
+            fs_icon="titlebar/fullscreen.svg", 
+            efs_icon="titlebar/exit_fullscreen.svg", 
+        )
+        self.bluetoothBtn = self.initTitleBtn(
+            "titlebar/bluetooth.svg", 
+            tip="open ubuntu's bluetooth panel.",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.bluetoothBtn.setFixedSize(QSize(15,15))
+        self.onScreenKeyboard = self.initTitleBtn(
+            "titlebar/onscreenkeyboard.svg", 
+            tip="open on screen keyboard.",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.transBtn = self.initTitleBtn(
+            "titlebar/trans.svg", 
+            tip="open translation utility.",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.ttsBtn = self.initTitleBtn(
+            "titlebar/tts.svg", 
+            tip="open text to speech.",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.battery = BatteryIndicator(self)
+        self.battery.setFixedSize(QSize(30,30))
+        self.battery.setIconSize(QSize(30,30))
+        self.battery.pluggedIcon.setFixedSize(QSize(17,17))
         # window title
         self.title = QLabel()
-        self.title.setText("Fig Dashboard")
+        self.title.setText("FigD")
         self.title.setStyleSheet("color: #fff; font-size: 16px; font-weight: bold;")
         self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        # left_spacer = QWidget()
-        # left_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # right_spacer = QWidget()
-        # right_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # lang settings.
+        self.langBtn = QToolButton(self)
+        self.langBtn.setText("En")
+        self.langBtn.setStyleSheet('''
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 14px;
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 0.5);
+            /* background: rgba(255, 223, 97, 0.5); */
+        }''')
         self.addWidget(self.closeBtn)
         self.addWidget(self.minimizeBtn)
         self.addWidget(self.maximizeBtn)
+        self.addWidget(self.initBlank())
+        self.addWidget(self.viewSourceBtn)
+        self.addWidget(self.saveSourceBtn)
+        self.addWidget(self.zoomInBtn)
+        self.addWidget(self.zoomOutBtn)
+        self.addWidget(self.widgetsToggleBtn)
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
-        self.addWidget(self.initTitleBtn(""))
-        self.addWidget(self.initTitleBtn(""))
-        self.addWidget(self.initTitleBtn(""))
+        self.addWidget(self.langBtn)
+        self.addWidget(self.bluetoothBtn)
+        self.addWidget(self.battery.pluggedIcon)
+        self.addWidget(self.battery)
+        self.addWidget(self.onScreenKeyboard)
+        self.addWidget(self.transBtn)
+        self.addWidget(self.ttsBtn)
+        self.addWidget(self.fullscreenBtn)
+        self.addWidget(self.initBlank())
         self.setMaximumHeight(30)
 
     def maximize(self):
@@ -106,11 +282,19 @@ class TitleBar(QToolBar):
 
         return spacer
 
+    def initBlank(self):
+        btn = QToolButton(self)
+        btn.setIcon(QIcon(None))
+        btn.setStyleSheet("border: 0px;")
+        return btn
+
     def initTitleBtn(self, icon, **kwargs):
         btn = QToolButton(self)
         btn.setToolTip(kwargs.get("tip", "a tip"))
         btn.setIcon(FigD.Icon(icon))
-        btn.setIconSize(QSize(22,22))
+        size = kwargs.get("size", (22,22))
+        print(icon, size)
+        btn.setIconSize(QSize(*size))
         btn.clicked.connect(kwargs.get("callback", self.callback))
         btn.setStyleSheet(title_btn_style)
 

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=FigDash
+Comment=fig-dash: A dashboard/web browser to boost productivity and multitask
+Exec=/home/atharva/GUI/fig-dash/dash.py
+Terminal=false
+Type=Application
+MimeType=text/python
+Icon=/home/atharva/GUI/fig-dash/resources/icons/logo.png
+StartupNotify=true

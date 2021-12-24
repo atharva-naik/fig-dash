@@ -158,6 +158,7 @@ class DashTabWidget(QTabWidget):
 
         self.setTabsClosable(True)
         self.setElideMode(Qt.ElideRight)
+        self.setDocumentMode(False)
         self.tabCloseRequested.connect(self.removeTab)
         self.setMovable(True)
         self.setCornerWidget(tabCornerWidget)
@@ -185,7 +186,12 @@ class DashTabWidget(QTabWidget):
         browser.setIcon(tabs=self, i=i)
         # print(icon.isNull())
         # if not icon.isNull(): 
-            # self.setTabIcon(i, icon)    
+            # self.setTabIcon(i, icon) 
+    def home(self):
+        currentWidget = self.currentWidget()
+        if isinstance(currentWidget, Browser):
+            currentWidget.load(FigD.static("home.html"))
+
     def openUrl(self, url: str="https://google.com"):
         qurl = QUrl(url)
         browser = Browser(self)
@@ -198,6 +204,27 @@ class DashTabWidget(QTabWidget):
 				self.setupTabForBrowser(i, browser)
         )
         self.setCurrentIndex(i)
+
+    def nextUrl(self, i: int):
+        currentWidget = self.currentWidget()
+        try:
+            currentWidget.nextInHistory()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"tab-{i} is not a browser instance") 
+
+    def save(self):
+        currentWidget = self.currentWidget()
+        if isinstance(currentWidget, Browser):
+            print(currentWidget.page())
+
+    def prevUrl(self, i: int):
+        currentWidget = self.currentWidget()
+        try:
+            currentWidget.prevInHistory()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"tab-{i} is not a browser instance") 
 
     def reloadUrl(self, i: int):
         currentWidget = self.currentWidget()

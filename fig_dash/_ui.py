@@ -8,16 +8,20 @@ from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy
+from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy
 # fig-dash imports.
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
+from fig_dash.ui.widget.floatmenu import FloatMenu
+from fig_dash.ui.system.date_time import DashClock, DashCalendar
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
 # from PyQt5.QtWidgets import QAction, QWidget, QTabWidget, QToolBar, QTabBar, QLabel, QSplitter, QVBoxLayout, QHBoxLayout, QToolButton, QPushButton, QGraphicsView, QGraphicsEffect, QScrollArea, QLineEdit, QFrame, QSizePolicy, QMessageBox, QTreeView, QRubberBand,  QFileSystemModel, QGraphicsDropShadowEffect, QTextEdit
 dash_window_style = jinja2.Template('''
 QMainWindow {
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 2, stop : 0.1 #000, stop : 0.2 #292929, stop : 0.7 #917459, stop : 0.8 #cf6400);
 }''')
 dash_tabbar_style = jinja2.Template('''
@@ -25,20 +29,18 @@ QTabBar {
     border: 0px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 #eb5f34, stop : 0.6 #ebcc34);
 }
-/* QTabBar::close-button {
-    background: url();
+QTabBar::close-button {
+    border: 0px;
     background-repeat: no-repeat;
     background-position: center;
     subcontrol-position: right;
-    border-radius: 12px;
 }
 QTabBar::close-button:hover {
-    background: url();
     background-color: rgba(235, 235, 235, 0.50);
     background-repeat: no-repeat;
     background-position: center;
     subcontrol-position: right;
-} */
+}
 QTabBar::tab {
     border: 0px;
     color: #292929;
@@ -67,6 +69,23 @@ QTabBar::tab:selected {
     font-size: 18px;
     font-weight: bold;
 }''')
+# all the splitters.
+class DatetimeNotifsSplitter(QSplitter):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(DatetimeNotifsSplitter, self).__init__(
+            Qt.Vertical,
+            parent=parent
+        )
+        self.clockWidget = DashClock(self)
+        self.calendarWidget = DashCalendar(self)
+        # self._notifs =
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: 
+            self.show()
+
+
 class DashWindow(QMainWindow):
     '''The main window for fig-dash.'''
     def __init__(self, **kwargs):
@@ -82,7 +101,10 @@ class DashWindow(QMainWindow):
         self.centralWidget = self.initCentralWidget()
         self.setCentralWidget(self.centralWidget)
         self.setWindowTitle("Dash Window")
-        
+        # print(kwargs.get('icon'))
+        self.logo = QIcon(kwargs.get('icon'))
+        # self.setWindowIcon(self.logo)
+
         maximize_by_default = kwargs.get("maximize_by_default", True)
         if maximize_by_default:
             self.showMaximized()
@@ -97,6 +119,13 @@ class DashWindow(QMainWindow):
         tabs = DashTabWidget(self)
         tabs.connectWindow(self)
         tabs.openUrl("https://github.com/atharva-naik")
+        dummyBtn = QToolButton(self)
+        dummyBtn.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            background: transparent;
+        }""")
+        tabs.tabBar().setTabButton(0, QTabBar.RightSide, dummyBtn)
         # for i in range(5):
         #     tabs.openUrl("https://google.com")
         tabs.connectWindow(self)
@@ -133,10 +162,19 @@ class DashWindow(QMainWindow):
         self.navbar = DashNavBar(self)
         self.navbar.setFixedHeight(30)
         self.navbar.connectTabWidget(self.tabs)
-        # vertical splitter.
+        # main horizontal splitter.
         self.h_split = QSplitter(Qt.Horizontal)
+        # add tabwidget
         self.h_split.addWidget(self.tabs)
+        # add notifications and datetime splitter.
+        self.datetime_notifs_splitter = self.initDatetimeNotif()
+        self.h_split.addWidget(self.datetime_notifs_splitter)
+        self.h_split.setSizes([500,330,300])
         self.tabs.connectDropdown(self.h_split)
+        # float menu widget
+        self.floatmenu = FloatMenu(self.tabs)
+        self.floatmenu.move(2,100)
+        self.floatmenu.connectWindow(self)
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
@@ -173,3 +211,9 @@ class DashWindow(QMainWindow):
             geo = dropdown.geometry()
             geo.moveTopLeft(geo.topLeft() + diff)
             dropdown.setGeometry(geo)
+
+    def initDatetimeNotif(self):
+        datetime_notifs_splitter = DatetimeNotifsSplitter(self)
+        datetime_notifs_splitter.hide()
+
+        return datetime_notifs_splitter

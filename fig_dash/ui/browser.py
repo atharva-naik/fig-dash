@@ -15,19 +15,20 @@ from fig_dash.assets import FigD
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;
     height: 10px;
-}    
-*::-webkit-scrollbar-track {
-    background-color: rgba(235, 235, 235, 0.8);
 }
 *::-webkit-scrollbar-track:hover {
-    background-color: rgba(29, 29, 29, 0.4);
+    background: rgba(29, 29, 29, 0.4);
+}    
+*::-webkit-scrollbar-track {
+    /* background-color: rgba(235, 235, 235, 0.8); */
+    background: linear-gradient(0deg, rgba(235,95,52,0.8) 0%, rgba(235,204,52,1) 94%);
 }
 *::-webkit-scrollbar-thumb {
     background-color: #292929;
 }
 *::-webkit-scrollbar-thumb:hover {
     background: rgb(235,95,52);
-    background: linear-gradient(0deg, rgba(235,95,52,1) 40%, rgba(235,204,52,1) 94%);;
+    background: linear-gradient(0deg, rgba(235,95,52,1) 40%, rgba(235,204,52,1) 94%);
 }
 *::-webkit-scrollbar-corner {
     background-color: transparent;
@@ -45,6 +46,8 @@ selection_style = '''
 class Browser(QWebEngineView):
     def __init__(self, parent: Union[None, QWidget]):
         super(Browser, self).__init__(parent)
+        self.historyIndex = 0
+        self.browsingHistory = []
         self.currentZoomFactor = 1.25
         self.setZoomFactor(self.currentZoomFactor)
     # def pageIconCallback(self, html: str):
@@ -66,9 +69,13 @@ class Browser(QWebEngineView):
     #         pprint(icon_path)
     def append(self, url: Union[str, QUrl]):
         '''append url to browsing history.'''
+        try: url = url.toString()
+        except AttributeError as e: pass
+        # store in local tab browsing history.
+        if len(self.browsingHistory) > 0 and self.browsingHistory[-1] == url:
+            self.browsingHistory.append(url)
+            self.historyIndex = len(self.browsingHistory)-1
         try:
-            try: url = url.toString()
-            except AttributeError as e: pass
             if len(self.dash_window.browsingHistory) > 0 and self.dash_window.browsingHistory[-1] == url:
                 return
             else:
@@ -78,7 +85,23 @@ class Browser(QWebEngineView):
             print("not connected to a DashWindow")
             return    
 
+    def prevInHistory(self):
+        self.historyIndex -= 1
+        self.historyIndex = max(0, self.historyIndex)
+        self.back()
+
+    def nextInHistory(self):
+        self.historyIndex += 1
+        self.historyIndex = min(len(self.browsingHistory)-1, self.historyIndex)
+        self.forward()
+
     def updateTabTitle(self):
+        try:
+            self.dash_window.navbar.searchbar.setText(
+                self.url().toString()
+            )
+        except AttributeError as e:
+            print("not connected to DashWindow") 
         self.append(self.url())
         try:
             # change title ofthe tab that contains this browser only.
