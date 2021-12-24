@@ -18,7 +18,7 @@ QLineEdit {
     font-size: 16px;
     padding-top: 5px;
     padding-bottom: 5px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2: 1, stop: 0 orange, stop: 0.3 #eee, stop: 0.5 #fff, stop: 0.7 #eee, stop: 1 orange);
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2: 0, stop: 0 #828282, stop: 0.5 #eee, stop: 1 #828282);
     border-radius: {{ BORDER_RADIUS }};
 }
 QLabel {

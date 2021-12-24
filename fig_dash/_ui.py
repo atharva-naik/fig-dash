@@ -2,17 +2,20 @@
 # -*- coding: utf-8 -*-
 import os
 import jinja2
+import getpass
 from typing import Union, Tuple, List
 # Qt imports.
-from PIL import Image, ImageQt
+# from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR
 from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy
 # fig-dash imports.
+from fig_dash.assets import FigD
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
+from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.date_time import DashClock, DashCalendar
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
@@ -71,6 +74,7 @@ QTabBar::tab:selected {
 }''')
 # all the splitters.
 class DatetimeNotifsSplitter(QSplitter):
+    '''Date, time and notifs panel contained in the splitter'''
     def __init__(self, parent: Union[None, QWidget]=None):
         super(DatetimeNotifsSplitter, self).__init__(
             Qt.Vertical,
@@ -78,12 +82,17 @@ class DatetimeNotifsSplitter(QSplitter):
         )
         self.clockWidget = DashClock(self)
         self.calendarWidget = DashCalendar(self)
-        # self._notifs =
+        self.notifsPanel = NotifsPanel(self)
+        # add all widgets.
+        self.addWidget(self.clockWidget)
+        self.addWidget(self.calendarWidget)
+        self.addWidget(self.notifsPanel)
+
     def toggle(self):
+        '''toggle visibility of the combined clock, calendar and notifs panel.'''
         if self.isVisible():
             self.hide()
-        else: 
-            self.show()
+        else: self.show()
 
 
 class DashWindow(QMainWindow):
@@ -173,7 +182,7 @@ class DashWindow(QMainWindow):
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)
-        self.floatmenu.move(2,100)
+        self.floatmenu.move(2,30)
         self.floatmenu.connectWindow(self)
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
@@ -215,5 +224,15 @@ class DashWindow(QMainWindow):
     def initDatetimeNotif(self):
         datetime_notifs_splitter = DatetimeNotifsSplitter(self)
         datetime_notifs_splitter.hide()
+        datetime_notifs_splitter.notifsPanel.pushNotif(
+            name="fig-dash",
+            icon=FigD.icon("logo.png"),
+            msg=f"Hi <b>{getpass.getuser()}</b>! Click <a href='https://github.com/atharva-naik/fig-dash' style='color: #269e92;'>here</a> to get started with <b>fig-dash</b>."
+        )
+        datetime_notifs_splitter.notifsPanel.pushNotif(
+            name="Hire Me?",
+            icon=FigD.icon("me.jpeg"),
+            msg=f"If you like what you see, and want to hire me, check out my <a href='https://www.linkedin.com/in/atharva-naik-112888190/' style='color: #269e92;'>LinkedIn profile</a>."
+        )
 
         return datetime_notifs_splitter

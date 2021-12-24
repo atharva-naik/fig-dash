@@ -48,10 +48,40 @@ class FloatMenu(QWidget):
             tip="Clock, timer, stopwatch and other widgets.",
             size=QSize(45,45),
         )
+        self.whiteboardBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/whiteboard.png"),
+            tip="Need to explain something? Present your ideas on a whiteboard.",
+            size=QSize(45,45),
+        )
+        self.kanbanBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/kanban.png"),
+            tip="Organize your project with a kanban board.",
+            size=QSize(45,45),
+        )
+        self.notesBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/notes.png"),
+            tip="Add new notes.",
+            size=QSize(45,45),
+        )
+        self.ideasBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/ideas.png"),
+            tip="Have an idea? write it down. Tell me when I should remind you.",
+            size=QSize(45,45),
+        )
+        self.botBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/bot.png"),
+            tip="Bot assistant to help you out with productivity.",
+            size=QSize(45,45),
+        )
         # add buttons.
         self.layout.addWidget(self.weatherBtn)
         self.layout.addWidget(self.calendarBtn)
         self.layout.addWidget(self.clockBtn)
+        self.layout.addWidget(self.whiteboardBtn)
+        self.layout.addWidget(self.kanbanBtn)
+        self.layout.addWidget(self.notesBtn)
+        self.layout.addWidget(self.ideasBtn)
+        self.layout.addWidget(self.botBtn)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
 

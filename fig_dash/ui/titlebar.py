@@ -84,6 +84,10 @@ class BatteryIndicator(QToolButton):
             border: 0px;
         }''')
         self.pluggedIcon = QToolButton(self)
+        self.pluggedIcon.setStyleSheet('''
+        QToolButton {
+            border: 0px;
+        }''')
 
     def getColor(self, level):
         if level < 33:
@@ -145,6 +149,17 @@ class FullScreenBtn(QToolButton):
             self.fullscreen()
 
 
+class WifiBtn(QToolButton):
+    def __init__(self, parent: Union[QWidget, None]=None, **kwargs):
+        super(WifiBtn, self).__init__(parent)
+        self.setToolTip("open wifi settings")
+        self.setIcon(FigD.Icon("titlebar/wifi-1.png"))
+        self.setStyleSheet('''
+        QToolButton {
+            border: 0px;
+        }''')
+
+
 class TitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None):
         super(TitleBar, self).__init__("Titlebar", parent)
@@ -192,6 +207,11 @@ class TitleBar(QToolBar):
             tip="zoom in",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.findBtn = self.initTitleBtn(
+            "titlebar/find_in_page.svg", 
+            tip="find in page",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
             tip="zoom out",
@@ -222,6 +242,12 @@ class TitleBar(QToolBar):
             tip="open text to speech.",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.wifi = self.initTitleBtn(
+            "titlebar/wifi-1.png",
+            tip="wifi indicator",
+        )
+        self.wifi.setFixedSize(QSize(18,18))
+
         self.battery = BatteryIndicator(self)
         self.battery.setFixedSize(QSize(30,30))
         self.battery.setIconSize(QSize(30,30))
@@ -253,10 +279,12 @@ class TitleBar(QToolBar):
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.zoomInBtn)
         self.addWidget(self.zoomOutBtn)
+        self.addWidget(self.findBtn)
         self.addWidget(self.widgetsToggleBtn)
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
+        self.addWidget(self.wifi)
         self.addWidget(self.langBtn)
         self.addWidget(self.bluetoothBtn)
         self.addWidget(self.battery.pluggedIcon)

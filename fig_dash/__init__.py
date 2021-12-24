@@ -4,7 +4,7 @@ import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import QEvent, Qt
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash._ui import DashWindow
@@ -26,7 +26,22 @@ class DashUI(QApplication):
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
         width = self.window.width()
+        # actions for tray icon context menu.
+        self.showAction = QAction("Show")
+        self.quitAction = QAction("Quit")
+        self.logsAction = QAction("Get logs")
+        self.supportAction = QAction("Collect support files")
+        # connect functions to actions.
+        self.quitAction.triggered.connect(self.quit)
+        # tray icon menu.
+        self.trayMenu = QMenu()
+        self.trayMenu.addAction(self.logsAction)
+        self.trayMenu.addAction(self.showAction)
+        self.trayMenu.addAction(self.quitAction)
+        self.trayMenu.addAction(self.supportAction)
+        # tray icon button.
         self.trayIcon = QSystemTrayIcon(QIcon(kwargs.get("icon")), self)
+        self.trayIcon.setContextMenu(self.trayMenu)
         self.trayIcon.show()
         # self.window.tabs.dropdown.initPos(width=width)
         self.setWindowFlags("frameless", "ontop")
@@ -37,11 +52,13 @@ class DashUI(QApplication):
 
     def notify(self, obj, event):
         if event.type() == QEvent.WindowDeactivate:
+            currentWidget = self.window.tabs.currentWidget()
+            currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=10))
             # print("bluring background")
-            pass
         if event.type() == QEvent.WindowActivate:
+            currentWidget = self.window.tabs.currentWidget()
+            currentWidget.setGraphicsEffect(None)
             # print("unbluring background")
-            pass
         return super().notify(obj, event)
 
     def launch(self):
