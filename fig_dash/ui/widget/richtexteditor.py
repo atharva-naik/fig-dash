@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+# I would like to mention that most of this code is from: https://gist.github.com/Axel-Erfurt/e33608124a4e47167ba76f4d62cba9ca
+# All credits to the original author Axel Erfurt.
+# I have made some minor style related modifications.
+
 import jinja2
 from typing import Union
 # fig-dash imports.
@@ -21,6 +26,49 @@ tableheader2 = "<table></tr><tr><td>    Column1    </td><td>    Column2    </td>
 tableheader3 = "<table></tr><tr><td>    Column1    </td><td>    Column2    </td><td>    Column3    </td></tr></table>"
 
 
+richtexteditor_style = """
+QTextEdit#RichTextEdit {
+    background: #fff;
+    border: 1px solid #1EAE3D;
+    selection-background-color: #eb5f34;
+    selection-color: #fff;
+}
+QDialog {
+    color: #fff;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+}
+QComboBox {
+    font-size: 16px;
+}
+QLineEdit#RTELineEdit {
+    color: #fff;
+    font-size: 16px;
+    background: #484848;
+}
+QMenuBar {
+    background: transparent;
+    border: 0px;
+}
+QToolBar {
+    background: transparent;
+    border: 0px;
+}
+QMainWindow {
+    /* background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1, stop: 0 #E1E1E1, stop: 0.4 #DDDDDD, stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3); */
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    color: #202020;
+}
+QPushButton {
+    padding: 4px;
+    border: 1px solid #484848;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    color: #eb5f34;
+}
+QPushButton:hover {
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+    color: #292929;
+}"""
+
 class htmlEditor(QWidget):
     def __init__(self, parent = None, text = ""):
         super(htmlEditor, self).__init__(parent)
@@ -29,10 +77,12 @@ class htmlEditor(QWidget):
         self.btnOK = QPushButton("OK", clicked=self.sendText)
         self.btnCancel = QPushButton("Cancel", clicked=self.cancelAction)
         self.hbox = QHBoxLayout()
+        self.hbox.setContentsMargins(0, 0, 0, 0)
         self.hbox.addWidget(self.btnCancel)
         self.hbox.addWidget(self.btnOK)
         
         self.vbox = QVBoxLayout()
+        self.vbox.setContentsMargins(0, 0, 0, 0)
         self.vbox.addWidget(self.ed)
         self.vbox.addLayout(self.hbox)
         self.setLayout(self.vbox)
@@ -51,7 +101,7 @@ class RichTextEditor(QMainWindow):
 #    def keyPressEvent(self, event):
 #        if event.key() == Qt.Key_Tab:
 #            print ("tab pressed")
-        self.setStyleSheet(myStyleSheet(self))
+        self.setStyleSheet(richtexteditor_style)
         self.MaxRecentFiles = 5
         self.windowList = []
         self.recentFileActs = []
@@ -61,8 +111,9 @@ class RichTextEditor(QMainWindow):
         # Editor Widget ...
 #        QIcon.setThemeName('gnome')
         self.editor = QTextEdit() 
+        self.editor.setObjectName("RichTextEdit")
 
-        self.editor.setStyleSheet(myStyleSheet(self))
+        self.editor.setStyleSheet(richtexteditor_style)
         self.editor.setTabStopWidth(14)
         self.editor.setContextMenuPolicy(Qt.CustomContextMenu)
         self.editor.customContextMenuRequested.connect(self.contextMenuRequested)        
@@ -100,9 +151,6 @@ class RichTextEditor(QMainWindow):
         self.repAllAct.setIcon(QIcon.fromTheme("gtk-find-and-replace"))
         self.repAllAct.setStatusTip("replace all")
         self.repAllAct.clicked.connect(self.replaceAll)
-        self.bgAct = QAction("change Background Color",self,  triggered=self.changeBGColor)
-        self.bgAct.setStatusTip("change Background Color")
-        self.bgAct.setIcon(QIcon.fromTheme("preferences-color-symbolic"))
 
     def createToolbar(self):        
             ### begin toolbar
@@ -111,46 +159,57 @@ class RichTextEditor(QMainWindow):
         self.file_tb.setWindowTitle("File Toolbar")        
         self.file_tb.addAction(self.newAct)
         self.file_tb.addAction(self.openAct)
-        self.file_tb.addSeparator() 
+        # TODO: change format of separator
+        # self.file_tb.addSeparator() 
         self.file_tb.addAction(self.saveAct)
         self.file_tb.addAction(self.saveAsAct)
-        self.file_tb.addSeparator() 
+        # TODO: change format of separator
+        # self.file_tb.addSeparator() 
         self.file_tb.addAction(self.saveAsODFAct)
-        self.file_tb.addSeparator()
+        # TODO: change format of separator
+        # self.file_tb.addSeparator()
         self.file_tb.addAction(self.pdfAct)
-        self.file_tb.addSeparator()
+        # TODO: change format of separator
+        # self.file_tb.addSeparator()
         self.file_tb.addAction(self.printPreviewAct)
         self.file_tb.addAction(self.printAct) 
-        self.file_tb.addSeparator()
+        # TODO: change format of separator
+        # self.file_tb.addSeparator()
         self.file_tb.addAction(self.browserAct) 
-        self.file_tb.addSeparator()
+        # TODO: change format of separator
+        # self.file_tb.addSeparator()
         self.file_tb.addAction(QAction(QIcon.fromTheme('image'), "insert Image", self, statusTip="insert an image", triggered = self.insertImage))        
         ### find / replace toolbar
         self.edit_tb = QToolBar(self)
         self.edit_tb.setIconSize(QSize(16, 16))
         self.edit_tb.setWindowTitle("Find Toolbar")   
         self.findfield = QLineEdit()
+        self.findfield.setObjectName("RTELineEdit")
         self.findfield.addAction(QIcon.fromTheme("gtk-find"), 0)
         self.findfield.setClearButtonEnabled(True)
-        self.findfield.setFixedWidth(200)
+        self.findfield.setFixedWidth(150)
         self.findfield.setPlaceholderText("find")
         self.findfield.setStatusTip("press RETURN to find")
         self.findfield.setText("")
         self.findfield.returnPressed.connect(self.findText)
         self.edit_tb.addWidget(self.findfield)
         self.replacefield = QLineEdit()
+        self.replacefield.setObjectName("RTELineEdit")
         self.replacefield.addAction(QIcon.fromTheme("gtk-find-and-replace"), 0)
         self.replacefield.setClearButtonEnabled(True)
-        self.replacefield.setFixedWidth(200)
+        self.replacefield.setFixedWidth(150)
         self.replacefield.setPlaceholderText("replace with")
         self.replacefield.setStatusTip("press RETURN to replace the first")
         self.replacefield.returnPressed.connect(self.replaceOne)
-        self.edit_tb.addSeparator() 
+        # TODO: change format of separator
+        # self.edit_tb.addSeparator() 
         self.edit_tb.addWidget(self.replacefield)
-        self.edit_tb.addSeparator()
+        # TODO: change format of separator
+        # self.edit_tb.addSeparator()
         self.edit_tb.addWidget(self.repAllAct)
-        self.edit_tb.addSeparator()
-        self.edit_tb.addAction(self.bgAct)
+        # TODO: change format of separator
+        # self.edit_tb.addSeparator()
+        # self.edit_tb.addAction(self.bgAct)
         ### Format Toolbar
         self.format_tb = QToolBar(self)
         self.format_tb.setIconSize(QSize(16, 16))
@@ -178,7 +237,8 @@ class RichTextEditor(QMainWindow):
         self.actionTextUnderline.setFont(underline)
         self.format_tb.addAction(self.actionTextUnderline)
         
-        self.format_tb.addSeparator()
+        # TODO: change format of separator
+        # self.format_tb.addSeparator()
         
         self.grp = QActionGroup(self, triggered=self.textAlign)
 
@@ -211,6 +271,11 @@ class RichTextEditor(QMainWindow):
 
         self.format_tb.addActions(self.grp.actions())
 
+        self.bgAct = QAction("change Background Color",self,  triggered=self.changeBGColor)
+        self.bgAct.setStatusTip("change Background Color")
+        self.bgAct.setIcon(QIcon.fromTheme("preferences-color-symbolic"))
+        self.format_tb.addAction(self.bgAct)
+
         #self.indentAct = QAction(QIcon.fromTheme("format-indent-more-symbolic"), "indent more", self, triggered = self.indentLine, shortcut = "F8")
 #        self.indentLessAct = QAction(QIcon.fromTheme("format-indent-less-symbolic"), "indent less", self, triggered = self.indentLessLine, shortcut = "F9")
 #        self.format_tb.addAction(self.indentAct)
@@ -220,7 +285,8 @@ class RichTextEditor(QMainWindow):
         pix.fill(Qt.black)
         self.actionTextColor = QAction(QIcon(pix), "TextColor...", self,
                 triggered=self.textColor)
-        self.format_tb.addSeparator()
+        # TODO: change format of separator
+        # self.format_tb.addSeparator()
         self.format_tb.addAction(self.actionTextColor)
         
         self.font_tb = QToolBar(self)
@@ -239,14 +305,20 @@ class RichTextEditor(QMainWindow):
         self.comboStyle.addItem("Ordered List (Roman lower)")
         self.comboStyle.addItem("Ordered List (Roman upper)")
         self.comboStyle.activated.connect(self.textStyle)
+        # TODO:smarter resizing
+        self.comboStyle.setMaximumWidth(150)
 
         self.comboFont = QFontComboBox(self.font_tb)
-        self.font_tb.addSeparator()
+        # TODO:smarter resizing
+        self.comboFont.setMaximumWidth(150)
+        # TODO: change format of separator
+        # self.font_tb.addSeparator()
         self.font_tb.addWidget(self.comboFont)
         self.comboFont.activated[str].connect(self.textFamily)
 
         self.comboSize = QComboBox(self.font_tb)
-        self.font_tb.addSeparator()
+        # TODO: change format of separator
+        # self.font_tb.addSeparator()
         self.comboSize.setObjectName("comboSize")
         self.font_tb.addWidget(self.comboSize)
         self.comboSize.setEditable(True)
@@ -261,8 +333,12 @@ class RichTextEditor(QMainWindow):
         self.comboSize.setCurrentIndex(
                 self.comboSize.findText(
                         "%s" % (QApplication.font().pointSize())))    
-        self.addToolBar(self.file_tb)    
-        self.addToolBar(self.format_tb)    
+        self.addToolBar(self.file_tb)   
+        # TODO: remove for fullscreen mode 
+        self.addToolBarBreak()  
+        self.addToolBar(self.format_tb)
+        # TODO: remove for fullscreen mode 
+        self.addToolBarBreak()    
 #        self.addToolBarBreak(Qt.TopToolBarArea)
         self.addToolBar(self.font_tb)
 
@@ -1060,7 +1136,7 @@ if __name__ == '__main__':
     win = RichTextEditor()
     win.setWindowIcon(QIcon.fromTheme("gnome-mime-application-rtf"))
     win.setWindowTitle("RichTextEdit" + "[*]")
-    win.setMinimumSize(640,250)
+    win.setMinimumSize(400,250)
     # win.showMaximized()
     win.show()
     if len(sys.argv) > 1:

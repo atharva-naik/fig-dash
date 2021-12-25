@@ -53,6 +53,14 @@ class PageInfo(QWidget):
         self.layout.setAlignment(Qt.AlignCenter)
         # page info.
         self.label = QLabel("Page Info")
+        self.label.setStyleSheet('''
+        QLabel {
+            border: 0px;
+            padding: 10px;
+            color: #eb5f34;
+            font-size: 20px;
+            font-weight: bold;
+        }''')
         self.label.setAlignment(Qt.AlignCenter)
         self.layout.addWidget(self.label)
         # word count of page.
@@ -63,6 +71,7 @@ class PageInfo(QWidget):
         self.word_count.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.word_count.setToolTip("word count of webpage.")
         self.word_count.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.word_count.setAttribute(Qt.WA_TranslucentBackground)
         self.layout.addWidget(self.word_count)
         # time taken to read.
         self.time_to_read = QToolButton(self)
@@ -72,34 +81,41 @@ class PageInfo(QWidget):
         self.time_to_read.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.time_to_read.setToolTip("time taken to read webpage.")
         self.time_to_read.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.time_to_read.setAttribute(Qt.WA_TranslucentBackground)
         self.layout.addWidget(self.time_to_read)
         self.layout.addStretch(1)
 
-        self.setLayout(self.layout)
-        self.setStyleSheet('''
-        QWidget {
-            background: #000;
-        }
-        QLabel {
-            padding: 10px;
-            color: #eb5f34;
-            border: 0px;
-            font-size: 20px;
-            font-weight: bold;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));       
-        }
-        QToolButton {
-            color: #6e6e6e;
-            border: 0px;
-            padding: 5px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-        }''')
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
         glow_effect.setOffset(3,3)
         glow_effect.setColor(QColor(235, 95, 52))
+        wrapper = QWidget()
+        wrapper.setObjectName("wrapper")
+        wrapper.setStyleSheet('''
+        QWidget#wrapper {
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }''')
+        wrapper.setLayout(self.layout)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.word_count.setStyleSheet('''
+        QToolButton {
+            color: #6e6e6e;
+            border: 0px;
+            padding: 5px;
+        }''')
+        self.time_to_read.setStyleSheet('''
+        QToolButton {
+            color: #6e6e6e;
+            border: 0px;
+            padding: 5px;
+        }''')
+
         self.setGraphicsEffect(glow_effect)
         self.setFixedWidth(150)
+        layout.addWidget(wrapper)
+        self.setLayout(layout)
         # self.setFixedWidth(100)
     def update(self, word_count: int):
         '''assuming average human adult reads at 200 wpm'''

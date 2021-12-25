@@ -9,7 +9,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWidgets import QSizePolicy, QWidget, QToolBar, QToolButton, QLabel, QAction, QApplication, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QLineEdit, QTextEdit
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.widget.richtexteditor import RichTextEditor
+from fig_dash.ui.widget.richtexteditor import RichTextEditor, richtexteditor_style
 # from fig_dash.ui.browser import Browser
 ideas_widget_style = '''
 QWidget {
@@ -102,7 +102,16 @@ class IdeasWidget(QWidget):
         # self.textarea.setPlaceholderText("Jot down your ideas here!")
         # self.textarea.setStyleSheet('''font-size: 16px;''')
         self.textarea = RichTextEditor(self)
-        self.textarea.setMaximumWidth(300)
+        self.textarea.setMaximumWidth(400)
+        self.textarea.edit_tb.setMovable(False)
+        self.textarea.file_tb.setMovable(False)
+        self.textarea.font_tb.setMovable(False)
+        self.textarea.format_tb.setMovable(False)
+        self.textarea.edit_tb.hide()
+        self.textarea.comboFont.setMaximumWidth(120)
+        self.textarea.comboStyle.setMaximumWidth(120)
+        self.textarea.statusBar().clearMessage()
+        self.textarea.setMaximumHeight(240)
         # self.textarea = IdeasTextArea(self)
         # self.textarea.load(QUrl.fromLocalFile("/home/atharva/GUI/fig-dash/resources/static/ideas.html"))
 
