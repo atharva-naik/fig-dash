@@ -68,6 +68,11 @@ class FloatMenu(QWidget):
             tip="Have an idea? write it down. Tell me when I should remind you.",
             size=QSize(45,45),
         )
+        self.newsBtn = self.initMenuBtn(
+            icon=FigD.Icon("widget/floatmenu/news.png"),
+            tip="Discover news and tune your feed to suit your interests.",
+            size=QSize(45,45),
+        )
         self.botBtn = self.initMenuBtn(
             icon=FigD.Icon("widget/floatmenu/bot.png"),
             tip="Bot assistant to help you out with productivity.",
@@ -81,6 +86,7 @@ class FloatMenu(QWidget):
         self.layout.addWidget(self.kanbanBtn)
         self.layout.addWidget(self.notesBtn)
         self.layout.addWidget(self.ideasBtn)
+        self.layout.addWidget(self.newsBtn)
         self.layout.addWidget(self.botBtn)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
