@@ -107,11 +107,11 @@ class PageInfo(QWidget):
         self.time_to_read.setText(f" {word_count // 200} mins")
         # self.setFixedHeight(100)
 class Browser(QWebEngineView):
-    def __init__(self, parent: Union[None, QWidget]):
+    def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25):
         super(Browser, self).__init__(parent)
         self.historyIndex = 0
         self.browsingHistory = []
-        self.currentZoomFactor = 1.25
+        self.currentZoomFactor = zoomFactor
         self.setZoomFactor(self.currentZoomFactor)
     # def pageIconCallback(self, html: str):
     #     from bs4 import BeautifulSoup
