@@ -13,12 +13,13 @@ from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow,
 
 dash_searchbar_style = jinja2.Template('''
 QLineEdit {
-    color: #000; /* #ad3700; */
     border: 0px;
     font-size: 16px;
     padding-top: 5px;
     padding-bottom: 5px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2: 0, stop: 0 #828282, stop: 0.5 #eee, stop: 1 #828282);
+    color: #6e6e6e; /* #ad3700; */
+    /* background: qlineargradient(x1 : 1, y1 : 0, x2 : 0, y2: 0, stop: 0 #828282, stop: 0.5 #eee, stop: 1 #828282); */
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
     border-radius: {{ BORDER_RADIUS }};
 }
 QLabel {
@@ -62,7 +63,8 @@ class DashSearchBar(QLineEdit):
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
         glow_effect.setOffset(2,0)
-        glow_effect.setColor(QColor(235, 156, 52))
+        glow_effect.setColor(QColor(235, 95, 52))
+        # glow_effect.setColor(QColor(235, 156, 52))
         self.setGraphicsEffect(glow_effect)
 
     def search(self):
@@ -195,8 +197,8 @@ class DashNavBar(QWidget):
         # self.setFixedHeight(50)
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
-        glow_effect.setOffset(0,3)
-        glow_effect.setColor(QColor(235, 156, 52))
+        glow_effect.setOffset(2,2)
+        glow_effect.setColor(QColor(235, 95, 52))
         self.setGraphicsEffect(glow_effect)
         # layout.addStretch(1)
     def connectTabWidget(self, tabWidget):
@@ -204,6 +206,7 @@ class DashNavBar(QWidget):
         self.reloadBtn.clicked.connect(tabWidget.reloadUrl)
         self.nextBtn.clicked.connect(tabWidget.nextUrl)
         self.prevBtn.clicked.connect(tabWidget.prevUrl)
+        self.homeBtn.clicked.connect(tabWidget.home)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):
 #         super(DashSearchBar, self).__init__(parent)

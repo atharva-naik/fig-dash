@@ -42,7 +42,7 @@ QTabBar::tab:hover {
 }
 QTabBar::tab:selected {
     border: 0px;
-    color: #bf3636; /* #eb5f34; */
+    color: #eb5f34;
     font-size: 18px;
     padding-top: 2px;
     padding-left: 10px;
@@ -52,8 +52,8 @@ QTabBar::tab:selected {
     margin-right: 10px;
     margin-top: 3px;
     margin-bottom: 3px;
-    /* border-bottom: 4px solid #eb5f34; */
-    border-bottom: 4px solid #bf3636;
+    border-bottom: 4px solid #eb5f34;
+    /* border-bottom: 4px solid #bf3636; */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
 clock_style = '''

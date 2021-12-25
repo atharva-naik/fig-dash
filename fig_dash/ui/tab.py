@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import jinja2
+import getpass
 from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon
@@ -191,7 +192,20 @@ class DashTabWidget(QTabWidget):
     def home(self):
         currentWidget = self.currentWidget()
         if isinstance(currentWidget, Browser):
-            currentWidget.load(FigD.static("home.html"))
+            currentWidget.load(
+                FigD.static(
+                    "home.html",
+                    USERNAME=getpass.getuser(),
+                    HOME_CSS=FigD.staticUrl("home.css"),
+                )
+            )
+
+    def openHome(self):
+        self.openUrl(url=FigD.static(
+            "home.html",
+            USERNAME=getpass.getuser(),
+            HOME_CSS=FigD.staticUrl("home.css"),
+        ).toString())
 
     def openUrl(self, url: str="https://google.com"):
         qurl = QUrl(url)

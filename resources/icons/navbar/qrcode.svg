@@ -7,7 +7,7 @@
   <title>QR coder</title>
   <desc>Manually edited diagram of qr code</desc>
   <!--  <rect x="0" y="0" width="300" height="422" stroke="none" fill="#CFA"/>  -->
-<g transform="scale(.5,.5)" fill="none" stroke="#292929" stroke-width="2" stroke-linecap="butt">
+<g transform="scale(.5,.5)" fill="none" stroke="#eb5f34" stroke-width="2" stroke-linecap="butt">
   <path id="A" d="M3,3 h8 v8 h-8 v-8 z M6,7 h2"/>
   <use xlink:href="#A" x="18" y="0" />
   <use xlink:href="#A" x="0" y="18" />

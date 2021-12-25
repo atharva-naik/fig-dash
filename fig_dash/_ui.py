@@ -128,7 +128,8 @@ class DashWindow(QMainWindow):
     def initTabWidget(self):
         tabs = DashTabWidget(self)
         tabs.connectWindow(self)
-        tabs.openUrl("https://github.com/atharva-naik")
+        tabs.openHome()
+        # tabs.openUrl("https://github.com/atharva-naik")
         dummyBtn = QToolButton(self)
         dummyBtn.setStyleSheet("""
         QToolButton {

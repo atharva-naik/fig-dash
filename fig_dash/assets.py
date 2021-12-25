@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 '''Asset management for ScriptO'''
 import os
+import jinja2
 from pathlib import Path
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QIcon, QFont
@@ -35,15 +36,22 @@ class AssetManager:
         '''return absolute path of an asset'''
         return os.path.join(self.resource_dir, path)
 
-    def static(self, path: str) -> str:
+    def static(self, path: str, **params) -> str:
         '''give relative path and get absolute static path.'''
-        return os.path.join(self.static_dir, path)
+        template_path = os.path.join(self.static_dir, path)
+        with open(template_path) as f:
+            template = jinja2.Template(f.read())
+            html = template.render(**params)
+        with open("/tmp/fig_dash.rendered.content.html", "w") as f:
+            f.write(html)
+
+        return QUrl.fromLocalFile("/tmp/fig_dash.rendered.content.html")
 
     def staticUrl(self, path: str) -> QUrl:
         '''local url given static path'''
-        filePath = self.static(path)
+        filePath = os.path.join(self.static_dir, path)
 
-        return QUrl.fromLocalFile(filePath)
+        return QUrl.fromLocalFile(filePath).toString()
 
     def Icon(self, name:str) -> QIcon :
         '''return QIcon'''
