@@ -54,7 +54,7 @@ class FloatMenu(QWidget):
             size=QSize(45,45),
         )
         self.kanbanBtn = self.initMenuBtn(
-            icon=FigD.Icon("widget/floatmenu/kanban.png"),
+            icon=FigD.Icon("widget/floatmenu/kanban.jpg"),
             tip="Organize your project with a kanban board.",
             size=QSize(45,45),
         )
@@ -89,6 +89,7 @@ class FloatMenu(QWidget):
         self.dash_window = dash_window
         self.calendarBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
         self.clockBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
+        self.ideasBtn.clicked.connect(dash_window.ideas.toogle)
 
     def toggle(self):
         '''toggle visibility of dashboard widgets.'''

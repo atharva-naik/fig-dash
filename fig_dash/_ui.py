@@ -16,6 +16,7 @@ from fig_dash.ui.browser import PageInfo
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
+from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.date_time import DashClock, DashCalendar
@@ -185,16 +186,19 @@ class DashWindow(QMainWindow):
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)
         self.floatmenu.move(2,30)
-        self.floatmenu.connectWindow(self)
         # page info.
         self.page_info = PageInfo(self.tabs)
         # self.page_info.setFixedSize(QSize(100,100))
         # self.page_info.move(500,10)
+        self.ideas = IdeasWidget(self.tabs)
+        self.ideas.move(80, 540)
+        self.ideas.hide()
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
         layout.insertWidget(0, self.navbar)
         layout.insertWidget(0, self.topbar)
+        self.floatmenu.connectWindow(self)
         # layout.addStretch(1)
         return centralWidget
 
@@ -207,15 +211,11 @@ class DashWindow(QMainWindow):
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
             self.page_info.move(self.width()-200, 50)
+            self.ideas.move(80, self.height()-350)
             # if self.firstResizeOver:
             #     width = self.width() 
-            #     self.tabs.dropdown.rePos(
-            #         width=width,
-            #         offset=170,
-            #     )
+            #     self.tabs.dropdown.rePos(width=width, offset=170)
             # TODO: really ugly jugaad. Fix this.
-            # if self.firstResizeOver == False:
-            #     self.firstResizeOver = True
         return super(DashWindow, self).eventFilter(obj, event)
 
     def moveEvent(self, event):
