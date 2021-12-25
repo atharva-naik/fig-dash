@@ -8,10 +8,11 @@ from typing import Union, Tuple, List
 # from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR
+from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
 from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.browser import PageInfo
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
@@ -184,6 +185,10 @@ class DashWindow(QMainWindow):
         self.floatmenu = FloatMenu(self.tabs)
         self.floatmenu.move(2,30)
         self.floatmenu.connectWindow(self)
+        # page info.
+        self.page_info = PageInfo(self.tabs)
+        # self.page_info.setFixedSize(QSize(100,100))
+        # self.page_info.move(500,10)
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
@@ -200,7 +205,7 @@ class DashWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
-            pass
+            self.page_info.move(self.width()-200, 50)
             # if self.firstResizeOver:
             #     width = self.width() 
             #     self.tabs.dropdown.rePos(

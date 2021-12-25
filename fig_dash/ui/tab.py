@@ -182,6 +182,7 @@ class DashTabWidget(QTabWidget):
         self.setTabText(i, "  "+browser.page().title())
         browser.setZoomFactor(browser.currentZoomFactor)
         browser.setScrollbar(scrollbar_style)
+        browser.setWordCount()
         browser.setSelectionStyle()
         browser.setIcon(tabs=self, i=i)
         # print(icon.isNull())

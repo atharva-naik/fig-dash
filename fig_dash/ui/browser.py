@@ -5,8 +5,9 @@ from typing import Union
 from pprint import pprint
 from requests.exceptions import MissingSchema
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl
-from PyQt5.QtWidgets import QToolBar, QWidget, QAction
+from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize
+from PyQt5.QtWidgets import QToolBar, QToolButton, QLabel, QWidget, QAction, QVBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from ..utils import QFetchIcon
 from fig_dash.assets import FigD
@@ -43,6 +44,68 @@ selection_style = '''
 	color: #000;
     background-color: rgb(235,204,52);
 }'''
+class PageInfo(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(PageInfo, self).__init__(parent)
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        self.layout.setAlignment(Qt.AlignCenter)
+        # page info.
+        self.label = QLabel("Page Info")
+        self.label.setAlignment(Qt.AlignCenter)
+        self.layout.addWidget(self.label)
+        # word count of page.
+        self.word_count = QToolButton(self)
+        self.word_count.setIcon(FigD.Icon("time_to_read.svg"))
+        self.word_count.setIconSize(QSize(20,20))
+        self.word_count.setText(" 0 words")
+        self.word_count.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.word_count.setToolTip("word count of webpage.")
+        self.word_count.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.layout.addWidget(self.word_count)
+        # time taken to read.
+        self.time_to_read = QToolButton(self)
+        self.time_to_read.setIcon(FigD.Icon("word_count.svg"))
+        self.time_to_read.setIconSize(QSize(20,20))
+        self.time_to_read.setText(" 0 mins")
+        self.time_to_read.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.time_to_read.setToolTip("time taken to read webpage.")
+        self.time_to_read.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.layout.addWidget(self.time_to_read)
+        self.layout.addStretch(1)
+
+        self.setLayout(self.layout)
+        self.setStyleSheet('''
+        QWidget {
+            background: #000;
+        }
+        QLabel {
+            padding: 10px;
+            color: #eb5f34;
+            border: 0px;
+            font-size: 20px;
+            font-weight: bold;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));       
+        }
+        QToolButton {
+            color: #6e6e6e;
+            border: 0px;
+            padding: 5px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }''')
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(3,3)
+        glow_effect.setColor(QColor(235, 95, 52))
+        self.setGraphicsEffect(glow_effect)
+        self.setFixedWidth(150)
+        # self.setFixedWidth(100)
+    def update(self, word_count: int):
+        '''assuming average human adult reads at 200 wpm'''
+        self.word_count.setText(f" {word_count} words")
+        self.time_to_read.setText(f" {word_count // 200} mins")
+        # self.setFixedHeight(100)
 class Browser(QWebEngineView):
     def __init__(self, parent: Union[None, QWidget]):
         super(Browser, self).__init__(parent)
@@ -120,6 +183,22 @@ class Browser(QWebEngineView):
     def setUrl(self, url):
         self.append(url)
         super(Browser, self).setUrl(url)
+
+    def setWordCount(self):
+        code = '''
+        function calculateWordCount(text) {
+            const wordsArr = text.trim().split(" ")
+            return wordsArr.filter(word => word !== "").length
+        }
+        calculateWordCount(document.body.textContent);
+        '''
+        self.page().runJavaScript(code, self._word_count_callback)
+
+    def _word_count_callback(self, word_count: int):
+        try:
+            self.dash_window.page_info.update(word_count)
+        except AttributeError as e:
+            print("TabWidget not connected to DashWindow") 
 
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget 
@@ -227,3 +306,14 @@ document.head.appendChild(newSelectStyle);
 #     def closeEvent(self, event):
 #         self.saveSettings()
 #         super(MainWindow, self).closeEvent(event)
+def test_page_info():
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    import sys
+    app = QApplication(sys.argv)
+    page_info = PageInfo()
+    page_info.show()
+    app.exec()
+
+
+if __name__ == "__main__":
+    test_page_info()

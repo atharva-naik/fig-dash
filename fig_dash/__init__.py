@@ -6,8 +6,11 @@ from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import QEvent, Qt
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
 # fig-dash imports.
-from fig_dash.assets import FigD
-from fig_dash._ui import DashWindow
+try:
+    from fig_dash.assets import FigD
+    from fig_dash._ui import DashWindow
+except ImportError:
+    print("ImportError: most likely in DashWindow")
 # Contains all the fig dashboard code.
 
 

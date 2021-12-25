@@ -9,7 +9,7 @@ from fig_dash.api.system.battery import Battery
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton, QDialog, QSizePolicy, QGraphicsDropShadowEffect, QVBoxLayout, QHBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton, QDialog, QSizePolicy, QGraphicsDropShadowEffect, QVBoxLayout, QHBoxLayout, QTextEdit, QScrollArea
 
 
 notif_style = '''
@@ -83,6 +83,7 @@ class Notification(QWidget):
         self.content = QTextEdit()
         self.content.setHtml(args.get("msg"))
         self.content.setMaximumHeight(100)
+        self.content.setMinimumHeight(60)
         self.content.setReadOnly(True)
         self.content.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
         self.content.setStyleSheet('''
@@ -106,26 +107,29 @@ class Notification(QWidget):
         self.setLayout(self.layout)
 
 
-class NotifsPanel(QWidget):
+class NotifsPanel(QScrollArea):
     '''Notifications panel.'''
     def __init__(self, parent: Union[None, QWidget]=None):
         super(NotifsPanel, self).__init__(parent)
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)        
+        # layout = QVBoxLayout()
+        # layout.setContentsMargins(0, 0, 0, 0)        
         self.box = QWidget()
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(2)
-        self.box.setLayout(self.layout)
-        self.layout.addStretch(1)
+        self.boxLayout = QVBoxLayout()
+        self.boxLayout.setContentsMargins(0, 0, 0, 0)
+        self.boxLayout.setSpacing(2)
+        self.box.setLayout(self.boxLayout)
+        self.boxLayout.addStretch(1)
         self.setStyleSheet('''
         QWidget {
             border: 0px;
             background: transparent;
         }''')
-        layout.addStretch(1)
-        layout.addWidget(self.box)
-        self.setLayout(layout)
+        # layout.addStretch(1)
+        # layout.addWidget(self.box)
+        # self.setLayout(layout)
+        self.setWidget(self.box)
+        self.setWidgetResizable(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)        
 
     def popNotif(self, i: int):
         pass
@@ -141,7 +145,7 @@ class NotifsPanel(QWidget):
         time = now.strftime("%a, %b %d  %-I:%M %p")
         notif = Notification(self, time=time, **args)
         notif.dismissBtn.clicked.connect(self.dismiss)
-        self.layout.insertWidget(0, notif)
+        self.boxLayout.insertWidget(1, notif)
 
 def test_notifs():
     import sys
@@ -157,6 +161,36 @@ def test_notifs():
         name="FigUI",
         icon="/home/atharva/GUI/FigUI/logo.png",
         msg="Upgrade to <b><i>premium</i></b> version for benefits",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="A notification",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="Yet another notification",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="Damn it, another notification :(",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="Damn it, another notification :(",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="Damn it, another notification :(",
+    )
+    notifs_panel.pushNotif(
+        name="FigUI",
+        icon="/home/atharva/GUI/FigUI/logo.png",
+        msg="Damn it, another notification :(",
     )
     # notifs_panel.pushNotif(
     #     name="ScriptO",

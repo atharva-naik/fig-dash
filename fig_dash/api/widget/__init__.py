@@ -1,0 +1,1 @@
+# backend API if needed by any widget (e.g. weather widget)
