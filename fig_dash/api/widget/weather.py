@@ -31,9 +31,46 @@ class WeatherEngine:
         return area
 
     def get_current_condition(self, data: Union[None, dict]=None):
+        current_condition = {}
         if data is None:
             data = self.history[-1]
-        data = data["nearest_area"][0]
+        data = data["current_condition"][0]
+        current_condition["feels_like"] = {
+            "C": data["FeelsLikeC"],
+            "F": data["FeelsLikeF"],
+        }
+        current_condition["humidity"] = data["humidity"]
+        current_condition["datetime"] = data["localObsDateTime"]
+        current_condition["cloud_cover"] = data["cloudcover"]
+        current_condition["observed_at"] = data["observation_time"]
+        current_condition["precipitation"] = {
+            "mm": data["precipInches"],
+            "inch": data["precipMM"],
+        }
+        current_condition["pressure"] = {
+            ".": data["pressure"],
+            "inches": data["pressureInches"],
+        }
+        current_condition["temp"] = {
+            "C": data["temp_C"],
+            "F": data["temp_F"],
+        }
+        current_condition["uv"] = data["uvIndex"]
+        current_condition["visibility"] = {   
+            ".": data["visibility"],
+            "miles": data["visibilityMiles"],
+        }
+        current_condition["code"] = data["weatherCode"]
+        current_condition["desc"] = data["weatherDesc"][0]['value']
+        current_condition["icon_url"] = data["weatherIconUrl"][0]['value']
+        current_condition["wind"] = {
+            "deg": data["winddirDegree"],
+            "dir": data["winddir16Point"],
+            "speed": data["windspeedKmph"],
+            "speed_miles": data["windspeedMiles"],
+        }
+
+        return current_condition
 
     def get_lat_lon(self, data: Union[None, dict]=None):
         '''
