@@ -22,9 +22,7 @@ QuillHTML = jinja2.Template('''<!DOCTYPE html>
         <title>{{ TITLE }}</title>
     </head>
     <body>
-        <div name="wrapper" style="height: 100%; flex: 1">
-            <div id="quill-editor" style="height: 100%; flex: 1"></div>
-        </div>
+        <div id="quill-editor" style="height: 100vh; flex: 1"></div>
         </div>
         <script>{{ JS }}</script>
         <script>{{ EMOJI_JS }}</script>
