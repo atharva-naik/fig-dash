@@ -18,6 +18,7 @@ from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
 from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
+from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.date_time import DashClock, DashCalendar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
@@ -186,14 +187,19 @@ class DashWindow(QMainWindow):
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)
+        self.floatmenu.hide()
         self.floatmenu.move(2,30)
         # page info.
         self.page_info = PageInfo(self.tabs)
-        # self.page_info.setFixedSize(QSize(100,100))
+        self.page_info.hide()
         # self.page_info.move(500,10)
         self.ideas = IdeasWidget(self.tabs)
-        self.ideas.move(80, 540)
+        self.ideas.move(80, 400)
         self.ideas.hide()
+        # weather widget.
+        self.weather = WeatherWidget(self.tabs)
+        self.weather.move(100, 40)
+        self.weather.hide()
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
@@ -212,7 +218,7 @@ class DashWindow(QMainWindow):
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
             self.page_info.move(self.width()-200, 50)
-            self.ideas.move(80, self.height()-350)
+            self.ideas.move(80, self.height()-470)
             # if self.firstResizeOver:
             #     width = self.width() 
             #     self.tabs.dropdown.rePos(width=width, offset=170)

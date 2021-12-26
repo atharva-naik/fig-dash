@@ -1,2 +1,4 @@
 parse
 boilerpy3
+pycountry
+matplotlib

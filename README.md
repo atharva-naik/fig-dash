@@ -13,3 +13,9 @@ An intelligent workspace, with a chromium browser instance at the centerstage an
 
 ## Screenshots
 
+## Helpful links
+Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter)
+Qt5 Rich text editor: [Axel Erfurt's Github gist](https://gist.github.com/Axel-Erfurt/e33608124a4e47167ba76f4d62cba9ca)
+Weather data: [wttr.in](https://github.com/chubin/wttr.in)
+Javascript rich text editor: [quill.js](https://quilljs.com/)
+icons: [flaticon.com](https://www.flaticon.com/ )

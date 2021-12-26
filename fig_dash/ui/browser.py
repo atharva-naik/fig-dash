@@ -117,6 +117,11 @@ class PageInfo(QWidget):
         layout.addWidget(wrapper)
         self.setLayout(layout)
         # self.setFixedWidth(100)
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+    
     def update(self, word_count: int):
         '''assuming average human adult reads at 200 wpm'''
         self.word_count.setText(f" {word_count} words")

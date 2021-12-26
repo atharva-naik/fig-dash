@@ -207,6 +207,11 @@ class TitleBar(QToolBar):
             tip="zoom in",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.wordCountBtn = self.initTitleBtn(
+            "titlebar/word_count.svg", 
+            tip="toggle visibility of word count, time to read display",
+            callback=self.callback if parent is None else parent.page_info.toggle
+        )
         self.findBtn = self.initTitleBtn(
             "titlebar/find_in_page.svg", 
             tip="find in page",
@@ -281,6 +286,7 @@ class TitleBar(QToolBar):
         self.addWidget(self.zoomOutBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.widgetsToggleBtn)
+        self.addWidget(self.wordCountBtn)
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())

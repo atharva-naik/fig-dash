@@ -64,12 +64,15 @@ class DashUI(QApplication):
             # print("unbluring background")
         return super().notify(obj, event)
 
-    def launch(self):
+    def launch(self, maximized=True):
         '''
         launch app ui.
         show QMainWindow and then run QApplication
         '''
-        self.window.show()
+        if maximized:
+            self.window.showMaximized()
+        else:
+            self.window.show()
         sys.exit(self.run())
 
     def run(self):

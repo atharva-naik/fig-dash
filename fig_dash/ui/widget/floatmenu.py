@@ -95,7 +95,8 @@ class FloatMenu(QWidget):
         self.dash_window = dash_window
         self.calendarBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
         self.clockBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
-        self.ideasBtn.clicked.connect(dash_window.ideas.toogle)
+        self.ideasBtn.clicked.connect(dash_window.ideas.toggle)
+        self.weatherBtn.clicked.connect(dash_window.weather.toggle)
 
     def toggle(self):
         '''toggle visibility of dashboard widgets.'''

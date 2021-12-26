@@ -139,7 +139,7 @@ class IdeasWidget(QWidget):
         self.setGraphicsEffect(glow_effect)
         # self.movie.stop()
 
-    def toogle(self):
+    def toggle(self):
         if self.isVisible():
             self.hide()
         else:

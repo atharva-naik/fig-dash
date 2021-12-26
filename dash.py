@@ -6,7 +6,7 @@ from fig_dash import DashUI
 
 def main(**kwargs):
     ui = DashUI(sys.argv, **kwargs)
-    ui.launch()
+    ui.launch(maximized=True)
 
 
 if __name__ == '__main__':
