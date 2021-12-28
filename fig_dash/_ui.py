@@ -20,6 +20,7 @@ from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
+from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.date_time import DashClock, DashCalendar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
@@ -154,6 +155,7 @@ class DashWindow(QMainWindow):
         centralWidget = QWidget()
         centralWidget.setLayout(layout)
         # add tab widget.
+        self.navbar = DashNavBar(self)
         self.tabs = self.initTabWidget()
         # top bar.
         self.topbar = QWidget()
@@ -173,7 +175,6 @@ class DashWindow(QMainWindow):
         topLayout.addWidget(self.tabs.cornerWidget())
         # topLayout.addWidget(self.tabs.dropdownBtn)
         # add search bar.
-        self.navbar = DashNavBar(self)
         self.navbar.setFixedHeight(30)
         self.navbar.connectTabWidget(self.tabs)
         # main horizontal splitter.
@@ -187,14 +188,15 @@ class DashWindow(QMainWindow):
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)
-        self.floatmenu.hide()
+        # self.floatmenu.hide()
         self.floatmenu.move(2,30)
+        # system utilities bar.
+        self.sysutilsbar = SysUtilsBar(self.tabs)
         # page info.
         self.page_info = PageInfo(self.tabs)
-        self.page_info.hide()
-        # self.page_info.move(500,10)
+        # self.page_info.hide()
+        # ideas widget.
         self.ideas = IdeasWidget(self.tabs)
-        self.ideas.move(80, 400)
         self.ideas.hide()
         # weather widget.
         self.weather = WeatherWidget(self.tabs)
@@ -217,8 +219,9 @@ class DashWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
-            self.page_info.move(self.width()-200, 50)
+            self.page_info.move(self.width()-250, 50)
             self.ideas.move(80, self.height()-470)
+            self.sysutilsbar.move(self.tabs.width()-50, 80)
             # if self.firstResizeOver:
             #     width = self.width() 
             #     self.tabs.dropdown.rePos(width=width, offset=170)

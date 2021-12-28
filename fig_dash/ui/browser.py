@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QToolBar, QToolButton, QLabel, QWidget, QAction, QVB
 from ..utils import QFetchIcon
 from fig_dash.assets import FigD
 
-
+# HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -122,7 +122,9 @@ class PageInfo(QWidget):
             self.hide()
         else: self.show()
     
-    def update(self, word_count: int):
+    def update(self, word_count: Union[int, None]):
+        if word_count is None:
+            word_count = 0
         '''assuming average human adult reads at 200 wpm'''
         self.word_count.setText(f" {word_count} words")
         self.time_to_read.setText(f" {word_count // 200} mins")

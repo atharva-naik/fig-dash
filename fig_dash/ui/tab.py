@@ -5,9 +5,9 @@ import jinja2
 import getpass
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QGraphicsDropShadowEffect
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -65,7 +65,7 @@ class TabsSearchDropdown(QWidget):
     def initSearchBar(self):
         searchbar = QLineEdit(self)
         searchAction = QAction()
-        searchAction.setIcon(QIcon("/home/atharva/GUI/fig-dash/resources/icons/tabbar/search.svg"))
+        searchAction.setIcon(FigD.Icon("tabbar/search.svg"))
         searchbar.addAction(searchAction)
 
         return searchbar
@@ -179,7 +179,13 @@ class DashTabWidget(QTabWidget):
         try: dash_window = self.dash_window
         except AttributeError as e: return
         url = browser.url().toString()
-        dash_window.navbar.searchbar.setText(url)
+
+        if url != "file:///tmp/fig_dash.rendered.content.html":    
+            dash_window.navbar.searchbar.setText(url)
+        else:
+            dash_window.navbar.searchbar.setText("")
+            dash_window.navbar.searchbar.setPlaceholderText("Search Google or type a URL")
+
         self.setTabText(i, "  "+browser.page().title())
         browser.setZoomFactor(browser.currentZoomFactor)
         browser.setScrollbar(scrollbar_style)
@@ -298,6 +304,42 @@ class TabBar(QTabBar):
     #     width = sizeHint.width()
     #     height = sizeHint.height()
     #     return QSize(width+50, height)
+    def contextMenuEvent(self, event):
+        contextMenu = QMenu(self)
+        # contextMenu.setIconSize(QSize(30,30))
+        newTabToRight = contextMenu.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab to the right")
+        addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
+        addToGroup = contextMenu.addAction("Add tab to group")
+        moveTab = contextMenu.addAction("Move tab to new window")
+        contextMenu.addSeparator()
+        reloadAct = contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
+        duplicate = contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
+        pin = contextMenu.addAction(FigD.Icon("tabbar/pin.svg"), "Pin")
+        mute = contextMenu.addAction(FigD.Icon("tabbar/mute.svg"), "Mute site")
+        contextMenu.addSeparator()
+        close = contextMenu.addAction(FigD.Icon("tabbar/close-tab.png"), "Close")
+        closeOther = contextMenu.addAction("Close other tabs")
+        closeToRight = contextMenu.addAction(FigD.Icon("tabbar/close-all-tabs.png"), "Close tabs to the right")
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(3,3)
+        glow_effect.setColor(QColor(235, 95, 52))
+        contextMenu.setGraphicsEffect(glow_effect)
+        contextMenu.setStyleSheet('''
+        QMenu {
+            color: #fff;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }
+        QMenu:selected  {
+            color: #292929;
+            font-weight: bold;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+        }
+        QMenu::separator {
+            background: #484848;
+        }''')
+        action = contextMenu.exec_(self.mapToGlobal(event.pos()))
+
     def resizeEvent(self, event):
         """Resize the widget and make sure the plus button is in the correct location."""
         super(TabBar, self).resizeEvent(event)

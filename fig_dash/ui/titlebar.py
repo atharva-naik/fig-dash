@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # titlebar for the main window
 import sys
+from fig_dash.api.system.network import NetworkHandler
 import jinja2
 from typing import Union
 # fig-dash imports.
@@ -158,6 +159,15 @@ class WifiBtn(QToolButton):
         QToolButton {
             border: 0px;
         }''')
+        self.network_manager = NetworkHandler().manager
+        name = self.network_manager.net_info.name
+        self.netName = QLabel(name)
+        self.netName.setStyleSheet('''
+        QLabel {
+            color: #fff;
+            font-size: 14px;
+            background: transparent;
+        }''')
 
 
 class TitleBar(QToolBar):
@@ -232,25 +242,22 @@ class TitleBar(QToolBar):
             # callback=self.callback if parent is None else parent.tabs.save
         )
         self.bluetoothBtn.setFixedSize(QSize(15,15))
-        self.onScreenKeyboard = self.initTitleBtn(
-            "titlebar/onscreenkeyboard.svg", 
-            tip="open on screen keyboard.",
-            # callback=self.callback if parent is None else parent.tabs.save
-        )
-        self.transBtn = self.initTitleBtn(
-            "titlebar/trans.svg", 
-            tip="open translation utility.",
-            # callback=self.callback if parent is None else parent.tabs.save
-        )
-        self.ttsBtn = self.initTitleBtn(
-            "titlebar/tts.svg", 
-            tip="open text to speech.",
-            # callback=self.callback if parent is None else parent.tabs.save
-        )
-        self.wifi = self.initTitleBtn(
-            "titlebar/wifi-1.png",
-            tip="wifi indicator",
-        )
+        # self.onScreenKeyboard = self.initTitleBtn(
+        #     "titlebar/onscreenkeyboard.svg", 
+        #     tip="open on screen keyboard.",
+        #     # callback=self.callback if parent is None else parent.tabs.save
+        # )
+        # self.transBtn = self.initTitleBtn(
+        #     "titlebar/trans.svg", 
+        #     tip="open translation utility.",
+        #     # callback=self.callback if parent is None else parent.tabs.save
+        # )
+        # self.ttsBtn = self.initTitleBtn(
+        #     "titlebar/tts.svg", 
+        #     tip="open text to speech.",
+        #     # callback=self.callback if parent is None else parent.tabs.save
+        # )
+        self.wifi = WifiBtn()
         self.wifi.setFixedSize(QSize(18,18))
 
         self.battery = BatteryIndicator(self)
@@ -291,13 +298,14 @@ class TitleBar(QToolBar):
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
         self.addWidget(self.wifi)
+        self.addWidget(self.wifi.netName)
         self.addWidget(self.langBtn)
         self.addWidget(self.bluetoothBtn)
         self.addWidget(self.battery.pluggedIcon)
         self.addWidget(self.battery)
-        self.addWidget(self.onScreenKeyboard)
-        self.addWidget(self.transBtn)
-        self.addWidget(self.ttsBtn)
+        # self.addWidget(self.onScreenKeyboard)
+        # self.addWidget(self.transBtn)
+        # self.addWidget(self.ttsBtn)
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         self.setMaximumHeight(30)

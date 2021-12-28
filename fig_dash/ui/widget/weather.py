@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import json
 import jinja2
 from typing import Union, List
 # Qt5 imports.
 from PyQt5.QtGui import QPixmap, QIcon, QMovie, QColor
-from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal
+from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal, QThread
 from PyQt5.QtWidgets import QLabel, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QToolBar, QSizePolicy, QApplication, QGraphicsDropShadowEffect
 # fig-dash imports.
 from fig_dash.assets import FigD
@@ -32,33 +33,35 @@ countries = {
 def fetchIcon(desc):
     desc = desc.lower()
     if "haze" in desc:
-        return "haze"
+        return "widget/weather/fog.gif"
     elif "mist" in desc:
-        return "haze"
+        return "widget/weather/fog.gif"
     elif "fog" in desc:
-        return "haze"
+        return "widget/weather/fog.gif"
     elif "sun" in desc:
         return "widget/weather/sun.gif"
     elif "clear" in desc:
         return "widget/weather/sun.gif"
     elif "cloud" in desc:
-        return "widget/weather/cloud.gif"
+        return "widget/weather/cloudy.png"
     elif "overcast" in desc:
-        return "widget/weather/cloud.gif"
+        return "widget/weather/cloudy.png"
     elif "snow" in desc:
-        return "snow"
+        return "widget/weather/snow.gif"
     elif "rain" in desc:
-        return "rain"
+        return "widget/weather/rain.gif"
     elif "drizzle" in desc:
-        return "rain"
+        return "widget/weather/rain.gif"
+    else:
+        return desc
 
 
-class WeatherUIWorker(QObject):
+class WeatherAPIFetchWorker(QObject):
     finished = pyqtSignal()
     progress = pyqtSignal(str, str)
     def __init__(self):
         self.weather_engine = WeatherEngine()
-        super(WeatherUIWorker, self).__init__()
+        super(WeatherAPIFetchWorker, self).__init__()
 
     def run(self, **units):
         # fetch weather data.
@@ -66,6 +69,11 @@ class WeatherUIWorker(QObject):
         # get current weather condition.
         weather = self.weather_engine.get_current_condition()
         area = self.weather_engine.get_nearest_area()
+        self.progress.emit(
+            json.dumps(weather), 
+            json.dumps(area)
+        )
+        self.finished.emit()
 # worker.run(temp='C', precip='mm', pressure='inches', )
 
 weather_widget_style = '''
@@ -95,6 +103,7 @@ class WeatherWidget(QWidget):
         glow_effect.setColor(QColor(235, 95, 52))
         self.setGraphicsEffect(glow_effect)
 
+        self.apiData = None
         currentWeather = QWidget()
         cwLayout = QVBoxLayout()
         cwLayout.setContentsMargins(0, 0, 0, 0)
@@ -131,7 +140,23 @@ class WeatherWidget(QWidget):
         self.setLayout(wrapperLayout)
 
     def update(self):
-        pass
+        import time
+        s = time.time()
+        # create updating thread.
+        self.update_thread = QThread()
+        # create weather API fetching worker.
+        self.fetch_worker = WeatherAPIFetchWorker()
+        self.fetch_worker.moveToThread(self.update_thread)
+        # connect to slots
+        self.update_thread.started.connect(self.fetch_worker.run)
+        self.update_thread.finished.connect(self.update_thread.deleteLater)
+
+        self.fetch_worker.finished.connect(self.update_thread.quit)
+        self.fetch_worker.finished.connect(self.fetch_worker.deleteLater)
+        self.fetch_worker.progress.connect(self.reportProgress)
+        # start updation thread.
+        self.update_thread.start()
+        print(f"update request launched in {time.time()-s}s")
 
     def initWeather(self):
         weather = QWidget()
@@ -141,11 +166,12 @@ class WeatherWidget(QWidget):
         weather.setLayout(layout)
         # weather icon
         tempIcon = QLabel()
-        desc = "Sunny"
+        desc = "Loading"
         descLabel = QLabel(f"<span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>{desc}</span>")
         descLabel.setAlignment(Qt.AlignCenter)
         layout.addWidget(descLabel)
-        path = FigD.icon(fetchIcon(desc))
+        path = FigD.icon(fetchIcon(""))
+        print(path)
         self.weatherGif = QMovie(path)
         tempIcon.setMovie(self.weatherGif)
         tempIcon.setAlignment(Qt.AlignCenter)
@@ -216,6 +242,17 @@ class WeatherWidget(QWidget):
         miscLayout.addWidget(pressure)
         miscLayout.addWidget(uvIndex)
         layout.addWidget(miscGroup)
+        # create referencs for relevant widgets.
+        self.tempIcon = tempIcon
+        self.tempLabel = tempLabel
+        self.descLabel = descLabel
+        self.humidity = humidity
+        self.windDir = windDir
+        self.windSpeed = windSpeed
+        self.cloudCover = cloudCover
+        self.precipitation = precipitation
+        self.pressure = pressure
+        self.uvIndex = uvIndex
 
         return weather
 
@@ -268,10 +305,48 @@ class WeatherWidget(QWidget):
         layout.addWidget(region)
         layout.addWidget(additionalInfo)
         area.setLayout(layout)
+        self.cityAndRegion = cityAndRegion
+        self.coords = coords
+        self.country = country
+        self.population = population
 
         return area
 
+    def reportProgress(self, weather: str, area: str):
+        area = json.loads(area)
+        weather = json.loads(weather)
+        self.apiData = {"area": area, "weather": weather}
+        # update area related fields.
+        self.cityAndRegion.setText(f"{area['area']}, {area['region']}")
+        x, y = area["coords"]
+        self.coords.setText(f" {x}, {y}")
+        self.country.setText(" "+area["country"])
+        self.population.setText(" "+area["population"])
+        # update weather related fields.
+        self.humidity.setText(" "+weather["humidity"]+"%")
+        wind = weather["wind"]
+        self.windSpeed.setText(f" {wind['speed']} kmph")
+        self.windDir.setText(f" {wind['deg']}°, {wind['dir']}")
+        self.cloudCover.setText(f" {weather['cloud_cover']}%")
+        self.precipitation.setText(f" {weather['precipitation']['mm']} mm")
+        self.pressure.setText(f" {weather['pressure']['inches']} inches")
+        self.uvIndex.setText(f" uv index: {weather['uv']}")
+        self.tempLabel.setText(f"<span style='font-size: 40px; font-weight: bold;'>{weather['temp']['C']}°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: gray;'>feels like {weather['feels_like']['C']}°C</span> <br> observed at {weather['observed_at']}</span>")
+        self.descLabel.setText(f"<span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>{weather['desc']}</span>")
+        # path = fetchIcon(weather['desc'])
+        path = FigD.icon(fetchIcon('mist'))
+        self.weatherGif = QMovie(path)
+        self.weatherGif.setScaledSize(QSize(150,150))
+        self.tempIcon.setMovie(self.weatherGif)
+        self.weatherGif.start()
+        # resize widget.
+        w = self.width()
+        h = self.height()
+        self.resize(w+80, h)
+
     def toggle(self):
+        if self.apiData is None:
+            self.update()
         if self.isVisible():
             self.hide()
         else:
@@ -297,6 +372,7 @@ def test_weather_widget():
     s = time.time()
     weather = WeatherWidget()
     weather.show()
+    weather.update()
     print(time.time()-s)
     app.exec()
 
