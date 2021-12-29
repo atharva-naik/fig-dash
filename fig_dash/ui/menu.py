@@ -86,9 +86,17 @@ class DashMenu(QTabWidget):
         self.addTab(self.editmenu, "Edit")
         self.addTab(self.codemenu, "Code")        
         self.collapse()
-        self.currentChanged.connect(self.onTabChange)
+        # self.currentChanged.connect(self.onTabChange)
+        self.tabBarClicked.connect(self.tabToggle)
         self.setStyleSheet(menu_style)
         self.setCornerWidget(self.toggleBtn)
+
+    def tabToggle(self, i):
+        '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
+        # print(self.currentIndex(), i)
+        if i == self.currentIndex(): 
+            self.toggle()
+        else: self.expand()
 
     def initToggleBtn(self):
         btn = QToolButton()
@@ -102,7 +110,6 @@ class DashMenu(QTabWidget):
         return btn
 
     def onTabChange(self, i: int):
-        # print(i)
         self.expand()
 
     @property

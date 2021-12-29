@@ -1,5 +1,6 @@
 # language mode.
 CMMimeTypeToLang = {
+    "text/x-python": "python",
     "text/apl": "apl",
     "text/x-ttcn-asn": "asn",
     "text/x-asterisk": "asterisk",
