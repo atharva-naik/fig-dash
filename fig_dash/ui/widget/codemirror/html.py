@@ -1,0 +1,537 @@
+import jinja2
+
+CMHtml = jinja2.Template(r'''
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <!-- core styling -->
+        <!-- <link rel="stylesheet" href="{{ MINIMAP_MIN_CSS }}" /> -->
+		
+        <style>
+            /* Chrome, safari */
+            *::-webkit-scrollbar {
+                width: 7px;
+                height: 7px;
+            }    
+            *::-webkit-scrollbar-track {
+                background-color: rgba(235, 235, 235, 0.1);
+            }
+    
+            *::-webkit-scrollbar-thumb {
+                background-color: gray;
+            }
+            *::-webkit-scrollbar-thumb:hover {
+                background-color: orange;
+            }
+            *::-webkit-scrollbar-corner {
+                background-color: transparent;
+                /* background: rgba(235, 235, 235, 0.1); */
+            }
+            /* Firefox */
+            /* .selector {
+                scrollbar-width: none;
+            } */
+        </style>
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jshint/2.9.5/jshint.min.js"></script>
+        
+        <!-- <script id="script">var widgets = []
+            function updateHints() {
+            editor.operation(function(){
+                for (var i = 0; i < widgets.length; ++i)
+                editor.removeLineWidget(widgets[i]);
+                widgets.length = 0;
+            
+                JSHINT(editor.getValue());
+                for (var i = 0; i < JSHINT.errors.length; ++i) {
+                var err = JSHINT.errors[i];
+                if (!err) continue;
+                var msg = document.createElement("div");
+                var icon = msg.appendChild(document.createElement("span"));
+                icon.innerHTML = "!!";
+                icon.className = "lint-error-icon";
+                msg.appendChild(document.createTextNode(err.reason));
+                msg.className = "lint-error";
+                widgets.push(editor.addLineWidget(err.line - 1, msg, {coverGutter: false, noHScroll: true}));
+                }
+            });
+            var info = editor.getScrollInfo();
+            var after = editor.charCoords({line: editor.getCursor().line + 1, ch: 0}, "local").top;
+            if (info.top + info.clientHeight < after)
+                editor.scrollTo(null, after - info.clientHeight + 3);
+            }
+            
+            window.onload = function() {
+            var sc = document.getElementById("script");
+            var content = sc.textContent || sc.innerText || sc.innerHTML;
+            
+            window.editor = CodeMirror(document.getElementById("code"), {
+                lineNumbers: true,
+                mode: "javascript",
+                value: content
+            });
+            
+            var waiting;
+            editor.on("change", function() {
+                clearTimeout(waiting);
+                waiting = setTimeout(updateHints, 500);
+            });
+            
+            setTimeout(updateHints, 100);
+            };
+        </script> -->
+        <style>
+            /* <link rel="stylesheet" href="https://codemirror.net/lib/codemirror.css"> */
+            {{ CM_CSS }}
+        </style>
+
+        <!-- editor themes -->
+        <link rel="stylesheet" href="https://codemirror.net/theme/3024-day.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/3024-night.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/abbott.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/abcdef.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ambiance-mobile.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ambiance.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ayu-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ayu-mirage.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/base16-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/base16-light.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/bespin.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/blackboard.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/cobalt.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/colorforth.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/darcula.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/dracula.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/duotone-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/duotone-light.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/eclipse.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/elegant.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/erlang-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/gruvbox-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/hopscotch.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/icecoder.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/idea.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/isotope.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/juejin.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/lesser-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/liquibyte.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/lucario.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/material-darker.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/material-ocean.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/material-palenight.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/material.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/mbo.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/mdn-like.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/midnight.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/monokai.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/moxer.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/neat.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/neo.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/night.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/nord.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/oceanic-next.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/panda-syntax.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/paraiso-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/paraiso-light.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/pastel-on-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/railscasts.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/rubyblue.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/seti.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/shadowfox.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/solarized.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ssms.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/the-matrix.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/tomorrow-night-bright.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/tomorrow-night-eighties.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/ttcn.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/twilight.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/vibrant-ink.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/xq-dark.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/xq-light.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/yeti.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/yonce.css">
+        <link rel="stylesheet" href="https://codemirror.net/theme/zenburn.css">
+        <!-- addon styling -->
+        <link rel="stylesheet" href="https://codemirror.net/addon/dialog/dialog.css">
+        <link rel="stylesheet" href="https://codemirror.net/addon/display/fullscreen.css">
+        <link rel="stylesheet" href="https://codemirror.net/addon/fold/foldgutter.css">
+        <link rel="stylesheet" href="https://codemirror.net/addon/search/matchesonscrollbar.css">
+        <link rel="stylesheet" href="https://codemirror.net/addon/scroll/simplescrollbars.css"></link>
+        <link rel="stylesheet" href="https://codemirror.net/addon/lint/lint.css"></link>
+        <link rel="stylesheet" href="https://codemirror.net/addon/tern/tern.css"></link>
+        <title>Code Mirror</title>
+    </head>
+    <body style="background-color: {{ EDITOR_BACKGROUND_COLOR }}">
+        <!-- <header class="top" style='background-color: black;'>
+            <div class="wrapper">
+            </div>
+        </header> -->
+        <div style="margin-left: auto; margin-right: auto;">
+            <p><span style="color: white; font-size: 13px">Select a theme </span>
+                <select style="text-align: center; background-color: #292929; color: #32a852; font-family: Monospace; border: 0px; outline: none;"  onchange="selectTheme()" id=select>
+                <option>default</option>
+                <option>3024-day</option>
+                <option>3024-night</option>
+                <option>abbott</option>
+                <option>abcdef</option>
+                <option>ambiance</option>
+                <option selected>ayu-dark</option>
+                <option>ayu-mirage</option>
+                <option>base16-dark</option>
+                <option>base16-light</option>
+                <option>bespin</option>
+                <option>blackboard</option>
+                <option>cobalt</option>
+                <option>colorforth</option>
+                <option>darcula</option>
+                <option>dracula</option>
+                <option>duotone-dark</option>
+                <option>duotone-light</option>
+                <option>eclipse</option>
+                <option>elegant</option>
+                <option>erlang-dark</option>
+                <option>gruvbox-dark</option>
+                <option>hopscotch</option>
+                <option>icecoder</option>
+                <option>idea</option>
+                <option>isotope</option>
+                <option>juejin</option>
+                <option>lesser-dark</option>
+                <option>liquibyte</option>
+                <option>lucario</option>
+                <option>material</option>
+                <option>material-darker</option>
+                <option>material-palenight</option>
+                <option>material-ocean</option>
+                <option>mbo</option>
+                <option>mdn-like</option>
+                <option>midnight</option>
+                <option>monokai</option>
+                <option>moxer</option>
+                <option>neat</option>
+                <option>neo</option>
+                <option>night</option>
+                <option>nord</option>
+                <option>oceanic-next</option>
+                <option>panda-syntax</option>
+                <option>paraiso-dark</option>
+                <option>paraiso-light</option>
+                <option>pastel-on-dark</option>
+                <option>railscasts</option>
+                <option>rubyblue</option>
+                <option>seti</option>
+                <option>shadowfox</option>
+                <option>solarized dark</option>
+                <option>solarized light</option>
+                <option>the-matrix</option>
+                <option>tomorrow-night-bright</option>
+                <option>tomorrow-night-eighties</option>
+                <option>ttcn</option>
+                <option>twilight</option>
+                <option>vibrant-ink</option>
+                <option>xq-dark</option>
+                <option>xq-light</option>
+                <option>yeti</option>
+                <option>yonce</option>
+                <option>zenburn</option>
+            </select>
+            </p>
+        </div>
+<textarea id="codemirror">
+{{ CODE_FILE_CONTENT }}
+</textarea>
+        <!-- core javascript source -->
+        <script src="https://codemirror.net/lib/codemirror.js"></script>
+        <!-- keymap -->
+        <script src="https://codemirror.net/keymap/sublime.js"></script>
+        <!-- addons -->
+        <script src="https://codemirror.net/addon/comment/comment.js"></script>
+        <script src="https://codemirror.net/addon/comment/continuecomment.js"></script>
+        <script src="https://codemirror.net/addon/dialog/dialog.js"></script>
+        <script src="https://codemirror.net/addon/wrap/hardwrap.js"></script>
+        <script src="https://codemirror.net/addon/display/autorefresh.js"></script>
+        <script src="https://codemirror.net/addon/display/fullscreen.js"></script>
+        <script src="https://codemirror.net/addon/display/panel.js"></script>
+        <script src="https://codemirror.net/addon/display/placeholder.js"></script>
+        <script src="https://codemirror.net/addon/display/rulers.js"></script>
+        <script src="https://codemirror.net/addon/fold/brace-fold.js"></script>
+        <script src="https://codemirror.net/addon/fold/comment-fold.js"></script>
+        <script src="https://codemirror.net/addon/fold/foldcode.js"></script>
+        <script src="https://codemirror.net/addon/fold/foldgutter.js"></script>
+        <script src="https://codemirror.net/addon/fold/indent-fold.js"></script>
+        <script src="https://codemirror.net/addon/fold/markdown-fold.js"></script>
+        <script src="https://codemirror.net/addon/fold/xml-fold.js"></script>
+        <script src="https://codemirror.net/addon/search/jump-to-line.js"></script>
+        <script src="https://codemirror.net/addon/search/match-highlighter.js"></script>
+        <script src="https://codemirror.net/addon/search/matchesonscrollbar.js"></script>
+        <script src="https://codemirror.net/addon/search/search.js"></script>
+        <script src="https://codemirror.net/addon/search/searchcursor.js"></script>
+        <script src="https://codemirror.net/addon/scroll/annotatescrollbar.js"></script>
+        <script src="https://codemirror.net/addon/scroll/scrollpastend.js"></script>
+        <script src="https://codemirror.net/addon/scroll/simplescrollbars.js"></script>
+        <!-- language highlighting scripts -->
+        <script src="https://codemirror.net/mode/javascript/javascript.js"></script>
+        <script src="https://codemirror.net/mode/python/python.js"></script>
+        <script src="https://codemirror.net/mode/markdown/markdown.js"></script>
+        <script src="https://codemirror.net/mode/css/css.js"></script>
+        <script src="https://codemirror.net/mode/shell/shell.js"></script>
+        <!-- addon edit -->
+        <script src="https://codemirror.net/addon/edit/closebrackets.js"></script>
+        <script src="https://codemirror.net/addon/edit/closetag.js"></script>
+        <script src="https://codemirror.net/addon/edit/continuelist.js"></script>
+        <script src="https://codemirror.net/addon/edit/matchbrackets.js"></script>
+        <script src="https://codemirror.net/addon/edit/matchtags.js"></script>
+        <script src="https://codemirror.net/addon/edit/trailingspace.js"></script>
+
+        <script src="https://codemirror.net/addon/lint/coffeescript-lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/css-lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/html-lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/javascript-lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/json-lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/lint.js"></script>
+        <script src="https://codemirror.net/addon/lint/yaml-lint.js"></script>
+        <script src="https://codemirror.net/addon/tern/tern.js"></script>
+        <script src="https://codemirror.net/addon/tern/worker.js"></script>
+        <script src="https://codemirror.net/addon/selection/active-line.js"></script>
+        <script src="https://codemirror.net/addon/selection/mark-selection.js"></script>
+        <script src="https://codemirror.net/addon/selection/selection-pointer.js"></script>
+        <!-- <script src="{{ JQUERY_JS }}"></script> -->
+        <!-- <script src="jquery.js"></script> -->
+        <!-- <script src="{{ MINIMAP_MIN_JS }}"></script> -->
+        <!-- <script src="pagemap-1.4.0.min.js"></script> -->
+        <!-- <script src="minimap.js"></script> -->
+        <script src="file:///home/atharva/GUI/FigUI/FigUI/handler/Code/static/qwebchannel.js"></script>
+        <style>
+            .CodeMirror-gutter-wrapper {
+                width: 80px;
+            }
+            .CodeMirror-linenumber {
+                /* padding: 1px 8px 0 5px; */
+                padding-left: 25px;
+                /* color: #c8d2d7; */
+                /* font-size: 10px; */
+            }
+            .CodeMirror {border: 1px solid black;}
+            .CodeMirror-activeline-gutter {background-image: url({{ HINT_IMAGE }}); background-color: purple}
+            .lint-error {font-family: arial; font-size: 70%; background: #ffa; color: #a00; padding: 2px 5px 3px; }
+            .lint-error-icon {color: white; background-color: red; font-weight: bold; border-radius: 50%; padding: 0 3px; margin-right: 7px;}
+       </style>
+        <script>
+// The bindings defined specifically in the Sublime Text mode
+            // var bindings = {
+            //   "Shift-Tab": "indentLess",
+            //   "Shift-Ctrl-K": "deleteLine",
+            //   "Alt-Q": "wrapLines",
+            //   "Ctr  extraKeys: {
+            //     'Ctrl-/': editor.execCommand('toggleComment')
+            //   }l-T": "transposeChars",
+            //   "Alt-Left": "goSubwordLeft",
+            //   "Alt-Right": "goSubwordRight",
+            //   "Ctrl-Up": "scrollLineUp",
+            //   "Ctrl-Down": "scrollLineDown",
+            //   "Ctrl-L": "selectLine",
+            //   "Shift-Ctrl-L": "splitSelectionByLine",
+            //   "Esc": "singleSelectionTop",
+            //   "Ctrl-Enter": "insertLineAfter",
+            //   "Shift-Ctrl-Enter": "insertLineBefore",
+            //   "Ctrl-D": "selectNextOccurrence",
+            //   "Shift-Ctrl-Space": "selectScope",
+            //   "Shift-Ctrl-M": "selectBetweenBrackets",
+            //   "Ctrl-M": "goToBracket",
+            //   "Shift-Ctrl-Up": "swapLineUp",
+            //   "Shift-Ctrl-Down": "swapLineDown",
+            //   "Ctrl-/": "toggleCommentIndented",
+            //   "Ctrl-J": "joinLines",
+            //   "Shift-Ctrl-D": "duplicateLine",
+            //   "F9": "sortLines",
+            //   "Shift-F9": "reverseSortLines",
+            //   "Ctrl-F9": "sortLinesInsensitive",
+            //   "Shift-Ctrl-F9": "reverseSortLinesInsensitive",
+            //   "F2": "nextBookmark",
+            //   "Shift-F2": "prevBookmark",
+            //   "Ctrl-F2": "toggleBookmark",
+            //   "Shift-Ctrl-F2": "clearBookmarks",
+            //   "Alt-F2": "selectBookmarks",
+            //   "Backspace": "smartBackspace",
+            //   "Ctrl-K Ctrl-D": "skipAndSelectNextOccurrence",
+            //   "Ctrl-K Ctrl-K": "delLineRight",
+            //   "Ctrl-K Ctrl-U": "upcaseAtCursor",
+            //   "Ctrl-K Ctrl-L": "downcaseAtCursor",
+            //   "Ctrl-K Ctrl-Space": "setSublimeMark",
+            //   "Ctrl-K Ctrl-A": "selectToSublimeMark",
+            //   "Ctrl-K Ctrl-W": "deleteToSublimeMark",
+            //   "Ctrl-K Ctrl-X": "swapWithSublimeMark",
+            //   "Ctrl-K Ctrl-Y": "sublimeYank",
+            //   "Ctrl-K Ctrl-C": "showInCenter",
+            //   "Ctrl-K Ctrl-G": "clearBookmarks",
+            //   "Ctrl-K Ctrl-Backspace": "delLineLeft",
+            //   "Ctrl-K Ctrl-1": "foldAll",
+            //   "Ctrl-K Ctrl-0": "unfoldAll",
+            //   "Ctrl-K Ctrl-J": "unfoldAll",
+            //   "Ctrl-Alt-Up": "addCursorToPrevLine",
+            //   "Ctrl-Alt-Down": "addCursorToNextLine",
+            //   "Ctrl-F3": "findUnder",
+            //   "Shift-Ctrl-F3": "findUnderPrevious",
+            //   "Shift-Ctrl-[": "fold",
+            //   "Shift-Ctrl-]": "unfold",
+            //   "Ctrl-H": "replace",
+            // }
+
+            // // The implementation of joinLines
+            // function joinLines(cm) {
+            // var ranges = cm.listSelections(), joined = [];
+            // for (var i = 0; i < ranges.length; i++) {
+            //     var range = ranges[i], from = range.from();
+            //     var start = from.line, end = range.to().line;
+            //     while (i < ranges.length - 1 && ranges[i + 1].from().line == end)
+            //     end = ranges[++i].to().line;
+            //     joined.push({start: start, end: end, anchor: !range.empty() && from});
+            // }
+            // cm.operation(function() {
+            //     var offset = 0, ranges = [];
+            //     for (var i = 0; i < joined.length; i++) {
+            //     var obj = joined[i];
+            //     var anchor = obj.anchor && Pos(obj.anchor.line - offset, obj.anchor.ch), head;
+            //     for (var line = obj.start; line <= obj.end; line++) {
+            //         var actual = line - offset;
+            //         if (line == obj.end) head = Pos(actual, cm.getLine(actual).length + 1);
+            //         if (actual < cm.lastLine()) {
+            //         cm.replaceRange(" ", Pos(actual), Pos(actual + 1, /^\s*/.exec(cm.getLine(actual + 1))[0].length));
+            //         ++offset;
+            //         }
+            //     }
+            //     ranges.push({anchor: anchor || head, head: head});
+            //     }
+            //     cm.setSelections(ranges, 0);
+            // });
+            // }
+
+            var editor = CodeMirror.fromTextArea(document.getElementById("codemirror"), {
+                value: "function myScript(){return 100;}\n",
+                lineNumbers: true,
+                electricChars: true,
+                lineSeparator: null,
+                mode: "text/{{ LANGUAGE }}",
+                indentUnit: 4,
+                keyMap: "sublime",
+                autoCloseBrackets: true,
+                matchBrackets: true,
+                styleActiveLine: true,
+                xml: true,
+                fencedCodeBlockHighlighting: true,
+                foldGutter: true,
+                highlightFormatting: true,
+                highlightNonStandardPropertyKeywords: true, 
+                gutters: ["breakpoints", "CodeMirror-linenumbers", "CodeMirror-foldgutter"],
+                // mode: "htmlmixed",
+                smartIndent: true,
+                theme: "ayu-dark",
+            });
+            editor.on("gutterClick", function(cm, n) {
+                var info = cm.lineInfo(n);
+                cm.setGutterMarker(n, "breakpoints", info.gutterMarkers ? null : makeMarker());
+                // cm.setGutterMarker(n, "jars", info.gutterMarkers ? null : setJar());
+            });
+            // function setJar() {
+            //     var marker = document.createElement("div");
+            //     marker.style.color = "#ff4d00";
+            //     marker.style.whiteSpace = "nowrap";
+            //     marker.innerHTML = `<img width='14px' src='{{ JAR_IMAGE }}' title="hints">`;
+
+            //     return marker;
+            // }
+            function makeMarker() {
+                var marker = document.createElement("div");
+                marker.style.color = "#ff4d00";
+                marker.style.whiteSpace = "nowrap";
+                marker.innerHTML = " ●" // `●<img width='14px' src='{{ HINT_IMAGE }}' title="hints">`;
+                return marker;
+            }
+
+            editor.setSize("100%", 600);
+            editor.setOption('viewportMargin', Infinity);
+            var input = document.getElementById("select");
+            function selectTheme() {
+                var theme = input.options[input.selectedIndex].textContent;
+                // alert(theme)
+                editor.setOption("theme", theme);
+                location.hash = "#" + theme;
+            }
+            var choice = (location.hash && location.hash.slice(1)) ||
+                        (document.location.search &&
+                            decodeURIComponent(document.location.search.slice(1)));
+            if (choice) {
+                input.value = choice;
+                editor.setOption("theme", choice);
+            }
+            CodeMirror.on(window, "hashchange", function() {
+                var theme = location.hash.slice(1);
+                if (theme) { input.value = theme; selectTheme(); }
+            });
+            CodeMirror.on(editor, "cursorActivity", (instance, obj) => {
+                cursor = instance.doc.getCursor()
+                col = cursor.ch
+                line = cursor.line
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    backend = channel.objects.backend;
+                    // backend.getRef(x, function(pyval) {
+                    //     backend.printRef(pyval);
+                    // });
+                    backend.sendCursorPos(line, col)
+                });
+            })
+
+        </script>
+        <!-- <script>
+            // Only run on browsers that support css transitions
+            // See also example.css:15
+            if(Modernizr.csstransforms) {
+                $(document).ready(function() {
+                    $.sublimeScroll({
+                        top: 20, // px to top
+                        bottom: 40, // px to bottom
+                        scrollWidth: 200, // Width of scrollbar
+                        removeElements: 'script',
+                        fixedElements: 'header.top, footer.bottom',
+                        contentWidth: 860, // Scroll viewport width
+                        contentHeight: 1000,
+                        minWidth: 1000 // Min width of window to display scroll
+                    });
+    
+                    $('#content2').sublimeScroll({
+                        contentWidth: 583
+                    });
+                });
+            }
+        </script> -->
+    </body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link href="https://vjs.zencdn.net/7.14.3/video-js.css" rel="stylesheet" />
+        <title>HTML 5 Video Player</title>
+    </head>
+
+    <body style='background-color: {{ VIDEO_WIDGET_BACKGROUND_COLOR }}'>
+        <div style="margin-left: auto; margin-right: auto; text-align: center">
+            <h1 style='color: white; text-align: center'> HTML 5 Video Player </h1>
+            <video id="my-video" class="video-js" controls preload="auto" width="640" height="360" data-setup='{"playbackRates": [0.5, 1, 1.5, 2]}' style="text-align: center">
+                <source src="http://localhost:3000/home/atharva/Videos/pewdiepie-coco.mp4" type="video/mp4" />
+                <source src="http://localhost:3000/home/atharva/Videos/pewdiepie-coco.mp4" type="video/webm" />
+                <p class="vjs-no-js">
+                    To view this video please enable JavaScript, and consider upgrading to a
+                    web browser that
+                    <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+                </p>
+            </video>
+            <script src="https://vjs.zencdn.net/7.14.3/video.min.js"></script>
+        </div>
+    </body>
+</html> -->''')

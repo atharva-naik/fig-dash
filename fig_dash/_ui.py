@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
 from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.menu import DashMenu
 from fig_dash.ui.browser import PageInfo
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
@@ -149,6 +150,7 @@ class DashWindow(QMainWindow):
         return tabs
 
     def initCentralWidget(self):
+        self.menu = DashMenu(self)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -206,6 +208,7 @@ class DashWindow(QMainWindow):
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
         layout.insertWidget(0, self.navbar)
+        layout.insertWidget(0, self.menu)
         layout.insertWidget(0, self.topbar)
         self.floatmenu.connectWindow(self)
         # layout.addStretch(1)

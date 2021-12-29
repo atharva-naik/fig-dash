@@ -175,6 +175,7 @@ class WeatherWidget(QWidget):
         self.weatherGif = QMovie(path)
         tempIcon.setMovie(self.weatherGif)
         tempIcon.setAlignment(Qt.AlignCenter)
+        tempIcon.setMinimumHeight(150)
         layout.addWidget(tempIcon)
         self.weatherGif.start()
         # temperature
@@ -334,7 +335,7 @@ class WeatherWidget(QWidget):
         self.tempLabel.setText(f"<span style='font-size: 40px; font-weight: bold;'>{weather['temp']['C']}°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: gray;'>feels like {weather['feels_like']['C']}°C</span> <br> observed at {weather['observed_at']}</span>")
         self.descLabel.setText(f"<span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>{weather['desc']}</span>")
         # path = fetchIcon(weather['desc'])
-        path = FigD.icon(fetchIcon('mist'))
+        path = FigD.icon(fetchIcon('sun'))
         self.weatherGif = QMovie(path)
         self.weatherGif.setScaledSize(QSize(150,150))
         self.tempIcon.setMovie(self.weatherGif)

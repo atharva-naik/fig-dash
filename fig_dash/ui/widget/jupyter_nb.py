@@ -169,27 +169,26 @@ class CellTypeBox(QComboBox):
         self.addItem("Raw NBConvert")
         self.addItem("Heading")
         self.currentIndexChanged.connect(self.changeCellType)
-        self.setStyleSheet(jinja2.Template('''
-            QComboBox {
-                border: 0px;
-                padding: 2px;
-                color: #eb5f34;
-                background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-            }
-            QComboBox::down-arrow {
-                border: 0px;
-                padding: 2px;
-                background: transparent;
-            }
-            QComboBox::drop-down {
-                border: 0px;
-                padding: 2px;
-                color: #eb5f34;
-                image: url({{ IMAGE_URL }});
-                background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-            }''').render(IMAGE_URL=FigD.icon("widget/jupyter_nb/down.svg")
-        ))
-
+        # self.setStyleSheet(jinja2.Template('''
+        #     QComboBox {
+        #         border: 0px;
+        #         padding: 2px;
+        #         color: #eb5f34;
+        #         background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        #     }
+        #     QComboBox::down-arrow {
+        #         border: 0px;
+        #         padding: 2px;
+        #         background: transparent;
+        #     }
+        #     QComboBox::drop-down {
+        #         border: 0px;
+        #         padding: 2px;
+        #         color: #eb5f34;
+        #         image: url({{ IMAGE_URL }});
+        #         background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        #     }''').render(IMAGE_URL=FigD.icon("widget/jupyter_nb/down.svg")
+        # ))
     def changeCellType(self, i: int):
         self.browser.page().runJavaScript(
             cellTypeChangeJS(i)
@@ -199,7 +198,7 @@ class CellTypeBox(QComboBox):
 class NotebookBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, icon: str="", 
                  browser: Union[None, QWebEngineView]=None, 
-                 js: str="", size: Tuple[int, int]=(20,20), tip="some tip"):
+                 js: str="", size: Tuple[int, int]=(23,23), tip="some tip"):
         super(NotebookBtn, self).__init__(parent)
         self.browser = browser
         self.js = js
