@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import sys
 import jinja2
 from typing import Union, Dict
 # Qt imports.
@@ -119,8 +120,21 @@ class CodeMirrorStatus(QWidget):
         self.eol_seq = QLabel("LF") 
         self.indent_type = self.initBtn(text="Spaces: 4")
         self.mimetype = QLabel("text/x-python") 
+        version_info = sys.version
+        self.py_version_text = "Python "+version_info.split("\n")[0].split()[0].strip()
+        self.gcc_version_text = version_info.split("\n")[1].strip()[1:-1]
+        self.py_version = self.initBtn(
+            icon="python.png",
+            text=" "+self.py_version_text
+        )
+        self.gcc_version = self.initBtn(
+            icon="c.png",
+            text=" "+self.gcc_version_text
+        )
         # add widgets.
         self.layout.addStretch(1)
+        self.layout.addWidget(self.py_version)
+        self.layout.addWidget(self.gcc_version)
         self.layout.addWidget(self.num_warnings)
         self.layout.addWidget(self.num_errors)
         self.layout.addWidget(self.permissions)
@@ -153,6 +167,16 @@ class CodeMirrorStatus(QWidget):
         if text: btn.setText(text)
         btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         btn.setStyleSheet("background: #292929; color: #fff;")
+        btn.setStyleSheet('''
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            border: 0px;
+            background: rgba(0, 0, 0, 0.5);
+        }''')
 
         return btn
 
@@ -165,6 +189,7 @@ class CodeMirrorMenu(QWidget):
         super(CodeMirrorMenu, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
+        self.webview = webview
         self.debugBtn = CodeMirrorBtn(
             self, icon="debug.svg",
             tip="debug code"
@@ -173,28 +198,26 @@ class CodeMirrorMenu(QWidget):
             self, text="format",
             tip="format code according to language specification (if formatter is available)"
         )
-        # self.mergeBtn = GitUIBtn(
-        #     self, icon="merge.svg",
-        #     tip="merge branch",
-        # )
-        # self.newBranchBtn = GitUIBtn(
-        #     self, icon="new_branch.svg",
-        #     tip="create new branch",
-        # )
-        # self.delBranchBtn = GitUIBtn(
-        #     self, icon="delete_branch.svg",
-        #     tip="delete branch",
-        # )
+        self.diffBtn = CodeMirrorBtn(
+            self, icon="diff.svg",
+            tip="toggle differences"
+        )
+        self.diffBtn.clicked.connect(self.toggleDifferences)
         self.themeDropdown = CodeMirrorThemeDropdown(themes=themes, webview=webview)
         self.modeDropdown = CodeMirrorModeDropdown(modes=modes, webview=webview)
         self.themeDropdown.setFixedWidth(150)
+        self.modeDropdown.setFixedWidth(150)
         self.layout.addStretch(1)
         self.layout.addWidget(self.formatBtn)
+        self.layout.addWidget(self.debugBtn)
+        self.layout.addWidget(self.diffBtn)
         self.layout.addWidget(self.themeDropdown)
         self.layout.addWidget(self.modeDropdown)
-        self.layout.addWidget(self.debugBtn)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
+
+    def toggleDifferences(self):
+        self.webview.page().runJavaScript("toggleDifferences()")
 
 
 class CodeMirrorEditor(QWidget):
@@ -240,7 +263,7 @@ class CodeMirrorEditor(QWidget):
 
     def buildEditor(self, **args):
         from fig_dash.ui.widget.codemirror.js import QWebChannelJS
-        from fig_dash.ui.widget.codemirror.html import CMHtml
+        from fig_dash.ui.widget.codemirror.html import CMHtml, CMMergeHtml
         from fig_dash.ui.widget.codemirror.lib.codemirror import CMCodeMirrorCSS, CMCodeMirrorJS
         # editor keymaps
         from fig_dash.ui.widget.codemirror.keymap.sublime import CMSublimeJS
@@ -270,11 +293,32 @@ class CodeMirrorEditor(QWidget):
         from fig_dash.ui.widget.codemirror.addon.fold.indent_fold import CMIndentFoldJS
         from fig_dash.ui.widget.codemirror.addon.fold.markdown_fold import CMMarkdownJS
         from fig_dash.ui.widget.codemirror.addon.fold.xml_fold import CMXMLFoldJS
+        # hint addon.
+        from fig_dash.ui.widget.codemirror.addon.hint.anyword_hint import CMAnywordHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.css_hint import CMCSSHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.html_hint import CMHTMLHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.javascript_hint import CMJavascriptHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.show_hint import CMShowHintCSS, CMShowHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.sql_hint import CMSQLHintJS
+        from fig_dash.ui.widget.codemirror.addon.hint.xml_hint import CMXMLHintJS
+        # lint addon.
+        from fig_dash.ui.widget.codemirror.addon.lint.lint import CMLintJS, CMLintCSS
+        from fig_dash.ui.widget.codemirror.addon.lint.json_lint import CMJSONLintJS
+        from fig_dash.ui.widget.codemirror.addon.lint.css_lint import CMCSSLintJS
+        from fig_dash.ui.widget.codemirror.addon.lint.html_lint import CMHTMLLintJS
+        from fig_dash.ui.widget.codemirror.addon.lint.javascript_lint import CMJavascriptLintJS
+        from fig_dash.ui.widget.codemirror.addon.lint.yaml_lint import CMYAMLLintJS
+        from fig_dash.ui.widget.codemirror.addon.lint.coffeescript_lint import CMCoffeescriptLintJS
+        # merge addon.
+        from fig_dash.ui.widget.codemirror.addon.merge.merge import CMMergeJS, CMMergeCSS
+        from fig_dash.ui.widget.codemirror.addon.merge.ui_funcs import CMMergeUIFuncs
+        from fig_dash.ui.widget.codemirror.addon.merge.diff_match_patch import GoogleDiffMatchPatchJS
         # wrap addon.
         from fig_dash.ui.widget.codemirror.addon.wrap.hardwrap import CMHardwrapJS
         # default mode is python.
         from fig_dash.ui.widget.codemirror.mode.python import PYTHONJS
         # self.keymap = {}
+        merge_mode = args.get('merge_mode', False)
         self.addon = {
             "COMMENT_JS": CMCommentJS,
             "CONTINUECOMMENT_JS": CMContinueCommentJS,
@@ -304,6 +348,25 @@ class CodeMirrorEditor(QWidget):
             "INDENT_FOLD_JS": CMIndentFoldJS,
             "MARKDOWN_FOLD_JS": CMMarkdownJS,
             "XML_FOLD_JS": CMXMLFoldJS,
+            "ANYWORD_HINT_JS": CMAnywordHintJS,
+            "CSS_HINT_JS": CMCSSHintJS,
+            "HTML_HINT_JS": CMHTMLHintJS,
+            "JAVASCRIPT_HINT_JS": CMJavascriptHintJS,
+            "SHOW_HINT_CSS": CMShowHintCSS,
+            "SHOW_HINT_JS": CMShowHintJS,
+            "SQL_HINT_JS": CMSQLHintJS,
+            "XML_HINT_JS": CMXMLHintJS,
+            "COFFEESCRIPT_LINT_JS": CMCoffeescriptLintJS,
+            "CSS_LINT.JS": CMCSSLintJS,
+            "HTML_LINT_JS": CMHTMLLintJS,
+            "JAVASCRIPT_LINT_JS": CMJavascriptHintJS,
+            "JSON_LINT_JS": CMJSONLintJS,
+            "LINT_CSS": CMLintCSS,
+            "LINT_JS": CMLintJS,
+            "YAML_LINT_JS": CMYAMLLintJS,
+            "MERGE_JS": CMMergeJS,
+            "MERGE_CSS": CMMergeCSS,
+            "MATCH_PATCH_JS": GoogleDiffMatchPatchJS,
         }
         # self.mode = {}
         self.lib = {
@@ -318,7 +381,11 @@ class CodeMirrorEditor(QWidget):
         params.update(args)
         params.update(self.lib)
         params.update(self.addon)
-        self.editor_html = CMHtml.render(params)
+        if merge_mode:
+            params["THEME"] = "ayu-dark"
+            self.editor_html = CMMergeHtml.render(params)
+        else:
+            self.editor_html = CMHtml.render(params)
         self.webview.setHtml(self.editor_html)
 
     def saveEditor(self, path: str):
@@ -342,7 +409,7 @@ def test_code_mirror():
     cm = CodeMirrorEditor()
     cm.show()
     s = time.time()
-    cm.buildEditor()
+    cm.buildEditor(merge_mode=True)
     print(f"built code-mirror editor in {time.time()-s}s")
     cm.saveEditor("cm-editor.html")
     app.exec()
