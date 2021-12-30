@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+# set QT DEBUGGING PORT.
+os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = '0.0.0.0:5000'
 import sys
 import jinja2
 from typing import Union, Dict
 # Qt imports.
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtCore import Qt, QSize, QUrl
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QComboBox, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.browser import DebugWebView
 
 
 class CodeMirrorBtn(QToolButton): 
@@ -93,9 +96,12 @@ class CodeMirrorThemeDropdown(QComboBox):
         for theme in themes:
             self.addItem(theme)
         self.currentIndexChanged.connect(self.changeTheme)
+        self.setCurrentIndex(21)
         # self.setFixedWidth(300)
     def changeTheme(self, i):
         theme = self.themes[i]
+        code = f'''selectThemeByIndex({i})'''
+        self.webview.page().runJavaScript(code)
         # print(i, theme)
         # self.webview.setTheme(theme)
 code_mirror_style = '''
@@ -198,6 +204,10 @@ class CodeMirrorMenu(QWidget):
             self, text="format",
             tip="format code according to language specification (if formatter is available)"
         )
+        self.wordWrapBtn = CodeMirrorBtn(
+            self, icon="word_wrap.svg",
+            tip="wrap lines"
+        )
         self.diffBtn = CodeMirrorBtn(
             self, icon="diff.svg",
             tip="toggle differences"
@@ -209,6 +219,8 @@ class CodeMirrorMenu(QWidget):
         self.modeDropdown.setFixedWidth(150)
         self.layout.addStretch(1)
         self.layout.addWidget(self.formatBtn)
+        self.layout.addWidget(self.webview.devToolsBtn)
+        self.layout.addWidget(self.wordWrapBtn)
         self.layout.addWidget(self.debugBtn)
         self.layout.addWidget(self.diffBtn)
         self.layout.addWidget(self.themeDropdown)
@@ -223,7 +235,7 @@ class CodeMirrorMenu(QWidget):
 class CodeMirrorEditor(QWidget):
     '''codemirror code editor.'''
     def __init__(self, parent: Union[None, QWidget]=None,
-                 zoom_factor: float=1.45):
+                 zoom_factor: float=1.35):
         super(CodeMirrorEditor, self).__init__(parent)
         from fig_dash.ui.widget.codemirror.mode import CMMimeTypeToLang
         from fig_dash.ui.widget.codemirror.theme import CMTheme
@@ -234,7 +246,7 @@ class CodeMirrorEditor(QWidget):
         self.layout.setSpacing(0)
 
         self.mimetype_to_lang = CMMimeTypeToLang
-        self.webview = QWebEngineView()
+        self.webview = DebugWebView()
         self.webview.setHtml("CM Editor not loaded")
         self.modes = CMMimeTypeToLang
         self.menubar = CodeMirrorMenu(
@@ -247,7 +259,7 @@ class CodeMirrorEditor(QWidget):
         self.themes = CMTheme
         self.layout.addWidget(self.menubar)
         self.menubar.setMaximumHeight(30)
-        self.layout.addWidget(self.webview)
+        self.layout.addWidget(self.webview.splitter)
         self.layout.addWidget(self.statusbar)
         # self.layout.addStretch(1)
         self.setLayout(self.layout)
@@ -257,6 +269,7 @@ class CodeMirrorEditor(QWidget):
         # self.webview.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
     def onUrlChange(self):
         self.webview.setZoomFactor(self.zoom_factor)
+        self.webview.loadFinished.connect(self.webview.loadDevTools)
     
     def setZoomFactor(self, zoom_factor: float=1):
         self.zoom_factor = zoom_factor
@@ -381,13 +394,15 @@ class CodeMirrorEditor(QWidget):
         params.update(args)
         params.update(self.lib)
         params.update(self.addon)
+        params["EDITOR_BACKGROUND_COLOR"] = "#292929"
         if merge_mode:
-            params["THEME"] = "ayu-dark"
+            params["THEME"] = "gruvbox-dark"
             self.editor_html = CMMergeHtml.render(params)
         else:
             self.editor_html = CMHtml.render(params)
-        self.webview.setHtml(self.editor_html)
-
+        url = FigD.createTempUrl(self.editor_html)
+        self.webview.load(url)
+        # print(url)
     def saveEditor(self, path: str):
         with open(path, "w") as f:
             f.write(self.editor_html)
@@ -395,10 +410,6 @@ class CodeMirrorEditor(QWidget):
     def setMode(self, mimetype: str="text"):
         lang = self.mimetype_to_lang[mimetype]
         exec(f"from fig_dash.ui.widget.codemirror.mode.{lang} import {lang.upper()}JS")
-
-    def setTheme(self, theme: str=""):
-        pass
-        # self.webview.page().runJavaScript()
 
 
 def test_code_mirror():
@@ -409,7 +420,7 @@ def test_code_mirror():
     cm = CodeMirrorEditor()
     cm.show()
     s = time.time()
-    cm.buildEditor(merge_mode=True)
+    cm.buildEditor(merge_mode=False)
     print(f"built code-mirror editor in {time.time()-s}s")
     cm.saveEditor("cm-editor.html")
     app.exec()

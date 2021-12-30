@@ -7,12 +7,41 @@ from requests.exceptions import MissingSchema
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize
-from PyQt5.QtWidgets import QToolBar, QToolButton, QLabel, QWidget, QAction, QVBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from ..utils import QFetchIcon
 from fig_dash.assets import FigD
 
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
+class DebugWebView(QWebEngineView):
+    def __init__(self, dev_tools_zoom=1.35):
+        super(DebugWebView, self).__init__()
+        self.dev_view = QWebEngineView()
+        self.devToolsBtn = QToolButton()
+        self.dev_tools_zoom = dev_tools_zoom
+        self.devToolsBtn.setText("open devtools")
+        self.devToolsBtn.clicked.connect(self.toggleDevTools)
+        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter.addWidget(self)
+        self.splitter.addWidget(self.dev_view)
+        self.splitter.setSizes([500, 300])
+        self.dev_view.hide()
+        self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def setDevToolsZoom(self):
+        self.dev_view.setZoomFactor(self.dev_tools_zoom)
+
+    def toggleDevTools(self):
+        if self.dev_view.isVisible():
+            self.dev_view.hide()
+        else:
+            self.dev_view.show()
+
+    def loadDevTools(self):
+        self.dev_view.load(QUrl("http://0.0.0.0:5000/"))
+        self.page().setDevToolsPage(self.dev_view.page())
+
+        
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;
     height: 10px;

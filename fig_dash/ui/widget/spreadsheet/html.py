@@ -7,8 +7,32 @@ XSpreadsheetHtml = jinja2.Template(r'''
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width">
     <title>{{ TITLE }}</title>
+    <style>
+        /* scroll bar style: Chrome, safari */
+        *::-webkit-scrollbar {
+            width: 7px;
+            height: 7px;
+        }    
+        *::-webkit-scrollbar-track {
+            background-color: rgba(235, 235, 235, 0.1);
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: gray;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+            background-color: orange;
+        }
+        *::-webkit-scrollbar-corner {
+            background-color: transparent;
+            /* background: rgba(235, 235, 235, 0.1); */
+        }
+        /* Firefox */
+        /* .selector {
+            scrollbar-width: none;
+        } */
+    </style>
     <style> {{ XSPREADSHEET_CSS }} </style>
-    <link href="xspreadsheet.css" rel="stylesheet">
 </head>
 <body onload="load()">
   <div id="spreadsheet-editor"></div>

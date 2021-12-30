@@ -53,6 +53,24 @@ class AssetManager:
 
         return QUrl.fromLocalFile(filePath).toString()
 
+    def createTempUrl(self, content: str) -> QUrl:
+        tempPath = os.path.join(
+            self.static_dir,
+            "temp_file_123456789.html"
+        )
+        with open(tempPath, "w") as f:
+            f.write(content)
+        
+        return QUrl.fromLocalFile(tempPath)
+
+    def __del__(self):
+        '''delete temporary file.'''
+        tempPath = os.path.join(
+            self.static_dir,
+            "temp_file_123456789.html"
+        )
+        os.remove(tempPath)
+
     def Icon(self, name:str) -> QIcon :
         '''return QIcon'''
         icon_path = self.icon(name)

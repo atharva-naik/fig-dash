@@ -849,7 +849,7 @@ form fieldset select {
   display: inline-block;
 }
 .x-spreadsheet-icon .x-spreadsheet-icon-img {
-  background-image: url(58eaeb4e52248a5c75936c6f4c33a370.svg);
+  background-image: url('{{ ICON_PACK_URL }}');
   position: absolute;
   width: 262px;
   height: 444px;

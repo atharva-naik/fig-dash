@@ -51,17 +51,17 @@ CMHtml = jinja2.Template(r'''
         
         <title> {{ TITLE }} </title>
     </head>
-    <body style="background-color: {{ EDITOR_BACKGROUND_COLOR }}">
+    <body style="background-color: {{ EDITOR_BACKGROUND_COLOR }}; margin: 0px;">
         <div style="margin-left: auto; margin-right: auto;">
-            <p><span style="color: white; font-size: 13px">Select a theme </span>
-                <select style="text-align: center; background-color: #292929; color: #32a852; font-family: Monospace; border: 0px; outline: none;" onchange="selectTheme()" id=select>
+            <p style="display: none;"><span style="color: white; font-size: 13px">Select a theme </span>
+                <select style="text-align: center; background-color: #292929; color: #32a852; font-family: Monospace; border: 0px; outline: none;" onchange="selectTheme()" id="select" style="display: none;">
                 <option>default</option>
                 <option>3024-day</option>
                 <option>3024-night</option>
                 <option>abbott</option>
                 <option>abcdef</option>
                 <option>ambiance</option>
-                <option selected>ayu-dark</option>
+                <option>ayu-dark</option>
                 <option>ayu-mirage</option>
                 <option>base16-dark</option>
                 <option>base16-light</option>
@@ -76,7 +76,7 @@ CMHtml = jinja2.Template(r'''
                 <option>eclipse</option>
                 <option>elegant</option>
                 <option>erlang-dark</option>
-                <option>gruvbox-dark</option>
+                <option selected>gruvbox-dark</option>
                 <option>hopscotch</option>
                 <option>icecoder</option>
                 <option>idea</option>
@@ -126,6 +126,40 @@ CMHtml = jinja2.Template(r'''
 <textarea id="codemirror">
 {{ CODE_FILE_CONTENT }}
 </textarea>
+            <section data-parallax="scroll" height="100px">       
+                <canvas id="c" height="50px"></canvas>
+              <script>
+                var ctr = 0;
+                var color = '#'+Math.floor(Math.random()*16777215).toString(16);
+                function draw(){
+                    if (ctr % 100 == 0) {
+                        color = '#'+Math.floor(Math.random()*16777215).toString(16);
+                    }
+                    // console.log(ctr);
+                    ctx.fillStyle="rgba(0, 0,0,0.05)",
+                    ctx.fillRect(0,0,c.width,c.height),
+                    // ctx.fillStyle="#F0F",
+                    ctx.fillStyle=color,
+                    ctr += 1;
+                    ctx.font=font_size+"px arial";
+                        for (var a=0;a<drops.length;a++) {
+                            var b=j[Math.floor(Math.random()*j.length)];
+                            ctx.fillText(b, a*font_size, drops[a]*font_size), 
+                            drops[a]*font_size > c.height && Math.random() > 0.975 && (drops[a]=0), 
+                            drops[a]++
+                        }
+                    }
+                    var c=document.getElementById("c"),
+                    ctx=c.getContext("2d");
+                    c.height=120, 
+                    c.width=1340;
+                    var j= "abcdefghijklmnopqrstuvwxyz1!2@3#4$5%6^7&8*9(0)";
+                    j = j.split("");
+                    for (var font_size=15, columns=c.width/font_size, drops=[], x=0; x<columns; x++)
+                        drops[x]=1;
+                        setInterval(draw, 33);
+              </script>
+            </section>
         <!-- core javascript source -->
         <script> {{ CODEMIRROR_JS }} </script>
         <!-- addon JS sources -->
@@ -250,7 +284,7 @@ CMHtml = jinja2.Template(r'''
                 gutters: ["breakpoints", "CodeMirror-linenumbers", "CodeMirror-foldgutter"],
                 mode: "{{ LANG_MODE }}",
                 smartIndent: true,
-                theme: "ayu-dark",
+                theme: "{{ THEME }}",
             });
             editor.on("gutterClick", function(cm, n) {
                 var info = cm.lineInfo(n);
@@ -272,10 +306,17 @@ CMHtml = jinja2.Template(r'''
                 editor.setOption("theme", theme);
                 location.hash = "#" + theme;
             }
+            function selectThemeByIndex(selectedIndex) {
+                var theme = input.options[selectedIndex].textContent;
+                // alert(theme)
+                editor.setOption("theme", theme);
+                location.hash = "#" + theme;
+            }
             var choice = (location.hash && location.hash.slice(1)) ||
                         (document.location.search &&
                             decodeURIComponent(document.location.search.slice(1)));
             if (choice) {
+                console.error(choice);
                 input.value = choice;
                 editor.setOption("theme", choice);
             }
@@ -309,6 +350,7 @@ CMHtml = jinja2.Template(r'''
                     backend.sendCursorPos(line, col)
                 });
             }) */
+            selectThemeByIndex(21);
         </script>
     </body>
 </html>''')
@@ -362,7 +404,7 @@ CMMergeHtml = jinja2.Template(r'''
 
         <title> {{ TITLE }} </title>
     </head>
-    <body style="background-color: {{ EDITOR_BACKGROUND_COLOR }}">
+    <body style="background-color: {{ EDITOR_BACKGROUND_COLOR }}; margin: 0px;">
 <div id="view">
 {{ CODE_FILE_CONTENT }}
 </div>
@@ -459,6 +501,8 @@ CMMergeHtml = jinja2.Template(r'''
             /* window.addEventListener('resize', function(event) {
                 console.error(event.width, event.height);
             }); */
+        /* document.getElementById("select").style.display = "none"; */
+        select.
         </script>
     <!-- SUB TEMP_JS_SOURCES HERE -->
     </body>
