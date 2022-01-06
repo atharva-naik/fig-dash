@@ -68,7 +68,7 @@ class DashSearchBar(QLineEdit):
         self.setGraphicsEffect(glow_effect)
 
     def search(self):
-        url = self.text()
+        url = UrlOrQuery(self.text())()
         self.searchHistory.append(url)
         self.completer = QCompleter(self.searchHistory)
         dash_navbar = self.parent()

@@ -222,9 +222,9 @@ class DashWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
-            self.page_info.move(self.width()-250, 50)
+            self.page_info.move(self.width()-270, 50)
             self.ideas.move(80, self.height()-470)
-            self.sysutilsbar.move(self.tabs.width()-50, 80)
+            self.sysutilsbar.move(self.tabs.width()-100, 50)
             # if self.firstResizeOver:
             #     width = self.width() 
             #     self.tabs.dropdown.rePos(width=width, offset=170)

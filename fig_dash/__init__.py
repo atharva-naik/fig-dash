@@ -56,7 +56,7 @@ class DashUI(QApplication):
     def notify(self, obj, event):
         if event.type() == QEvent.WindowDeactivate:
             currentWidget = self.window.tabs.currentWidget()
-            currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=10))
+            currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=5))
             # print("bluring background")
         if event.type() == QEvent.WindowActivate:
             currentWidget = self.window.tabs.currentWidget()

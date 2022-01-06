@@ -187,21 +187,16 @@ class CodeMirrorStatus(QWidget):
         return btn
 
 
-class CodeMirrorMenu(QWidget):
+class CodeMirrorViewToolbar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None, 
                  themes: Dict[str, str]={}, 
-                 modes: Dict[str, str]={}, 
                  webview: Union[str, QWebEngineView]=None):
-        super(CodeMirrorMenu, self).__init__(parent)
+        super(CodeMirrorViewToolbar, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = webview
-        self.debugBtn = CodeMirrorBtn(
-            self, icon="debug.svg",
-            tip="debug code"
-        )
-        self.formatBtn = CodeMirrorTextBtn(
-            self, text="format",
+        self.formatBtn = CodeMirrorBtn(
+            self, icon="format_code.svg", size=(27,27),
             tip="format code according to language specification (if formatter is available)"
         )
         self.wordWrapBtn = CodeMirrorBtn(
@@ -214,17 +209,37 @@ class CodeMirrorMenu(QWidget):
         )
         self.diffBtn.clicked.connect(self.toggleDifferences)
         self.themeDropdown = CodeMirrorThemeDropdown(themes=themes, webview=webview)
-        self.modeDropdown = CodeMirrorModeDropdown(modes=modes, webview=webview)
         self.themeDropdown.setFixedWidth(150)
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.themeDropdown)
+        self.layout.addWidget(self.formatBtn)
+        self.layout.addWidget(self.wordWrapBtn)
+        self.layout.addWidget(self.diffBtn)
+        self.layout.addStretch(1)
+        self.setLayout(self.layout)
+
+    def toggleDifferences(self):
+        self.webview.page().runJavaScript("toggleDifferences()")
+
+
+class CodeMirrorCodeToolbar(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                 modes: Dict[str, str]={}, 
+                 webview: Union[str, QWebEngineView]=None):
+        super(CodeMirrorCodeToolbar, self).__init__(parent)
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.webview = webview
+        self.debugBtn = CodeMirrorBtn(
+            self, icon="debug.svg",
+            tip="debug code"
+        )
+        self.modeDropdown = CodeMirrorModeDropdown(modes=modes, webview=webview)
         self.modeDropdown.setFixedWidth(150)
         self.layout.addStretch(1)
-        self.layout.addWidget(self.formatBtn)
         self.layout.addWidget(self.webview.devToolsBtn)
-        self.layout.addWidget(self.wordWrapBtn)
-        self.layout.addWidget(self.debugBtn)
-        self.layout.addWidget(self.diffBtn)
-        self.layout.addWidget(self.themeDropdown)
         self.layout.addWidget(self.modeDropdown)
+        self.layout.addWidget(self.debugBtn)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
 
@@ -249,16 +264,21 @@ class CodeMirrorEditor(QWidget):
         self.webview = DebugWebView()
         self.webview.setHtml("CM Editor not loaded")
         self.modes = CMMimeTypeToLang
-        self.menubar = CodeMirrorMenu(
+        self.viewtoolbar = CodeMirrorViewToolbar(
             themes=CMTheme, 
+            webview=self.webview
+        )
+        self.codetoolbar = CodeMirrorCodeToolbar(
             modes=self.modes, 
             webview=self.webview
         )
         self.statusbar = CodeMirrorStatus(self.webview)
         self.statusbar.setMaximumHeight(30)
         self.themes = CMTheme
-        self.layout.addWidget(self.menubar)
-        self.menubar.setMaximumHeight(30)
+        self.layout.addWidget(self.viewtoolbar)
+        self.viewtoolbar.setMaximumHeight(30)
+        self.layout.addWidget(self.codetoolbar)
+        self.codetoolbar.setMaximumHeight(30)
         self.layout.addWidget(self.webview.splitter)
         self.layout.addWidget(self.statusbar)
         # self.layout.addStretch(1)

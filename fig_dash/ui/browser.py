@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
-from typing import Union
 from pprint import pprint
+from typing import Union, Tuple
 from requests.exceptions import MissingSchema
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
 from PyQt5.QtGui import QColor
@@ -13,13 +13,36 @@ from ..utils import QFetchIcon
 from fig_dash.assets import FigD
 
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
+class DevToolsBtn(QToolButton): 
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                size: Tuple[int, int]=(23,23)):
+        super(DevToolsBtn, self).__init__(parent)
+        self.inactive_icon = "browser/dev_tools.svg"
+        self.active_icon = "browser/dev_tools_active.svg"
+        self.setIcon(FigD.Icon(self.inactive_icon))
+        self.setIconSize(QSize(*size))
+        self.setToolTip("open devtools (inspect)")
+        self.setStyleSheet('''
+        QToolButton {
+            border: 0px;
+            background: transparent;
+        }''')
+
+    def enterEvent(self, event):
+        self.setIcon(FigD.Icon(self.active_icon))
+        super(DevToolsBtn, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIcon(FigD.Icon(self.inactive_icon))
+        super(DevToolsBtn, self).leaveEvent(event)
+
+
 class DebugWebView(QWebEngineView):
     def __init__(self, dev_tools_zoom=1.35):
         super(DebugWebView, self).__init__()
         self.dev_view = QWebEngineView()
-        self.devToolsBtn = QToolButton()
+        self.devToolsBtn = DevToolsBtn(self)
         self.dev_tools_zoom = dev_tools_zoom
-        self.devToolsBtn.setText("open devtools")
         self.devToolsBtn.clicked.connect(self.toggleDevTools)
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self)
@@ -27,6 +50,16 @@ class DebugWebView(QWebEngineView):
         self.splitter.setSizes([500, 300])
         self.dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def contextMenuEvent(self, event):
+        self.menu = self.page().createStandardContextMenu()
+        # print(dir(self.menu))
+        self.menu.setStyleSheet("background: #292929; color: #fff;")
+        self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
+        self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
+        self.menu.addSeparator()
+        self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
+        self.menu.popup(event.globalPos())
 
     def setDevToolsZoom(self):
         self.dev_view.setZoomFactor(self.dev_tools_zoom)

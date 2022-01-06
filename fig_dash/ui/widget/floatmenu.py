@@ -17,10 +17,10 @@ QWidget {
     background: transparent;
 }
 QToolButton {
+    color: #292929;
+    padding: 10px;
     margin-right: 5px;
     margin-bottom: 5px;
-    padding: 10px;
-    color: #292929;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
     border-radius: 34px;
 }

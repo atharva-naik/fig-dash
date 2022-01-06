@@ -25,9 +25,9 @@ from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton
 # }
 sysutils_bar_style = jinja2.Template('''
 QWidget { 
-    border: 0px;
     color: #fff;
-    background: transparent;
+    border: 0px;
+    background: red;
 }''')
 sysutils_btn_style = '''
 QToolButton {
@@ -51,12 +51,18 @@ class SysUtilsBtn(QToolButton):
     def enterEvent(self, event):
         # print(f"entered {self.inactive_icon}")
         glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(10)
-        glow_effect.setOffset(5,5)
         glow_effect.setColor(QColor(235, 95, 52))
+        # set active icon only if it exists.
+        if os.path.exists(FigD.icon(self.active_icon)):
+            self.setIcon(FigD.Icon(self.active_icon))
+            super(SysUtilsBtn, self).enterEvent(event)
+            glow_effect.setBlurRadius(10)
+            glow_effect.setOffset(5,5)
+        else:
+            glow_effect.setBlurRadius(5)
+            glow_effect.setOffset(0,0)
+
         self.setGraphicsEffect(glow_effect)
-        self.setIcon(FigD.Icon(self.active_icon))
-        super(SysUtilsBtn, self).enterEvent(event)
 
     def leaveEvent(self, event):
         self.setGraphicsEffect(None)
@@ -74,6 +80,12 @@ class SysUtilsBar(QWidget):
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
 
+        self.ideasJarBtn = SysUtilsBtn(
+            parent=self,
+            icon="widget/ideas/ideas_jar.svg",
+            tip="your bottled ideas",
+            size=(70,70),
+        )
         self.onScreenKeyboardBtn = SysUtilsBtn(
             parent=self,
             icon="system/sysutils/onscreenkeyboard.svg", 
@@ -105,12 +117,13 @@ class SysUtilsBar(QWidget):
             tip="view system information",
         )
         # add buttons.
-        self.layout.addWidget(self.onScreenKeyboardBtn)
-        self.layout.addWidget(self.systemMonitorBtn)
-        self.layout.addWidget(self.fileExplorerBtn)
-        self.layout.addWidget(self.transBtn)
-        self.layout.addWidget(self.ttsBtn)
-        self.layout.addWidget(self.trashBtn)
+        self.layout.addWidget(self.ideasJarBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.onScreenKeyboardBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.systemMonitorBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.fileExplorerBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.transBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.ttsBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.trashBtn, 0, Qt.AlignCenter)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
     # def connectWindow(self, dash_window):

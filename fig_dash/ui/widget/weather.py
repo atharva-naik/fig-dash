@@ -80,7 +80,8 @@ weather_widget_style = '''
 QWidget#WeatherWidget {
     color: #fff;
     padding: 10px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 0.8), stop : 0.6 rgba(29, 29, 29, 0.6));
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
 }
 QLabel#Weather {
     color: #fff;
@@ -88,8 +89,8 @@ QLabel#Weather {
     background: transparent;
 }
 QToolButton#AreaButton {
+    color: #fff;
     border: 0px;
-    color: #6e6e6e;
     background: transparent;
 }'''
 # also add moon phase widgets.
@@ -98,9 +99,9 @@ class WeatherWidget(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(WeatherWidget, self).__init__(parent)
         glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(5)
-        glow_effect.setOffset(3,3)
-        glow_effect.setColor(QColor(235, 95, 52))
+        glow_effect.setBlurRadius(30)
+        glow_effect.setOffset(0,0)
+        glow_effect.setColor(QColor(235, 95, 52, 150))
         self.setGraphicsEffect(glow_effect)
 
         self.apiData = None
@@ -179,7 +180,7 @@ class WeatherWidget(QWidget):
         layout.addWidget(tempIcon)
         self.weatherGif.start()
         # temperature
-        tempLabel = QLabel("<span style='font-size: 40px; font-weight: bold;'>0°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: gray;'>feels like 0°C</span> <br> observed at 12:00AM</span>") 
+        tempLabel = QLabel("<span style='font-size: 40px; font-weight: bold;'>0°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>feels like 0°C</span> <br> observed at 12:00AM</span>") 
         tempLabel.setObjectName("Weather")
         tempLabel.setAlignment(Qt.AlignCenter)
         layout.addWidget(tempLabel)

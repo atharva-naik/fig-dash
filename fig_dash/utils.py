@@ -10,6 +10,12 @@ def collapseuser(path: str):
 def description():
     pass
 
+def secs_to_hms(secs):
+    hrs = secs // 3600
+    mins = (secs % 3600) // 60
+    
+    return (hrs, mins, secs)
+
 def QFetchIcon(url: str, is_svg=True) -> QIcon:
     import requests
     import tempfile

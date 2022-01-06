@@ -12,6 +12,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.widget.git import DashGitUI
 from fig_dash.ui.widget.jupyter_nb import JupyterNBWidget
 from fig_dash.ui.widget.codemirror import CodeMirrorEditor
+from fig_dash.ui.system.fileviewer import FileViewerWidget
 
 
 menu_style = '''
@@ -141,11 +142,20 @@ class DashMenu(QTabWidget):
         filemenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(QLabel("File Menu"))
+        self.fileviewer = FileViewerWidget()
+        layout.addWidget(self.fileviewer.menu)
         filemenu.setLayout(layout)
         filemenu.setObjectName("DashMenuTab")
 
         return filemenu
+
+    def initBrowserMenu(self):
+        browsermenu = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(QLabel("File Menu"))
+        browsermenu.setLayout(layout)
+        browsermenu.setObjectName("DashMenuTab")
 
     def initEditMenu(self):
         editmenu = QWidget()
@@ -186,7 +196,8 @@ class DashMenu(QTabWidget):
         CMLayout.setContentsMargins(0, 0, 0, 0)
         CMLayout.setSpacing(0)
         CMLayout.addWidget(self.menuName("Editor Tools"))
-        CMLayout.addWidget(self.cm_editor.menubar)
+        CMLayout.addWidget(self.cm_editor.viewtoolbar)
+        CMLayout.addWidget(self.cm_editor.codetoolbar)
         CMLayout.addStretch(1)
         CMToolbar.setLayout(CMLayout)
 
@@ -245,6 +256,7 @@ def test_menu():
     app = QApplication(sys.argv)
     dashmenu = DashMenu()
     dashmenu.setAttribute(Qt.WA_TranslucentBackground)
+    dashmenu.setWindowFlags(Qt.WindowStaysOnTopHint)
     dashmenu.show()
     app.exec()
 
