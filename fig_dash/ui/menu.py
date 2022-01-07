@@ -228,9 +228,9 @@ class DashMenu(QTabWidget):
         IPyToolbar.setLayout(IPyLayout)
         # add all submenus.
         layout.addWidget(CMToolbar)
-        layout.addWidget(self.addSepartor())
+        layout.addWidget(self.addSeparator())
         layout.addWidget(VCSToolbar)
-        layout.addWidget(self.addSepartor())
+        layout.addWidget(self.addSeparator())
         layout.addWidget(IPyToolbar)
         layout.addStretch(1)
         codemenu.setLayout(layout)
@@ -238,7 +238,7 @@ class DashMenu(QTabWidget):
 
         return codemenu
 
-    def addSepartor(self):
+    def addSeparator(self):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
