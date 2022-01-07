@@ -61,6 +61,9 @@ class DebugWebView(QWebEngineView):
         self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
         self.menu.popup(event.globalPos())
 
+    def alert(self, msg: str):
+        self.page().runJavaScript(f"alert(`{msg}`);")
+
     def setDevToolsZoom(self):
         self.dev_view.setZoomFactor(self.dev_tools_zoom)
 
