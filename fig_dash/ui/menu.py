@@ -124,7 +124,7 @@ class DashMenu(QTabWidget):
     def expand(self):
         self._collapsed = False
         self.toggleBtn.setIcon(FigD.Icon("menu/collapse.svg"))
-        self.setFixedHeight(150)
+        self.setFixedHeight(160)
 
     def collapse(self):
         self._collapsed = True
@@ -243,7 +243,6 @@ class DashMenu(QTabWidget):
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
         sep.setStyleSheet('''background: #292929''')
-        # sep.setStyleSheet('''background: rgba(232, 141, 109, 0.5);''')
         sep.setLineWidth(1)
         sep.setMaximumHeight(90)
 
