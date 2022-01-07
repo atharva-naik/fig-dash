@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# the fig-dash fileviewer is known as the "orchard".
 import os
 import jinja2
 from typing import Union
@@ -12,13 +13,15 @@ from fig_dash.ui.js.webchannel import QWebChannelJS
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject
-from PyQt5.QtWidgets import QWidget, QApplication, QErrorMessage, QLabel, QToolBar, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider
 # filweviewer widget.
 ViSelectJS = r'''/*! @viselect/vanilla 3.0.0-beta.13 MIT | https://github.com/Simonwep/selection */
 const t=(t,e="px")=>"number"==typeof t?t+e:t;function e({style:e},s,i){if("object"==typeof s)for(const[i,o]of Object.entries(s))e[i]=t(o);else void 0!==i&&(e[s]=t(i))}function s(t){return(e,s,i,o={})=>{e instanceof HTMLCollection||e instanceof NodeList?e=Array.from(e):Array.isArray(e)||(e=[e]),Array.isArray(s)||(s=[s]);for(const n of e)for(const e of s)n[t](e,i,{capture:!1,...o});return[e,s,i,o]}}const i=s("addEventListener"),o=s("removeEventListener"),n=t=>{const e=t.touches&&t.touches[0]||t;return{tap:e,x:e.clientX,y:e.clientY,target:e.target}};function r(t){let e=t.path||t.composedPath&&t.composedPath();if(e)return e;let s=t.target.parentElement;for(e=[t.target,s];s=s.parentElement;)e.push(s);return e.push(document,window),e}function h(t,e,s="touch"){switch(s){case"center":{const s=e.left+e.width/2,i=e.top+e.height/2;return s>=t.left&&s<=t.right&&i>=t.top&&i<=t.bottom}case"cover":return e.left>=t.left&&e.top>=t.top&&e.right<=t.right&&e.bottom<=t.bottom;case"touch":return t.right>=e.left&&t.left<=e.right&&t.bottom>=e.top&&t.top<=e.bottom;default:throw new Error(`Unkown intersection mode: ${s}`)}}function c(t,e){const s=t.indexOf(e);~s&&t.splice(s,1)}function a(t,e=document){const s=Array.isArray(t)?t:[t],i=[];for(let t=0,o=s.length;t<o;t++){const o=s[t];"string"==typeof o?i.push(...Array.from(e.querySelectorAll(o))):o instanceof Element&&i.push(o)}return i}const l=()=>matchMedia("(hover: none), (pointer: coarse)").matches,u=(t,e)=>{for(const[s,i]of Object.entries(t)){const o=e[s];t[s]=void 0===o?t[s]:"object"!=typeof o||"object"!=typeof i||null===i||Array.isArray(i)?o:u(i,o)}return t},{abs:d,max:p,min:f,ceil:m}=Math;class SelectionArea extends class{constructor(){this.t=new Map,this.on=this.addEventListener,this.off=this.removeEventListener,this.emit=this.dispatchEvent}addEventListener(t,e){const s=this.t.get(t)||new Set;return this.t.set(t,s),s.add(e),this}removeEventListener(t,e){return this.t.get(t)?.delete(e),this}dispatchEvent(t,...e){let s=!0;for(const i of this.t.get(t)||[])s=!1!==i(...e)&&s;return s}unbindAllListeners(){this.t.clear()}}{constructor(t){super(),this.i={touched:[],stored:[],selected:[],changed:{added:[],removed:[]}},this.o=[],this.h=new DOMRect,this.l={y1:0,x2:0,y2:0,x1:0},this.u=!0,this.p=!0,this.m={x:0,y:0},this.v={x:0,y:0},this.disable=this.g.bind(this,!1),this.enable=this.g,this._=u({selectionAreaClass:"selection-area",selectionContainerClass:void 0,selectables:[],document:window.document,behaviour:{overlap:"invert",intersect:"touch",startThreshold:{x:10,y:10},scrolling:{speedDivider:10,manualSpeed:750,startScrollMargins:{x:0,y:0}}},features:{range:!0,touch:!0,singleTap:{allow:!0,intersect:"native"}},startAreas:["html"],boundaries:["html"],container:"body"},t);for(const t of Object.getOwnPropertyNames(Object.getPrototypeOf(this)))"function"==typeof this[t]&&(this[t]=this[t].bind(this));const{document:s,selectionAreaClass:i,selectionContainerClass:o}=this._;this.S=s.createElement("div"),this.A=s.createElement("div"),this.A.appendChild(this.S),this.S.classList.add(i),o&&this.A.classList.add(o),e(this.S,{willChange:"top, left, bottom, right, width, height",top:0,left:0,position:"fixed"}),e(this.A,{overflow:"hidden",position:"fixed",transform:"translate3d(0, 0, 0)",pointerEvents:"none",zIndex:"1"}),this.T=(t=>{let e,s=-1,i=!1;return{next(...o){e=o,i||(i=!0,s=requestAnimationFrame((()=>{t(...e),i=!1})))},cancel(){cancelAnimationFrame(s),i=!1}}})((t=>{this.L(),this.C(),this.M("move",t),this.j()})),this.enable()}g(t=!0){const{document:e,features:s}=this._,n=t?i:o;n(e,"mousedown",this.k),s.touch&&n(e,"touchstart",this.k,{passive:!1})}k(t,e=!1){const{x:s,y:o,target:c}=n(t),{_:l}=this,{document:u}=this._,d=c.getBoundingClientRect(),p=a(l.startAreas,l.document),f=a(l.boundaries,l.document);this.O=f.find((t=>h(t.getBoundingClientRect(),d)));const m=r(t);if(!this.O||!p.find((t=>m.includes(t)))||!f.find((t=>m.includes(t))))return;if(!e&&!1===this.M("beforestart",t))return;this.l={x1:s,y1:o,x2:0,y2:0};const v=u.scrollingElement||u.body;this.v={x:v.scrollLeft,y:v.scrollTop},this.u=!0,this.clearSelection(!1),i(u,["touchmove","mousemove"],this.R,{passive:!1}),i(u,["mouseup","touchcancel","touchend"],this.$),i(u,"scroll",this.D)}F(t){const{singleTap:{intersect:e},range:s}=this._.features,i=n(t);let o=null;if("native"===e)o=i.target;else if("touch"===e){this.resolveSelectables();const{x:t,y:e}=i;o=this.o.find((s=>{const{right:i,left:o,top:n,bottom:r}=s.getBoundingClientRect();return t<i&&t>o&&e<r&&e>n}))}if(!o)return;for(this.resolveSelectables();!this.o.includes(o);){if(!o.parentElement)return;o=o.parentElement}const{stored:r}=this.i;if(this.M("start",t),t.shiftKey&&r.length&&s){const t=this.q??r[0],[e,s]=4&t.compareDocumentPosition(o)?[o,t]:[t,o],i=[...this.o.filter((t=>4&t.compareDocumentPosition(e)&&2&t.compareDocumentPosition(s))),e,s];this.select(i)}else r.includes(o)&&(1===r.length||t.ctrlKey||r.every((t=>this.i.stored.includes(t))))?this.deselect(o):(this.q=o,this.select(o));this.M("stop",t)}R(t){const{container:s,document:r,features:h,behaviour:{startThreshold:c}}=this._,{x1:u,y1:p}=this.l,{x:f,y:m}=n(t),v=typeof c;if("number"===v&&d(f+m-(u+p))>=c||"object"===v&&d(f-u)>=c.x||d(m-p)>=c.y){if(o(r,["mousemove","touchmove"],this.R,{passive:!1}),!1===this.M("beforedrag",t))return void o(r,["mouseup","touchcancel","touchend"],this.$);i(r,["mousemove","touchmove"],this.H,{passive:!1}),e(this.S,"display","block"),a(s,r)[0].appendChild(this.A),this.resolveSelectables(),this.u=!1,this.W=this.O.getBoundingClientRect(),this.p=this.O.scrollHeight!==this.O.clientHeight||this.O.scrollWidth!==this.O.clientWidth,this.p&&(i(r,"wheel",this.I,{passive:!1}),this.o=this.o.filter((t=>this.O.contains(t)))),this.N(),this.M("start",t),this.H(t)}h.touch&&l()&&t.preventDefault()}N(){const{A:t,O:s,S:i}=this,o=this.W=s.getBoundingClientRect();this.p?(e(t,{top:o.top,left:o.left,width:o.width,height:o.height}),e(i,{marginTop:-o.top,marginLeft:-o.left})):(e(t,{top:0,left:0,width:"100%",height:"100%"}),e(i,{marginTop:0,marginLeft:0}))}H(t){const{x:e,y:s}=n(t),{m:i,l:o,_:r,T:h}=this,{features:c}=r,{speedDivider:a}=r.behaviour.scrolling,u=this.O;if(o.x2=e,o.y2=s,this.p&&(i.y||i.x)){const e=()=>{if(!i.x&&!i.y)return;const{scrollTop:s,scrollLeft:n}=u;i.y&&(u.scrollTop+=m(i.y/a),o.y1-=u.scrollTop-s),i.x&&(u.scrollLeft+=m(i.x/a),o.x1-=u.scrollLeft-n),h.next(t),requestAnimationFrame(e)};requestAnimationFrame(e)}else h.next(t);c.touch&&l()&&t.preventDefault()}D(){const{v:t,_:{document:e}}=this,{scrollTop:s,scrollLeft:i}=e.scrollingElement||e.body;this.l.x1+=t.x-i,this.l.y1+=t.y-s,t.x=i,t.y=s,this.N(),this.T.next(null)}I(t){const{manualSpeed:e}=this._.behaviour.scrolling,s=t.deltaY?t.deltaY>0?1:-1:0,i=t.deltaX?t.deltaX>0?1:-1:0;this.m.y+=s*e,this.m.x+=i*e,this.H(t),t.preventDefault()}L(){const{m:t,l:e,h:s,O:i,W:o,_:n}=this,{scrollTop:r,scrollHeight:h,clientHeight:c,scrollLeft:a,scrollWidth:l,clientWidth:u}=i,m=o,{x1:v,y1:g}=e;let{x2:y,y2:_}=e;const{behaviour:{scrolling:{startScrollMargins:x}}}=n;y<m.left+x.x?(t.x=a?-d(m.left-y+x.x):0,y=y<m.left?m.left:y):y>m.right-x.x?(t.x=l-a-u?d(m.left+m.width-y-x.x):0,y=y>m.right?m.right:y):t.x=0,_<m.top+x.y?(t.y=r?-d(m.top-_+x.y):0,_=_<m.top?m.top:_):_>m.bottom-x.y?(t.y=h-r-c?d(m.top+m.height-_-x.y):0,_=_>m.bottom?m.bottom:_):t.y=0;const b=f(v,y),S=f(g,_),w=p(v,y),A=p(g,_);s.x=b,s.y=S,s.width=w-b,s.height=A-S}j(){const{x:t,y:e,width:s,height:i}=this.h,{style:o}=this.S;o.left=`${t}px`,o.top=`${e}px`,o.width=`${s}px`,o.height=`${i}px`}$(t,s){const{document:i,features:n}=this._,{u:r}=this;o(i,["mousemove","touchmove"],this.R),o(i,["touchmove","mousemove"],this.H),o(i,["mouseup","touchcancel","touchend"],this.$),o(i,"scroll",this.D),t&&r&&n.singleTap.allow?this.F(t):r||s||(this.C(),this.M("stop",t)),this.m.x=0,this.m.y=0,this.p&&o(i,"wheel",this.I,{passive:!0}),this.A.remove(),this.T?.cancel(),e(this.S,"display","none"),this.U()}C(){const{o:t,_:e,i:s,h:i}=this,{stored:o,selected:n,touched:r}=s,{intersect:c,overlap:a}=e.behaviour,l="invert"===a,u=[],d=[],p=[];for(let e=0;e<t.length;e++){const s=t[e];if(h(i,s.getBoundingClientRect(),c)){if(n.includes(s))o.includes(s)&&!r.includes(s)&&r.push(s);else{if(l&&o.includes(s)){p.push(s);continue}d.push(s)}u.push(s)}}l&&d.push(...o.filter((t=>!n.includes(t))));const f="keep"===a;for(let t=0;t<n.length;t++){const e=n[t];u.includes(e)||f&&o.includes(e)||p.push(e)}s.selected=u,s.changed={added:d,removed:p},this.q=u[u.length-1]}M(t,e){return this.emit(t,{event:e,store:this.i,selection:this})}U(){const{_:t,i:e}=this,{selected:s,changed:i,touched:o,stored:n}=e,r=s.filter((t=>!n.includes(t)));switch(t.behaviour.overlap){case"drop":e.stored=[...r,...n.filter((t=>!o.includes(t)))];break;case"invert":e.stored=[...r,...n.filter((t=>!i.removed.includes(t)))];break;case"keep":e.stored=[...n,...s.filter((t=>!n.includes(t)))]}}trigger(t,e=!0){this.k(t,e)}resolveSelectables(){this.o=a(this._.selectables,this._.document)}clearSelection(t=!0){this.i={stored:t?[]:this.i.stored,selected:[],touched:[],changed:{added:[],removed:[]}}}getSelection(){return this.i.stored}getSelectionArea(){return this.S}cancel(t=!1){this.$(null,!t)}destroy(){this.cancel(),this.disable(),this.A.remove(),super.unbindAllListeners()}select(t,e=!1){const{changed:s,selected:i,stored:o}=this.i,n=a(t,this._.document).filter((t=>!i.includes(t)&&!o.includes(t)));return o.push(...n),i.push(...n),s.added.push(...n),!e&&this.M("move",null),n}deselect(t,e=!1){const{selected:s,stored:i,changed:o}=this.i;return!(!s.includes(t)&&!i.includes(t))&&(o.removed.push(t),c(i,t),c(s,t),!e&&this.M("move",null),!0)}}SelectionArea.version="3.0.0-beta.13";export{SelectionArea as default};
 //'''# sourceMappingURL=selection.min.js.map
 
 FileViewerStyle = r'''
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap');
+
 ::-webkit-scrollbar {
     width: 0.5em;
     height: 0.55em;
@@ -48,10 +51,9 @@ body {
 
 body {
     color: {{ FONT_COLOR }};
-    font-weight: bold;
+    font-family: 'Roboto', sans-serif;
     background: rgb(72,72,72);
     background: linear-gradient(-45deg, rgba(72,72,72,1) 30%, rgba(41,41,41,1) 60%);
-    font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Helvetica, Arial, sans-serif, Apple Color Emoji, Segoe UI Emoji;
     /* backdrop-filter: blur(10px); */
     backdrop-filter: brightness(30%) blur(2px);
     background-image: url('{{ BACKGROUND_IMAGE }}');
@@ -145,7 +147,7 @@ main .boxes {
     display: -ms-flexbox;
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
+    justify-content: left;
     border: 2px solid rgba(66, 68, 90, 0.075);
     border-radius: 0.15em;
     padding: 1em 0;
@@ -185,8 +187,10 @@ main .boxes div {
     height:fit-content;
     /* height: 5em; */
     margin: 0.2em;
-    margin-left: 0.75em;
-    margin-right: 0.75em;
+    padding-top: 0.5em;
+    padding-bottom: 0.5em;
+    margin-left: 0em;
+    margin-right: 1.5em;
     border-radius: 0.2em;
     /* background: rgba(66, 68, 90, 0.075);
     background: transparent; 
@@ -196,7 +200,6 @@ main .boxes div {
 
 main .boxes.green div.selected {
     color: #292929;
-    font-weight: bold;
     background: linear-gradient(45deg, rgba(235,95,52,0.6) 40%, rgba(235,204,52,0.6) 94%);
     background-color: rgba(255, 0, 0, 0.45);
     /* background: hsl(100, 80%, 65%);
@@ -272,15 +275,25 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.setAttributeNode(hiddenFileFlag)
         divElement.className = "file_item";
         divElement.style.textAlign = 'center';
-        divElement.innerHTML = `<img class="icon" src="${fileViewerIcons[i]}" width="40px;"/><br><span class="item_name" style="text-align: center; font-size: 13px;">${fileViewerItems[i]}</div>`
+        divElement.innerHTML = `
+    <img class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
+    <br>
+    <span class="item_name" style="text-align: center; font-size: 14px;">${fileViewerItems[i]}</span>`
         divElement.onclick = function() {
             // console.error(this.id);
             var file_item_id = this.id;
             new QWebChannel(qt.webChannelTransport, function(channel) {
-                var clickHandler = channel.objects.clickHandler;
-                clickHandler.sendClickedItem(file_item_id);
+                var eventHandler = channel.objects.eventHandler;
+                eventHandler.sendClickedItem(file_item_id);
             });
         }
+        divElement.addEventListener("dblclick", function() {
+            var file_item_id = this.id;
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                var eventHandler = channel.objects.eventHandler;
+                eventHandler.sendOpenRequest(file_item_id);
+            });
+        })
         if (fileHiddenFlags[i] == "1") {
             divElement.style.display = "none";
         }
@@ -314,6 +327,39 @@ const filesSelection = new SelectionArea({
 });'''
 
 FileViewerCustomJS = r'''
+// create file item.
+function createItem(path, name, icon, hidden) {
+    var item = document.createElement('div');
+    item.id = path;
+    console.log(`creating item: ${name} at ${path}, icon=${icon}`)
+    var hiddenFileFlag = document.createAttribute('data-filehidden');
+    hiddenFileFlag.value = hidden;
+    item.setAttributeNode(hiddenFileFlag)
+    item.className = "file_item";
+    item.style.textAlign = 'center';
+    item.innerHTML = `
+    <img class="icon" src="${icon}" width="40px;"/>
+    <br>
+    <span class="item_name" style="text-align: center; font-size: 14px;">${name}</span>`
+    item.onclick = function() {
+        var file_item_id = this.id;
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            var eventHandler = channel.objects.eventHandler;
+            eventHandler.sendClickedItem(file_item_id);
+        });
+    }
+    item.addEventListener("dblclick", function() {
+        var file_item_id = this.id;
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            var eventHandler = channel.objects.eventHandler;
+            eventHandler.sendOpenRequest(file_item_id);
+        });
+    })
+    if (hidden == "1") {
+        item.style.display = "none";
+    }
+    return item;
+}
 // hide hidden files.
 function hideHiddenFiles() {
     var items = document.getElementsByClassName("file_item");
@@ -334,6 +380,25 @@ function showHiddenFiles() {
         if (item.getAttribute("data-filehidden") == "1") {
             item.style.display = "";
         }
+    }
+}
+
+// this function is the callback triggered on an item rename event
+function handleItemRename(event) {
+    // specifically handle enter key.
+    if (event.keyCode === 13) { 
+        // console.log(`${selectedItemElement.id} renamed to ${selectedItemSpan.innerText}`);
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            var eventHandler = channel.objects.eventHandler;
+            var id = selectedItemElement.id;
+            var newName = selectedItemSpan.innerText;
+            eventHandler.triggerRename(id, newName);
+        });
+        event.preventDefault();
+        selectedItemSpan.style.backgroundColor = "";
+        selectedItemSpan.style.color = "";
+        selectedItemSpan.setAttribute('contenteditable', 'false');
+        // make span uneditable
     }
 }
 
@@ -392,13 +457,6 @@ FileViewerHtml = jinja2.Template(r'''
 
         <title>Selection JS</title>
 
-        <!-- Icons -->
-        <!-- <link rel="icon" href="favicon.png"/>
-        <link rel="fluid-icon" href="favicon.png"/>
-        <link rel="apple-touch-icon" href="favicon.png"/>
-        <link href="favicon.png" rel="icon"/>
-        <link href="favicon.png" rel="apple-touch-icon"/> -->
-
         <!-- CSS / JS -->
         <style>{{ FILEVIEWER_CSS }}</style>
     </head>
@@ -406,7 +464,7 @@ FileViewerHtml = jinja2.Template(r'''
     <body>
         <main>
             <section class="demo">
-                <section class="boxes green"></section>
+                <section id="orchard" class="boxes green"></section>
             </section>
         </main>
         <script>{{ WEBCHANNEL_JS }}</script>
@@ -414,28 +472,32 @@ FileViewerHtml = jinja2.Template(r'''
         <script type="module">{{ FILEVIEWER_MJS }}</script>
     </body>
 </html>''')
-class ClickEventHandler(QObject):
+class EventHandler(QObject):
     def __init__(self, fileviewer):
-        super(ClickEventHandler, self).__init__()
+        super(EventHandler, self).__init__()
         self.fileviewer = fileviewer
 
     @pyqtSlot(str)
-    def sendClickedItem(self, path):
-        # id = int(id.replace("item", ""))
-        if self.fileviewer.selected_item == path:
-            # print(id)
-            # item = self.fileviewer.loaded_file_items[]
-            self.fileviewer.open(path)  
-        else:
-            self.fileviewer.updateSelection(path)
+    def sendClickedItem(self, path: str):
+        print(f"selected path {path}")
+        self.fileviewer.updateSelection(path)
+
+    @pyqtSlot(str)
+    def sendOpenRequest(self, path: str):
+        print(f"opened path {path}")
+        self.fileviewer.open(path)
+
+    @pyqtSlot(str, str)
+    def triggerRename(self, id: str, new_name: str):
+        new_name = new_name.strip()
+        self.fileviewer.renameItem(id, new_name)
         
 
 class FileViewerWebView(DebugWebView):
     '''fileviewer web view'''
-    def contextMenuEvent(self, event):
-        '''redefine the context menu.'''
-        self.menu = self.page().createStandardContextMenu()
-        self.menu.clear()
+    def __init__(self):
+        super(FileViewerWebView, self).__init__()
+        self.menu = QMenu()
         self.menu.setStyleSheet("background: #292929; color: #fff;")
         self.menu.addAction("New Folder")
         self.menu.addAction("New File")
@@ -446,7 +508,53 @@ class FileViewerWebView(DebugWebView):
         self.menu.addAction("Paste")
         self.menu.addSeparator()
         self.menu.addAction("Properties")
+
+    def contextMenuEvent(self, event):
+        '''redefine the context menu.'''
         self.menu.popup(event.globalPos())
+
+    def connectWidget(self, widget):
+        self.widget = widget
+        # New folder action.
+        self.menu.actions()[0].triggered.connect(
+            lambda: widget.createDialogue(item_type="folder")
+        )
+        # New file action.
+        self.menu.actions()[1].triggered.connect(
+            lambda: widget.createDialogue(item_type="file")
+        )
+
+    def initiateRenameForId(self, id: str):
+        '''make the span displaying the item_name editanle for the selected item'''
+        code = f'''selectedItemElement = document.getElementById('{id}');
+selectedItemSpan = selectedItemElement.getElementsByClassName('item_name')[0];
+// selectedItemSpan
+selectedItemSpan.setAttribute('contenteditable', 'true');
+selectedItemSpan.style.backgroundColor = "white";
+selectedItemSpan.style.color = "black";
+selectedItemSpan.focus()
+document.execCommand('selectAll', false, null);
+document.getSelection().collapseToEnd();
+selectedItemSpan.addEventListener('keypress', handleItemRename);
+'''        
+        # print(code)
+        self.page().runJavaScript(code)
+
+    def createItem(self, path: str, name: str, 
+                  icon: str, hidden: bool=False):
+        '''
+        Create a file item from arguments:
+        path (or id of the div): the exact file location.
+        name: the displayed file name.
+        icon: the icon for the file item.
+        hidden: whether the file is hidden or displayed.
+        '''
+        hidden = 1 if hidden else 0
+        code = f'''
+        var newItemDivElement = createItem('{path}', '{name}', '{icon}', {hidden}); // create the new file item.
+        orchard.prepend(newItemDivElement); // add the new file item to the green boxes section which is marked by the 'orchard' id.
+        '''
+        self.page().runJavaScript(code)
 
 
 class  FileViewerGroup(QWidget):
@@ -484,6 +592,7 @@ class  FileViewerGroup(QWidget):
         btnGroup.btns = []
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        btnGroup.layout = layout
         btnGroup.setLayout(layout)
         btnGroup.setStyleSheet('''
         QWidget {
@@ -563,6 +672,16 @@ class FileViewerFileGroup(FileViewerGroup):
         self.layout.addWidget(self.creationWidget)
         self.layout.addWidget(self.connectToServerBtn)
 
+    def connectWidget(self, widget):
+        self.widget = widget
+        # self.newFileBtn.clicked.connect(widget.createFile)
+        self.newFolderBtn.clicked.connect(
+            lambda: widget.createDialogue(item_type="folder")
+        )
+        self.newFileBtn.clicked.connect(
+            lambda: widget.createDialogue(item_type="file")
+        )
+
 
 class FileViewerPathGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -601,6 +720,10 @@ class FileViewerPathGroup(FileViewerGroup):
             size=(25,25),
             tip="copy file path as url",
         )
+        self.stemBtn = self.initBtn(
+            text="stem", size=(25,25),
+            tip="copy file name without extension",
+        )
         self.extBtn = self.initBtn(
             text=".ext", size=(25,25),
             tip="copy extension of file",
@@ -617,6 +740,7 @@ class FileViewerPathGroup(FileViewerGroup):
 
         self.navLayout.addStretch(1)
         self.navLayout.addWidget(self.backPathBtn)
+        self.navLayout.addWidget(self.stemBtn)
         self.navLayout.addWidget(self.extBtn)
         
         self.layout.addStretch(1)
@@ -650,6 +774,9 @@ class FileViewerEditGroup(FileViewerGroup):
             {"icon": "rename.svg", "size": (20,20), "tip": "rename file/folder"},
             {"icon": "redo.png", "size": (20,20) , "tip": "redo rename"},
         ])
+        self.undoBtn = self.renameGroup.btns[0]
+        self.renameBtn = self.renameGroup.btns[1]
+        self.redoBtn = self.renameGroup.btns[2]
         # cut, copy, paste
         self.moveGroup = self.initBtnGroup([
             {"icon": "cut.png", "size": (20,20), "tip": "cut selected item"},
@@ -670,6 +797,10 @@ class FileViewerEditGroup(FileViewerGroup):
         self.layout.addStretch(1)
         self.layout.addWidget(self.editWidget)
         self.layout.addStretch(1)    
+
+    def connectWidget(self, widget):
+        self.widget = widget
+        self.renameBtn.clicked.connect(widget.renameDialog)
 
 
 class FileViewerViewGroup(FileViewerGroup):
@@ -790,6 +921,8 @@ class FileViewerMenu(QWidget):
         return sep
 
     def connectWidget(self, widget):
+        self.filegroup.connectWidget(widget)
+        self.editgroup.connectWidget(widget)
         self.viewgroup.connectWidget(widget)
         self.pathgroup.connectWidget(widget)
         self.selectgroup.connectWidget(widget)
@@ -913,7 +1046,7 @@ class FileViewerFolderBar(QWidget):
         return btn 
 
 
-class FileViewerWidget(QWidget):
+class FileViewerWidget(QMainWindow):
     def __init__(self, parent: Union[None, QWidget]=None,
                  zoom_factor: float=1.35, **args):
         super(FileViewerWidget, self).__init__(parent)
@@ -937,8 +1070,8 @@ class FileViewerWidget(QWidget):
         self.hidden_visible = False
         # handle click events (using click handler)
         self.channel = QWebChannel()
-        self.clickHandler = ClickEventHandler(fileviewer=self)
-        self.channel.registerObject("clickHandler", self.clickHandler)
+        self.eventHandler = EventHandler(fileviewer=self)
+        self.channel.registerObject("eventHandler", self.eventHandler)
         self.webview.page().setWebChannel(self.channel)
         self.folderbar = FileViewerFolderBar()
         self.folderbar.setMaximumHeight(30)
@@ -950,13 +1083,21 @@ class FileViewerWidget(QWidget):
         # add widgets to layout.
         self.layout.addWidget(self.menu)
         self.layout.addWidget(self.folderbar)
-        self.layout.addWidget(self.webview.devToolsBtn)
+        # add the dev tools button to the view group.
+        self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
+        # self.layout.addWidget(self.webview.devToolsBtn)
         self.layout.addWidget(self.webview.splitter)
-        self.setLayout(self.layout)
+        
+        self.central_widget = QWidget()
+        self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
+        self.central_widget.setLayout(self.layout)
+        self.setCentralWidget(self.central_widget)
+
         self.webview.urlChanged.connect(self.onUrlChange)
-        self.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')
+        
         self.menu.connectWidget(self)
         self.folderbar.connectWidget(self)
+        self.webview.connectWidget(self)
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -1017,8 +1158,63 @@ class FileViewerWidget(QWidget):
         self.error_dialog.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.error_dialog.showMessage(msg)
         # print(msg)
-    def open(self, folder: str=os.path.expanduser("~")):
+    def createDialogue(self, item_type="file"):
+        # file icon: file:///usr/share/icons/Humanity/mimes/48/text-plain.svg
+        # folder icon: file:///usr/share/icons/Humanity/places/64/inode-directory.svg
+        if item_type == "folder": 
+            path = self.createFolder()
+            icon = "file:///usr/share/icons/Humanity/places/64/inode-directory.svg"
+        elif item_type == "file": 
+            path = self.createFile()
+            icon = "file:///usr/share/icons/Humanity/mimes/48/text-plain.svg"
+        name = Path(path).name
+        self.webview.createItem(path, name, icon, hidden=False) 
+
+    def renameDialog(self, path: Union[str, None]=None):
+        '''rename file item, by creating an editable field.'''
+        if path is None: path = self.selected_item
+        if self.selected_item:
+            self.webview.initiateRenameForId(self.selected_item)
+
+    def renameItem(self, id: str, new_name: str):
+        parent = Path(id).parent
+        new_name = os.path.join(parent, new_name)
+        print(f"renaming {id} to {new_name}")
+        os.rename(id, new_name)
+
+    def createFile(self):
+        '''create a new empty file'''
+        i = 1
+        while True:
+            path = os.path.join(self.folder, f"Untitled File {i}")
+            if not os.path.exists(path): break
+            else: i += 1
+        print(f"\x1b[32;1mcreated new file: {path}\x1b[0m")
+        open(path, "w")
+
+        return path
+
+    def createFolder(self):
+        '''create a new empty folder'''
+        i = 1
+        while True:
+            try:
+                path = os.  path.join(
+                    self.folder, 
+                    f"Untitled Folder {i}"
+                )
+                os.mkdir(path)
+                break
+            except FileExistsError:
+                i += 1
+        print(f"\x1b[32;1mcreated new folder: {path}\x1b[0m")
+
+        return path
+
+    def open(self, folder: str="~"):
         '''open a file/folder location.'''
+        # expand user.
+        folder = os.path.expanduser(folder) 
         # call xdg-open if a file is clicked instead of a folder.
         if os.path.isfile(folder): 
             self.callXdgOpen(folder)
@@ -1184,7 +1380,8 @@ def test_fileviewer():
         background="/home/atharva/Pictures/Wallpapers/anime/beautiful-crowded-city.jpg",
         font_color="#fff",
     )
-    fileviewer.open()
+    fileviewer.setStyleSheet("background: tranparent; border: 0px;")
+    fileviewer.open("~/GUI/FileViewerTest")
     # fileviewer.saveScreenshot("fileviewer.html")
     fileviewer.show()
     app.exec()
