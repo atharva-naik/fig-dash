@@ -213,6 +213,14 @@ class DashTabWidget(QTabWidget):
             HOME_CSS=FigD.staticUrl("home.css"),
         ).toString())
 
+    def openFolder(self, folder: str):
+        pass
+
+    def openWidget(self, widget: QWidget, 
+                   title: str="", icon: str=""):
+        i = self.addTab(widget, QIcon(icon), "  "+title)
+        self.setCurrentIndex(i)
+
     def openUrl(self, url: str="https://google.com"):
         qurl = QUrl(url)
         browser = Browser(self)

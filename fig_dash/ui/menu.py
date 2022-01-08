@@ -77,12 +77,12 @@ QTabBar::tab:selected {
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
 class DashMenu(QTabWidget):
-    def __init__(self, parent: Union[None, QWidget]=None):
+    def __init__(self, parent: Union[None, QWidget]=None, **args):
         super(DashMenu, self).__init__(parent)
         self.toggleBtn = self.initToggleBtn()
-        self.filemenu = self.initFileMenu()
-        self.editmenu = self.initEditMenu()
-        self.codemenu = self.initCodeMenu()
+        self.filemenu = self.initFileMenu(**args)
+        self.editmenu = self.initEditMenu(**args)
+        self.codemenu = self.initCodeMenu(**args)
         self.addTab(self.filemenu, "File")        
         self.addTab(self.editmenu, "Edit")
         self.addTab(self.codemenu, "Code")        
@@ -138,18 +138,20 @@ class DashMenu(QTabWidget):
         else:
             self.collapse()
 
-    def initFileMenu(self):
+    def initFileMenu(self, **args):
         filemenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        self.fileviewer = FileViewerWidget()
+        self.fileviewer = FileViewerWidget(
+            background=args.get("wallpaper")
+        )
         layout.addWidget(self.fileviewer.menu)
         filemenu.setLayout(layout)
         filemenu.setObjectName("DashMenuTab")
 
         return filemenu
 
-    def initBrowserMenu(self):
+    def initBrowserMenu(self, **args):
         browsermenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -157,7 +159,7 @@ class DashMenu(QTabWidget):
         browsermenu.setLayout(layout)
         browsermenu.setObjectName("DashMenuTab")
 
-    def initEditMenu(self):
+    def initEditMenu(self, **args):
         editmenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -180,7 +182,7 @@ class DashMenu(QTabWidget):
         }''')
         return name
 
-    def initCodeMenu(self):
+    def initCodeMenu(self, **args):
         codemenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)

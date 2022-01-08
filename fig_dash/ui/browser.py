@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
+import os
 from pprint import pprint
 from typing import Union, Tuple
 from requests.exceptions import MissingSchema
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from ..utils import QFetchIcon
@@ -197,6 +198,7 @@ class PageInfo(QWidget):
 class Browser(QWebEngineView):
     def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25):
         super(Browser, self).__init__(parent)
+        self.mime_database = QMimeDatabase()
         self.historyIndex = 0
         self.browsingHistory = []
         self.currentZoomFactor = zoomFactor
@@ -245,6 +247,26 @@ class Browser(QWebEngineView):
         self.historyIndex += 1
         self.historyIndex = min(len(self.browsingHistory)-1, self.historyIndex)
         self.forward()
+
+    def dragEnterEvent(self, e):
+        from pathlib import Path
+        from pprint import pprint
+
+        filename = e.mimeData().text().strip()
+        filename = filename.replace("file://", "")
+        mimetype = self.mime_database.mimeTypeForFile(filename).name()
+        print(f"dragEvent for {'folder' if os.path.isdir(filename) else 'file'}: {filename}, with mimetype: {mimetype}")
+        if os.path.isdir(filename):
+            # case when item being opened is actually a folder.
+            self.dash_window.tabs.openWidget(
+                widget=self.dash_window.menu.fileviewer,
+                icon=FigD.Icon("system/fileviewer/folder.svg"),
+                title=filename, 
+            )
+            self.dash_window.menu.fileviewer.connectWindow(self.dash_window)
+            self.dash_window.menu.fileviewer.open(filename)
+        else:
+            super(Browser, self).dragEnterEvent(e)
 
     def updateTabTitle(self):
         try:
@@ -309,6 +331,8 @@ newSelectStyle.innerHTML = Style
 document.head.appendChild(newSelectStyle);
 '''
         self.page().runJavaScript(code)
+
+    # def drop
 
     def iconSetCallback(self, html: str):
         from bs4 import BeautifulSoup

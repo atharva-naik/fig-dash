@@ -52,18 +52,16 @@ class DashUI(QApplication):
         # self.window.setWindowIcon(QIcon(kwargs.get("icon")))
     def setWindowFlags(self, *flags):
         self.window.setFlags(*flags)
-
-    def notify(self, obj, event):
-        if event.type() == QEvent.WindowDeactivate:
-            currentWidget = self.window.tabs.currentWidget()
-            currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=5))
-            # print("bluring background")
-        if event.type() == QEvent.WindowActivate:
-            currentWidget = self.window.tabs.currentWidget()
-            currentWidget.setGraphicsEffect(None)
-            # print("unbluring background")
-        return super().notify(obj, event)
-
+    # def notify(self, obj, event):
+    #     if event.type() == QEvent.WindowDeactivate:
+    #         currentWidget = self.window.tabs.currentWidget()
+    #         currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=5))
+    #         # print("bluring background")
+    #     if event.type() == QEvent.WindowActivate:
+    #         currentWidget = self.window.tabs.currentWidget()
+    #         currentWidget.setGraphicsEffect(None)
+    #         # print("unbluring background")
+    #     return super().notify(obj, event)
     def launch(self, maximized=True):
         '''
         launch app ui.

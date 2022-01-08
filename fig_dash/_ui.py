@@ -113,7 +113,7 @@ class DashWindow(QMainWindow):
         h = kwargs.get("h", 100)
         self.setGeometry(x, y, w, h)
         # self.firstResizeOver = False
-        self.centralWidget = self.initCentralWidget()
+        self.centralWidget = self.initCentralWidget(**kwargs)
         self.setCentralWidget(self.centralWidget)
         self.setWindowTitle("Dash Window")
         # print(kwargs.get('icon'))
@@ -149,8 +149,8 @@ class DashWindow(QMainWindow):
         # tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         return tabs
 
-    def initCentralWidget(self):
-        self.menu = DashMenu(self)
+    def initCentralWidget(self, **kwargs):
+        self.menu = DashMenu(self, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -190,13 +190,13 @@ class DashWindow(QMainWindow):
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)
-        # self.floatmenu.hide()
+        self.floatmenu.hide()
         self.floatmenu.move(2,30)
         # system utilities bar.
         self.sysutilsbar = SysUtilsBar(self.tabs)
         # page info.
         self.page_info = PageInfo(self.tabs)
-        # self.page_info.hide()
+        self.page_info.hide()
         # ideas widget.
         self.ideas = IdeasWidget(self.tabs)
         self.ideas.hide()

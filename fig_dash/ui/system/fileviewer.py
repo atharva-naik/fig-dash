@@ -3,8 +3,8 @@
 # the fig-dash fileviewer is known as the "orchard".
 import os
 import jinja2
-from typing import Union
 from pathlib import Path
+from typing import Union, Tuple
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.ui.browser import DebugWebView
@@ -13,7 +13,7 @@ from fig_dash.ui.js.webchannel import QWebChannelJS
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox
 # filweviewer widget.
 ViSelectJS = r'''/*! @viselect/vanilla 3.0.0-beta.13 MIT | https://github.com/Simonwep/selection */
 const t=(t,e="px")=>"number"==typeof t?t+e:t;function e({style:e},s,i){if("object"==typeof s)for(const[i,o]of Object.entries(s))e[i]=t(o);else void 0!==i&&(e[s]=t(i))}function s(t){return(e,s,i,o={})=>{e instanceof HTMLCollection||e instanceof NodeList?e=Array.from(e):Array.isArray(e)||(e=[e]),Array.isArray(s)||(s=[s]);for(const n of e)for(const e of s)n[t](e,i,{capture:!1,...o});return[e,s,i,o]}}const i=s("addEventListener"),o=s("removeEventListener"),n=t=>{const e=t.touches&&t.touches[0]||t;return{tap:e,x:e.clientX,y:e.clientY,target:e.target}};function r(t){let e=t.path||t.composedPath&&t.composedPath();if(e)return e;let s=t.target.parentElement;for(e=[t.target,s];s=s.parentElement;)e.push(s);return e.push(document,window),e}function h(t,e,s="touch"){switch(s){case"center":{const s=e.left+e.width/2,i=e.top+e.height/2;return s>=t.left&&s<=t.right&&i>=t.top&&i<=t.bottom}case"cover":return e.left>=t.left&&e.top>=t.top&&e.right<=t.right&&e.bottom<=t.bottom;case"touch":return t.right>=e.left&&t.left<=e.right&&t.bottom>=e.top&&t.top<=e.bottom;default:throw new Error(`Unkown intersection mode: ${s}`)}}function c(t,e){const s=t.indexOf(e);~s&&t.splice(s,1)}function a(t,e=document){const s=Array.isArray(t)?t:[t],i=[];for(let t=0,o=s.length;t<o;t++){const o=s[t];"string"==typeof o?i.push(...Array.from(e.querySelectorAll(o))):o instanceof Element&&i.push(o)}return i}const l=()=>matchMedia("(hover: none), (pointer: coarse)").matches,u=(t,e)=>{for(const[s,i]of Object.entries(t)){const o=e[s];t[s]=void 0===o?t[s]:"object"!=typeof o||"object"!=typeof i||null===i||Array.isArray(i)?o:u(i,o)}return t},{abs:d,max:p,min:f,ceil:m}=Math;class SelectionArea extends class{constructor(){this.t=new Map,this.on=this.addEventListener,this.off=this.removeEventListener,this.emit=this.dispatchEvent}addEventListener(t,e){const s=this.t.get(t)||new Set;return this.t.set(t,s),s.add(e),this}removeEventListener(t,e){return this.t.get(t)?.delete(e),this}dispatchEvent(t,...e){let s=!0;for(const i of this.t.get(t)||[])s=!1!==i(...e)&&s;return s}unbindAllListeners(){this.t.clear()}}{constructor(t){super(),this.i={touched:[],stored:[],selected:[],changed:{added:[],removed:[]}},this.o=[],this.h=new DOMRect,this.l={y1:0,x2:0,y2:0,x1:0},this.u=!0,this.p=!0,this.m={x:0,y:0},this.v={x:0,y:0},this.disable=this.g.bind(this,!1),this.enable=this.g,this._=u({selectionAreaClass:"selection-area",selectionContainerClass:void 0,selectables:[],document:window.document,behaviour:{overlap:"invert",intersect:"touch",startThreshold:{x:10,y:10},scrolling:{speedDivider:10,manualSpeed:750,startScrollMargins:{x:0,y:0}}},features:{range:!0,touch:!0,singleTap:{allow:!0,intersect:"native"}},startAreas:["html"],boundaries:["html"],container:"body"},t);for(const t of Object.getOwnPropertyNames(Object.getPrototypeOf(this)))"function"==typeof this[t]&&(this[t]=this[t].bind(this));const{document:s,selectionAreaClass:i,selectionContainerClass:o}=this._;this.S=s.createElement("div"),this.A=s.createElement("div"),this.A.appendChild(this.S),this.S.classList.add(i),o&&this.A.classList.add(o),e(this.S,{willChange:"top, left, bottom, right, width, height",top:0,left:0,position:"fixed"}),e(this.A,{overflow:"hidden",position:"fixed",transform:"translate3d(0, 0, 0)",pointerEvents:"none",zIndex:"1"}),this.T=(t=>{let e,s=-1,i=!1;return{next(...o){e=o,i||(i=!0,s=requestAnimationFrame((()=>{t(...e),i=!1})))},cancel(){cancelAnimationFrame(s),i=!1}}})((t=>{this.L(),this.C(),this.M("move",t),this.j()})),this.enable()}g(t=!0){const{document:e,features:s}=this._,n=t?i:o;n(e,"mousedown",this.k),s.touch&&n(e,"touchstart",this.k,{passive:!1})}k(t,e=!1){const{x:s,y:o,target:c}=n(t),{_:l}=this,{document:u}=this._,d=c.getBoundingClientRect(),p=a(l.startAreas,l.document),f=a(l.boundaries,l.document);this.O=f.find((t=>h(t.getBoundingClientRect(),d)));const m=r(t);if(!this.O||!p.find((t=>m.includes(t)))||!f.find((t=>m.includes(t))))return;if(!e&&!1===this.M("beforestart",t))return;this.l={x1:s,y1:o,x2:0,y2:0};const v=u.scrollingElement||u.body;this.v={x:v.scrollLeft,y:v.scrollTop},this.u=!0,this.clearSelection(!1),i(u,["touchmove","mousemove"],this.R,{passive:!1}),i(u,["mouseup","touchcancel","touchend"],this.$),i(u,"scroll",this.D)}F(t){const{singleTap:{intersect:e},range:s}=this._.features,i=n(t);let o=null;if("native"===e)o=i.target;else if("touch"===e){this.resolveSelectables();const{x:t,y:e}=i;o=this.o.find((s=>{const{right:i,left:o,top:n,bottom:r}=s.getBoundingClientRect();return t<i&&t>o&&e<r&&e>n}))}if(!o)return;for(this.resolveSelectables();!this.o.includes(o);){if(!o.parentElement)return;o=o.parentElement}const{stored:r}=this.i;if(this.M("start",t),t.shiftKey&&r.length&&s){const t=this.q??r[0],[e,s]=4&t.compareDocumentPosition(o)?[o,t]:[t,o],i=[...this.o.filter((t=>4&t.compareDocumentPosition(e)&&2&t.compareDocumentPosition(s))),e,s];this.select(i)}else r.includes(o)&&(1===r.length||t.ctrlKey||r.every((t=>this.i.stored.includes(t))))?this.deselect(o):(this.q=o,this.select(o));this.M("stop",t)}R(t){const{container:s,document:r,features:h,behaviour:{startThreshold:c}}=this._,{x1:u,y1:p}=this.l,{x:f,y:m}=n(t),v=typeof c;if("number"===v&&d(f+m-(u+p))>=c||"object"===v&&d(f-u)>=c.x||d(m-p)>=c.y){if(o(r,["mousemove","touchmove"],this.R,{passive:!1}),!1===this.M("beforedrag",t))return void o(r,["mouseup","touchcancel","touchend"],this.$);i(r,["mousemove","touchmove"],this.H,{passive:!1}),e(this.S,"display","block"),a(s,r)[0].appendChild(this.A),this.resolveSelectables(),this.u=!1,this.W=this.O.getBoundingClientRect(),this.p=this.O.scrollHeight!==this.O.clientHeight||this.O.scrollWidth!==this.O.clientWidth,this.p&&(i(r,"wheel",this.I,{passive:!1}),this.o=this.o.filter((t=>this.O.contains(t)))),this.N(),this.M("start",t),this.H(t)}h.touch&&l()&&t.preventDefault()}N(){const{A:t,O:s,S:i}=this,o=this.W=s.getBoundingClientRect();this.p?(e(t,{top:o.top,left:o.left,width:o.width,height:o.height}),e(i,{marginTop:-o.top,marginLeft:-o.left})):(e(t,{top:0,left:0,width:"100%",height:"100%"}),e(i,{marginTop:0,marginLeft:0}))}H(t){const{x:e,y:s}=n(t),{m:i,l:o,_:r,T:h}=this,{features:c}=r,{speedDivider:a}=r.behaviour.scrolling,u=this.O;if(o.x2=e,o.y2=s,this.p&&(i.y||i.x)){const e=()=>{if(!i.x&&!i.y)return;const{scrollTop:s,scrollLeft:n}=u;i.y&&(u.scrollTop+=m(i.y/a),o.y1-=u.scrollTop-s),i.x&&(u.scrollLeft+=m(i.x/a),o.x1-=u.scrollLeft-n),h.next(t),requestAnimationFrame(e)};requestAnimationFrame(e)}else h.next(t);c.touch&&l()&&t.preventDefault()}D(){const{v:t,_:{document:e}}=this,{scrollTop:s,scrollLeft:i}=e.scrollingElement||e.body;this.l.x1+=t.x-i,this.l.y1+=t.y-s,t.x=i,t.y=s,this.N(),this.T.next(null)}I(t){const{manualSpeed:e}=this._.behaviour.scrolling,s=t.deltaY?t.deltaY>0?1:-1:0,i=t.deltaX?t.deltaX>0?1:-1:0;this.m.y+=s*e,this.m.x+=i*e,this.H(t),t.preventDefault()}L(){const{m:t,l:e,h:s,O:i,W:o,_:n}=this,{scrollTop:r,scrollHeight:h,clientHeight:c,scrollLeft:a,scrollWidth:l,clientWidth:u}=i,m=o,{x1:v,y1:g}=e;let{x2:y,y2:_}=e;const{behaviour:{scrolling:{startScrollMargins:x}}}=n;y<m.left+x.x?(t.x=a?-d(m.left-y+x.x):0,y=y<m.left?m.left:y):y>m.right-x.x?(t.x=l-a-u?d(m.left+m.width-y-x.x):0,y=y>m.right?m.right:y):t.x=0,_<m.top+x.y?(t.y=r?-d(m.top-_+x.y):0,_=_<m.top?m.top:_):_>m.bottom-x.y?(t.y=h-r-c?d(m.top+m.height-_-x.y):0,_=_>m.bottom?m.bottom:_):t.y=0;const b=f(v,y),S=f(g,_),w=p(v,y),A=p(g,_);s.x=b,s.y=S,s.width=w-b,s.height=A-S}j(){const{x:t,y:e,width:s,height:i}=this.h,{style:o}=this.S;o.left=`${t}px`,o.top=`${e}px`,o.width=`${s}px`,o.height=`${i}px`}$(t,s){const{document:i,features:n}=this._,{u:r}=this;o(i,["mousemove","touchmove"],this.R),o(i,["touchmove","mousemove"],this.H),o(i,["mouseup","touchcancel","touchend"],this.$),o(i,"scroll",this.D),t&&r&&n.singleTap.allow?this.F(t):r||s||(this.C(),this.M("stop",t)),this.m.x=0,this.m.y=0,this.p&&o(i,"wheel",this.I,{passive:!0}),this.A.remove(),this.T?.cancel(),e(this.S,"display","none"),this.U()}C(){const{o:t,_:e,i:s,h:i}=this,{stored:o,selected:n,touched:r}=s,{intersect:c,overlap:a}=e.behaviour,l="invert"===a,u=[],d=[],p=[];for(let e=0;e<t.length;e++){const s=t[e];if(h(i,s.getBoundingClientRect(),c)){if(n.includes(s))o.includes(s)&&!r.includes(s)&&r.push(s);else{if(l&&o.includes(s)){p.push(s);continue}d.push(s)}u.push(s)}}l&&d.push(...o.filter((t=>!n.includes(t))));const f="keep"===a;for(let t=0;t<n.length;t++){const e=n[t];u.includes(e)||f&&o.includes(e)||p.push(e)}s.selected=u,s.changed={added:d,removed:p},this.q=u[u.length-1]}M(t,e){return this.emit(t,{event:e,store:this.i,selection:this})}U(){const{_:t,i:e}=this,{selected:s,changed:i,touched:o,stored:n}=e,r=s.filter((t=>!n.includes(t)));switch(t.behaviour.overlap){case"drop":e.stored=[...r,...n.filter((t=>!o.includes(t)))];break;case"invert":e.stored=[...r,...n.filter((t=>!i.removed.includes(t)))];break;case"keep":e.stored=[...n,...s.filter((t=>!n.includes(t)))]}}trigger(t,e=!0){this.k(t,e)}resolveSelectables(){this.o=a(this._.selectables,this._.document)}clearSelection(t=!0){this.i={stored:t?[]:this.i.stored,selected:[],touched:[],changed:{added:[],removed:[]}}}getSelection(){return this.i.stored}getSelectionArea(){return this.S}cancel(t=!1){this.$(null,!t)}destroy(){this.cancel(),this.disable(),this.A.remove(),super.unbindAllListeners()}select(t,e=!1){const{changed:s,selected:i,stored:o}=this.i,n=a(t,this._.document).filter((t=>!i.includes(t)&&!o.includes(t)));return o.push(...n),i.push(...n),s.added.push(...n),!e&&this.M("move",null),n}deselect(t,e=!1){const{selected:s,stored:i,changed:o}=this.i;return!(!s.includes(t)&&!i.includes(t))&&(o.removed.push(t),c(i,t),c(s,t),!e&&this.M("move",null),!0)}}SelectionArea.version="3.0.0-beta.13";export{SelectionArea as default};
@@ -52,12 +52,15 @@ body {
 body {
     color: {{ FONT_COLOR }};
     font-family: 'Roboto', sans-serif;
-    background: rgb(72,72,72);
-    background: linear-gradient(-45deg, rgba(72,72,72,1) 30%, rgba(41,41,41,1) 60%);
+    background-color: rgb(72,72,72);
+    background-color: linear-gradient(-45deg, rgba(72,72,72,1) 30%, rgba(41,41,41,1) 60%);
     /* backdrop-filter: blur(10px); */
-    backdrop-filter: brightness(30%) blur(2px);
     background-image: url('{{ BACKGROUND_IMAGE }}');
+    background-repeat: no-repeat;
     background-position: center;
+    background-size: cover;
+    background-attachment: fixed;
+    backdrop-filter: brightness(50%);
 }
 
 *::-webkit-scrollbar {
@@ -294,6 +297,17 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
                 eventHandler.sendOpenRequest(file_item_id);
             });
         })
+        divElement.addEventListener('contextmenu', function(event) {
+            // event.preventDefault(); // disable regular contextmenu.
+            event.preventDefault();
+            var file_item = this;
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                var eventHandler = channel.objects.eventHandler;
+                eventHandler.triggerContextMenu(file_item.id);
+            });
+            console.log(event);
+            // file_item.dispatchEvent(new CustomEvent('contextmenu'));
+        });
         if (fileHiddenFlags[i] == "1") {
             divElement.style.display = "none";
         }
@@ -328,6 +342,78 @@ const filesSelection = new SelectionArea({
 
 FileViewerCustomJS = r'''
 // create file item.
+class OrchardAppearance {
+    constructor() {
+        var body = document.body
+        this.style = window.getComputedStyle(body);
+    }
+    get(attr) {
+        var body = document.body
+        this.style = window.getComputedStyle(body);
+        
+        return this.style.getPropertyValue(attr);
+    }
+    set(attr, value) {
+        document.body.style.setProperty(attr, value);
+    }
+    setFilter(filter, val) {
+        var filter_str = this.get('backdrop-filter');
+        var all_filters = filter_str.split(" ");
+        var filter_exists = false
+        for (let i=0; i<all_filters.length; i++) {
+            if (all_filters[i].startsWith(filter)) {
+                all_filters[i] = `${filter}(${val})`;
+                filter_exists = true;
+            }   
+        }
+        if (filter_exists == false) {
+            all_filters.push(`${filter}(${val})`);
+        }
+        filter_str = all_filters.join(" ");
+        this.set('backdrop-filter', filter_str);
+    }
+    setGrayScale(val) {
+        this.setFilter('grayscale', val);
+    }
+    setContrast(val) {
+        this.setFilter('contrast', val);
+    }
+    setInvert(val) {
+        this.setFilter('invert', val);
+    }
+    setOpacity(val) {
+        this.setFilter('opacity', val);
+    }
+    setSaturate(val) {
+        this.setFilter('saturate', val);
+    }
+    setBlurRadius(radius) {
+        var filter_str = this.get('backdrop-filter');
+        var all_filters = filter_str.split(" ");
+        var filter_exists = false
+        for (let i=0; i<all_filters.length; i++) {
+            if (all_filters[i].startsWith('blur')) {
+                all_filters[i] = `blur(${radius}px)`;
+                filter_exists = true;
+            }   
+        }
+        if (filter_exists == false) {
+            all_filters.push(`blur(${radius}px)`);
+        }
+        filter_str = all_filters.join(" ");
+        this.set('backdrop-filter', filter_str);
+    }
+    // backdrop-filter: hue-rotate(120deg);
+    // backdrop-filter: drop-shadow(4px 4px 10px blue);
+    setBrightness(val) {
+        this.setFilter('brightness', val);
+    }
+    setSepia(val) {
+        this.setFilter('sepia', val);
+    }
+}
+let oa = new OrchardAppearance();
+
 function createItem(path, name, icon, hidden) {
     var item = document.createElement('div');
     item.id = path;
@@ -338,7 +424,7 @@ function createItem(path, name, icon, hidden) {
     item.className = "file_item";
     item.style.textAlign = 'center';
     item.innerHTML = `
-    <img class="icon" src="${icon}" width="40px;"/>
+    <img class="icon" src="${icon}" width="40px" max-height="40px"/>
     <br>
     <span class="item_name" style="text-align: center; font-size: 14px;">${name}</span>`
     item.onclick = function() {
@@ -467,6 +553,39 @@ FileViewerHtml = jinja2.Template(r'''
                 <section id="orchard" class="boxes green"></section>
             </section>
         </main>
+        <div id="background_style_panel" style="text-align:center; font-size: 14px;">
+            <span>gray scale</span>
+            <br>
+            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setGrayScale(this.value/100)">
+            <br>
+            <span>contrast</span>
+            <br>
+            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setContrast(this.value/100)">
+            <br>
+            <span>invert</span>
+            <br>
+            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setInvert(this.value/100)">
+            <br>
+            <span>opacity</span>
+            <br>
+            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
+            <br>
+            <span>saturation</span>
+            <br>
+            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
+            <br>
+            <span>blur</span>
+            <br>
+            <input type="range" min="1" max="30" value="0" class="slider" onchange="oa.setBlurRadius(this.value)">
+            <br>
+            <span>brightness</span>
+            <br>
+            <input type="range" min="1" max="100" value="50" class="slider" onchange="oa.setBrightness(this.value/100)">
+            <br>
+            <span>sepia</span>
+            <br>
+            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
+        </div>
         <script>{{ WEBCHANNEL_JS }}</script>
         <script>{{ FILEVIEWER_CJS }}</script>
         <script type="module">{{ FILEVIEWER_MJS }}</script>
@@ -487,6 +606,11 @@ class EventHandler(QObject):
         print(f"opened path {path}")
         self.fileviewer.open(path)
 
+    @pyqtSlot(str)
+    def triggerContextMenu(self, path: str):
+        # self.fileviewer.webview.menu = self.fileviewer.webview.itemMenu
+        print(f"context menu triggered for {path}")
+
     @pyqtSlot(str, str)
     def triggerRename(self, id: str, new_name: str):
         new_name = new_name.strip()
@@ -497,30 +621,44 @@ class FileViewerWebView(DebugWebView):
     '''fileviewer web view'''
     def __init__(self):
         super(FileViewerWebView, self).__init__()
-        self.menu = QMenu()
-        self.menu.setStyleSheet("background: #292929; color: #fff;")
-        self.menu.addAction("New Folder")
-        self.menu.addAction("New File")
-        self.menu.addSeparator()
-        self.menu.addAction("Restore Missing Files...")
-        self.menu.addAction("Open in Terminal")
-        self.menu.addSeparator()
-        self.menu.addAction("Paste")
-        self.menu.addSeparator()
-        self.menu.addAction("Properties")
+        self.orchardMenu = QMenu()
+        self.orchardMenu.setStyleSheet("background: #292929; color: #fff;")
+        self.orchardMenu.addAction("New Folder")
+        self.orchardMenu.addAction("New File")
+        self.orchardMenu.addSeparator()
+        self.orchardMenu.addAction("Restore Missing Files...")
+        self.orchardMenu.addAction("Open in Terminal")
+        self.orchardMenu.addSeparator()
+        self.orchardMenu.addAction("Paste")
+        self.orchardMenu.addSeparator()
+        self.orchardMenu.addAction("Properties")
 
+        self.itemMenu = QMenu()
+        self.itemMenu.setStyleSheet("background: #292929; color: #fff;")
+        self.itemMenu.addAction("Open")
+        self.itemMenu.addAction("Open With")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction("Cut")
+        self.itemMenu.addAction("Copy")
+
+    def dragEnterEvent(self, e):
+        e.ignore()
+    # def itemContextMenuEvent(self, event):
+    #     '''show item specific context menu (for the selected item)'''
+    #     self.itemMenu.popup(event.globalPos())
     def contextMenuEvent(self, event):
-        '''redefine the context menu.'''
-        self.menu.popup(event.globalPos())
+        '''show the orchared context menu (not specific to a selected item)'''
+        print(dir(event))
+        self.orchardMenu.popup(event.globalPos())
 
     def connectWidget(self, widget):
         self.widget = widget
         # New folder action.
-        self.menu.actions()[0].triggered.connect(
+        self.orchardMenu.actions()[0].triggered.connect(
             lambda: widget.createDialogue(item_type="folder")
         )
         # New file action.
-        self.menu.actions()[1].triggered.connect(
+        self.orchardMenu.actions()[1].triggered.connect(
             lambda: widget.createDialogue(item_type="file")
         )
 
@@ -557,11 +695,12 @@ selectedItemSpan.addEventListener('keypress', handleItemRename);
         self.page().runJavaScript(code)
 
 
-class  FileViewerGroup(QWidget):
+class FileViewerGroup(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None,
                  name: str="Widget Group"):
         super(FileViewerGroup, self).__init__(parent)
         layout = QVBoxLayout()
+        layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         # layout.setSpacing(0)
         self.group = QWidget()
@@ -587,10 +726,14 @@ class  FileViewerGroup(QWidget):
         }''')
         return name
 
-    def initBtnGroup(self, btn_args):
+    def initBtnGroup(self, btn_args, 
+                     orient="horizontal"):
         btnGroup = QWidget()
         btnGroup.btns = []
-        layout = QHBoxLayout()
+        if orient == "horizontal":
+            layout = QHBoxLayout()
+        elif orient == "vertical":
+            layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
         btnGroup.setLayout(layout)
@@ -789,6 +932,7 @@ class FileViewerEditGroup(FileViewerGroup):
             {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
             {"icon": "trash.svg", "size": (30,30), "tip": "move selected item(s) to trash"},
         ])
+        # self.sortWidget = QWidget()
         self.editLayout.addWidget(self.renameGroup)
         self.editLayout.addWidget(self.moveGroup)
         self.editLayout.addWidget(self.linkGroup)
@@ -844,6 +988,10 @@ class FileViewerViewGroup(FileViewerGroup):
         self.folderbarBtn.clicked.connect(
             widget.folderbar.toggle
         )
+        self.sidebarBtn.clicked.connect(
+            widget.sidebar.toggle
+        )
+
         self.hiddenFilesBtn.clicked.connect(
             widget.toggleHiddenFiles
         )
@@ -860,7 +1008,7 @@ class FileViewerSelectGroup(FileViewerGroup):
             {"icon": "clear_selection.png", "size": (25,25), "tip": "clear current selection"},
             {"icon": "select_all.png", "size": (25,25), "tip": "select all items"},
             {"icon": "invert_selection.png", "size": (25,25), "tip": "invert selected items"},
-        ])
+        ], orient="vertical")
         self.clearBtn = self.selectionGroup.btns[0]
         self.selectAllBtn = self.selectionGroup.btns[1]
         self.invertBtn = self.selectionGroup.btns[2]
@@ -877,36 +1025,318 @@ class FileViewerSelectGroup(FileViewerGroup):
         self.clearBtn.clicked.connect(widget.clearSelection)
         self.selectAllBtn.clicked.connect(widget.selectAll)
         self.invertBtn.clicked.connect(widget.invertSelection)
-# class FileViewerOpenGroup(QWidget):
-# class FileViewerMoveGroup(QWidget):
-# class FileViewerPropGroup(QWidget):
+
+
+class XdgOpenDropdown(QComboBox):
+    '''Dropdown of available applications for opening file of particular type.'''
+    def __init__(self, mimetype: str):
+        super(XdgOpenDropdown, self).__init__()
+        self.populate(mimetype)
+        self.currentIndexChanged.connect(self.selChanged)
+        self.setStyleSheet("background: #000; color: #fff; font-size: 14px;")
+
+    def getAppsList(self, mimetype: str):
+        '''get list of apps available for a given mimetype.'''
+        return ["an app", "another app", "more apps"]
+
+    def populate(self, mimetype: str):
+        # clear combox box.
+        # get list of available apps.
+        self.apps = self.getAppsList(mimetype)
+        for app in self.apps:
+            self.addItem(app)
+
+    def selChanged(self, index: int):
+        '''selected application (for xdg-open) is changed.'''
+        appSelected = self.apps[index]
+        print(appSelected)
+
+
+class FileViewerOpenGroup(FileViewerGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerOpenGroup, self).__init__(parent, "Open")
+        self.xdgOpenWidget = self.initXdgOpenWidget()
+        # opener widget.
+        self.openerGroup = self.initBtnGroup([
+            {"icon": "terminal.svg", "size":(40,40),
+            'tip': "open in terminal"},
+            {"icon": "browser.svg", "size":(40,40),
+            'tip': "open in browser"},
+        ], orient="vertical",)
+        self.terminalBtn = self.openerGroup.btns[0]
+        self.browserBtn = self.openerGroup.btns[1]
+
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.xdgOpenWidget)
+        self.layout.addWidget(self.openerGroup)
+        self.layout.addStretch(1)   
+
+    def updateMimeBtn(self, mimetype: str, 
+                      icon: QIcon):
+        self.mimeBtn.setText(mimetype)
+        # self.mimeBtn.setToolTip(tip)
+        # self.mimeBtn.setStatusTip(tip)
+        self.mimeBtn.setIcon(QIcon(icon))
+        self.mimeBtn.setIconSize(QSize(35,35))
+
+    def initXdgOpenWidget(self):
+        '''change xdg-open settings.'''
+        xdgOpenWidget = QWidget() 
+        xdgOpenLayout = QVBoxLayout()
+        xdgOpenLayout.setContentsMargins(0, 0, 0, 0)
+        xdgOpenLayout.setSpacing(0)
+        # open with label.
+        label = QLabel("Open With")
+        label.setStyleSheet('''
+        QLabel {
+            color: #eb5f34;
+            border: 0px;
+            font-size: 13px;
+            padding: 2px;
+            background: transparent;
+        }''')
+        
+        tip = "open selected file with selected app"
+        icon = os.path.join(
+            "system/fileviewer", 
+            "file.svg"
+        )
+        self.mimeBtn = QToolButton()
+        self.mimeBtn.setToolTip(tip)
+        self.mimeBtn.setStatusTip(tip)
+        self.mimeBtn.setText("text-plain")
+        self.mimeBtn.setIcon(FigD.Icon(icon))
+        self.mimeBtn.setIconSize(QSize(35,35))
+        self.mimeBtn.setStyleSheet('''
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 13px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+        }''')
+        self.mimeBtn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        # app selection dropdown.
+        self.appDropdown = XdgOpenDropdown("text-plain")
+
+        xdgOpenLayout.addWidget(self.mimeBtn, 0, Qt.AlignCenter)
+        xdgOpenLayout.addWidget(label, 0, Qt.AlignCenter)
+        xdgOpenLayout.addWidget(self.appDropdown)
+        xdgOpenWidget.setLayout(xdgOpenLayout)
+
+        return xdgOpenWidget
 # class FileViewerShareGroup(QWidget):
+# class FileViewerPropGroup(QWidget):
 # class FileViewerFilterGroup(QWidget):
 # class FileViewerUtilsGroup(QWidget): encryption, compression, file conversion (for images, videos,document formats etc.)
 
 # class FileViewerMiscGroup(QWidget): note, bookmark
 # class FileViewerVCSGroup(QWidget):
 # class FileViewerBackupGroup(QWidget):
+
+
+class AppearanceSlider(QWidget):
+    def __init__(self, icon: str="", orient: str="horizontal", 
+                 initial_value: float=1, tip: str=""):
+        super(AppearanceSlider, self).__init__()
+        self.layout = QHBoxLayout()
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.label = QLineEdit()
+        self.label.setText(str(initial_value))
+        self.label.returnPressed.connect(self.setSliderByLabel)
+        self.slider = QSlider()
+        if orient == "vertical":
+            self.slider.setOrientation(Qt.Vertical)
+        else:
+            self.slider.setOrientation(Qt.Horizontal)
+        self.icon = QLabel()
+        path = FigD.icon(
+            os.path.join("system/fileviewer", icon)
+        )
+        self.slider.setMaximumWidth(50)
+        self.slider.valueChanged.connect(self.sliderAction)
+        pixmap = QPixmap(path)
+        if icon.endswith(".png"):
+            pixmap = pixmap.scaled(
+                QSize(20,20), 
+                aspectRatioMode=Qt.KeepAspectRatio,
+                transformMode=Qt.SmoothTransformation,
+            )
+        # pixmap = pixmap.scaled(QSize(20,20))
+        self.icon.setPixmap(pixmap)
+        self.layout.addWidget(self.icon)
+        self.layout.addWidget(self.slider)
+        self.layout.addWidget(self.label)
+        self.label.setMaximumWidth(30)
+        self.label.setStyleSheet('''
+        QLineEdit {
+            color: #eb5f34;
+            font-size: 14px;
+        }''')
+        self.js_func  = None
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        self.setLayout(self.layout)
+
+    def connectWidget(self, js_func):
+        '''connect JS functionality'''
+        self.js_func = js_func
+
+    def sliderAction(self, value):
+        self.label.setText(f"{1+value:.0f}")
+        if self.js_func:
+            self.js_func()
+
+    def setSliderByLabel(self):
+        '''set slider value when return is pressed in the line edit.'''
+        try: value = int(self.label.text())
+        except ValueError: value = 0
+        self.slider.setValue(value)
+# oa.set('backdrop-filter', 'brightness(0.3) sepia(0.7)')
+# oa.setBrightness(0.5)
+class FileViewerAppearanceGroup(FileViewerGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerAppearanceGroup, self).__init__(parent, "Appearance")
+        VBox = QWidget()
+        HBox = QWidget()
+        Box3 = QWidget()
+        VBox.setStyleSheet("background: rgba(29, 29, 29, 0.7); border: 0px;")
+        HBox.setStyleSheet("background: rgba(29, 29, 29, 0.7); border: 0px;")
+        Box3.setStyleSheet("background: rgba(29, 29, 29, 0.7); border: 0px;")
+        HLayout = QVBoxLayout()
+        HLayout.setContentsMargins(0, 0, 0, 0)
+        VLayout = QVBoxLayout()
+        VLayout.setContentsMargins(0, 0, 0, 0)
+        Layout3 = QVBoxLayout()
+        Layout3.setContentsMargins(0, 0, 0, 0)
+        self.brightnessSlider = AppearanceSlider(
+            icon="brightness.svg",
+            tip="set background brightness",
+        )
+        self.blurRadiusSlider = AppearanceSlider(
+            icon="blur.svg",
+            tip="set background blur radius",
+        )
+        self.contrastSlider = AppearanceSlider(
+            icon="contrast.svg",
+            tip="set background contrast",
+        )
+        self.hueRotateSlider = AppearanceSlider(
+            icon="hue.png",
+            tip="set hue rotation",
+        )
+        self.grayScaleSlider = AppearanceSlider(
+            icon="grayscale.png",
+            tip="set gray scale amount",
+        )
+        self.saturateSlider = AppearanceSlider(
+            icon="saturation.png",
+            tip="set background saturation",
+        )
+        self.invertSlider = AppearanceSlider(
+            icon="invert.svg",
+            tip="invert background image color scheme",
+        )
+        self.opacitySlider = AppearanceSlider(
+            icon="opacity.svg",
+            tip="set background opacity",
+        )
+        self.sepiaSlider = AppearanceSlider(
+            icon="sepia.png",
+            tip="apply sepia filter",
+        )
+        self.backgroundImageBtn = self.initBtn(
+            icon="background-image.png",
+            tip="change background image"
+        )
+        # horizontal sliders box.
+        VLayout.addWidget(self.brightnessSlider)
+        VLayout.addWidget(self.blurRadiusSlider)
+        VLayout.addWidget(self.contrastSlider)
+        VLayout.addWidget(self.invertSlider)
+        VBox.setLayout(VLayout)
+        # vertical sliders box.
+        HLayout.addWidget(self.hueRotateSlider)
+        HLayout.addWidget(self.grayScaleSlider)
+        HLayout.addWidget(self.opacitySlider)
+        HLayout.addWidget(self.sepiaSlider)
+        HBox.setLayout(HLayout)
+        # 3rd vertical box.
+        Layout3.addWidget(self.backgroundImageBtn, 0, Qt.AlignCenter)
+        Layout3.addWidget(self.saturateSlider)
+        Box3.setLayout(Layout3)
+
+        self.layout.addStretch(1)
+        self.layout.addWidget(VBox)
+        self.layout.addWidget(HBox)
+        self.layout.addWidget(Box3)
+        self.layout.addStretch(1)
+
+    def initBtn(self, icon: str, tip: str=""):
+        btn = QToolButton(self)
+        btn.setIconSize(QSize(30,30))
+        path = os.path.join(
+            "system/fileviewer", icon
+        )
+        btn.setIcon(FigD.Icon(path))
+        btn.setText("background\nimage")
+        btn.setStyleSheet('''
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 12px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+        }''')
+        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        btn.setToolTip(tip)
+        btn.setStatusTip(tip)
+
+        return btn
+
+    def connectWidget(self, widget):
+        self.widget = widget
+
+# don't need class FileViewerMoveGroup(QWidget):
 class FileViewerMenu(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerMenu, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
+        # direct access to mime database and icon provider.
+        self.mime_database = QMimeDatabase()
+        self.icon_provider = QFileIconProvider()
+
         self.filegroup = FileViewerFileGroup()
         self.pathgroup = FileViewerPathGroup()
         self.editgroup = FileViewerEditGroup()
         self.viewgroup = FileViewerViewGroup()
+        self.opengroup = FileViewerOpenGroup()
         self.selectgroup = FileViewerSelectGroup()
+        self.appearancegroup = FileViewerAppearanceGroup()
+        
         self.layout.addWidget(self.filegroup)
-        self.layout.addWidget(self.addSeparator(20))
+        self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.pathgroup)
-        self.layout.addWidget(self.addSeparator(20))
+        self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.editgroup)
-        self.layout.addWidget(self.addSeparator(20))
+        self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.viewgroup)
-        self.layout.addWidget(self.addSeparator(20))
+        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.opengroup)
+        self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.selectgroup)
+        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.appearancegroup)
+        
         self.layout.addStretch(1)
         self.setLayout(self.layout)
 
@@ -917,7 +1347,8 @@ class FileViewerMenu(QWidget):
         sep.setStyleSheet('''background: transparent;''')
         sep.setLineWidth(1)
         sep.setMaximumHeight(90)
-        if width: sep.setFixedWidth(width)
+        if width: 
+            sep.setFixedWidth(width)
         return sep
 
     def connectWidget(self, widget):
@@ -925,7 +1356,9 @@ class FileViewerMenu(QWidget):
         self.editgroup.connectWidget(widget)
         self.viewgroup.connectWidget(widget)
         self.pathgroup.connectWidget(widget)
+        # self.opengroup.connectWidget(widget)
         self.selectgroup.connectWidget(widget)
+        self.appearancegroup.connectWidget(widget)
 
 
 class FileViewerFolderBar(QWidget):
@@ -1046,6 +1479,135 @@ class FileViewerFolderBar(QWidget):
         return btn 
 
 
+class FileViewerShortcutBtn(QToolButton):
+    '''File viewer shortcut button.'''
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                 text: str="", icon: str="", path: str="",
+                 size: Tuple[int, int]=(25,25),
+                 tip: str=""):
+        super(FileViewerShortcutBtn, self).__init__(parent)
+        self.btnStyle = '''
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            padding-top: 0px;
+            padding-bottom: 0px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }'''
+        if text is None:
+            text = Path(path).name
+        self.setStyleSheet(self.btnStyle)
+        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.setIcon(FigD.Icon(
+            os.path.join("system/fileviewer", icon)
+        ))
+        self.setIconSize(QSize(*size))
+        self.setText(3*" "+text)
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        self.path = path
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        
+    def connectWidget(self, widget):
+        self.widget = widget
+        self.clicked.connect(self.onClick)
+
+    def onClick(self):
+        self.widget.open(self.path)
+
+
+class FileViewerSideBar(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerSideBar, self).__init__(parent)
+        self.layout = QVBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        # shortcuts.
+        self.shortcutBtns = []
+        # bookmarks.
+        self.bookmarkBtns = []
+        home = os.path.expanduser("~")
+        self.layout.setSpacing(5)
+        self.homeBtn = self.initShortcutBtn(
+            path=home,
+            icon="home.svg",
+            tip=f"open home folder ({home})",
+            text="Home",
+        )
+        self.desktopBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Desktop"),
+            icon="desktop.svg",
+            tip="open desktop",
+        )
+        self.downloadsBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Downloads"),
+            icon="downloads.svg",
+            tip="open downloads",
+        )
+        self.documentsBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Documents"),
+            icon="document.svg",
+            tip="open documents folder",
+        )
+        # add buttons to layout.
+        self.layout.addWidget(self.homeBtn)
+        self.layout.addWidget(self.desktopBtn)
+        self.layout.addWidget(self.downloadsBtn)
+        self.layout.addWidget(self.documentsBtn)
+        self.layout.addStretch(1)
+        self.setLayout(self.layout)
+
+    def toggle(self):
+        print("toggling folderbar visibility")
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+    def addSeparator(self):
+        pass
+
+    def initShortcutBtn(self, path: str, 
+                        icon: str, tip: str, 
+                        text: Union[None, str]=None,
+                        size: Tuple[int, int]=(25,25)):
+        btn = FileViewerShortcutBtn(
+            self, path=path, icon=icon,
+            text=text, size=size, tip=tip,
+        )
+        self.shortcutBtns.append(btn)
+
+        return btn
+    # def initFavBtn(self, *args):
+    #     pass
+    # def initBookmarkBtn(self, path):
+    #     name = Path(path).name
+    #     btn = QToolButton(self)
+    #     btn.setText(name)
+    #     btn.setIcon(FigD.Icon("system/fileviewer/folder.svg"))
+    #     btn.setToolTip(f"{path}")
+    #     btn.setStyleSheet(self.btnStyle)
+    #     btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+    #     btn.path = path
+    #     self.bookmarkBtns.append(btn)
+
+    #     return btn
+    def connectWidget(self, widget):
+        self.widget = widget
+        for btn in self.shortcutBtns:
+            btn.connectWidget(widget)
+
+
 class FileViewerWidget(QMainWindow):
     def __init__(self, parent: Union[None, QWidget]=None,
                  zoom_factor: float=1.35, **args):
@@ -1064,6 +1626,7 @@ class FileViewerWidget(QMainWindow):
         ).toString()
         self.icon_provider = QFileIconProvider()
         self.mime_database = QMimeDatabase()
+        self.showItemContextMenu = False
         self.loaded_file_items = []
         self.browsing_history = []
         self.selected_item = None
@@ -1073,8 +1636,10 @@ class FileViewerWidget(QMainWindow):
         self.eventHandler = EventHandler(fileviewer=self)
         self.channel.registerObject("eventHandler", self.eventHandler)
         self.webview.page().setWebChannel(self.channel)
+        
         self.folderbar = FileViewerFolderBar()
-        self.folderbar.setMaximumHeight(30)
+        self.folderbar.setFixedHeight(34)
+        self.sidebar = FileViewerSideBar()
         # clipboard access.
         self.clipboard = args.get("clipboard")
         # shortcuts.
@@ -1087,7 +1652,9 @@ class FileViewerWidget(QMainWindow):
         self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
         self.layout.addWidget(self.webview.splitter)
-        
+        self.webview.splitter.insertWidget(0, self.sidebar)
+        self.webview.splitter.setSizes([200, 600, 200])
+
         self.central_widget = QWidget()
         self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
         self.central_widget.setLayout(self.layout)
@@ -1098,6 +1665,7 @@ class FileViewerWidget(QMainWindow):
         self.menu.connectWidget(self)
         self.folderbar.connectWidget(self)
         self.webview.connectWidget(self)
+        self.sidebar.connectWidget(self)
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -1115,6 +1683,8 @@ class FileViewerWidget(QMainWindow):
         '''call xdg-open for the appropriate mimetype.'''
         mimetype = self.mime_database.mimeTypeForFile(path).name()
         print(f"{path}: calling xdg-open for {mimetype} files")
+        url = QUrl.fromLocalFile(path).toString()
+        os.system(f"xdg-open {url}")
 
     def listFiles(self, path: str, **args):
         listed_and_full_paths_files = []
@@ -1152,6 +1722,21 @@ class FileViewerWidget(QMainWindow):
         hidden_flag_list = [i for _,i,_ in listed_and_full_paths]
 
         return listed, full_paths, hidden_flag_list
+
+    def getIcon(self, path):
+        name = self.icon_provider.icon(QFileInfo(path)).name()
+        # paths where mimetype icons may be found.
+        icon_theme_devices_path = "/usr/share/icons/Humanity/devices/48"
+        icon_theme_places_path = "/usr/share/icons/Humanity/places/64"
+        icon_theme_mimes_path = "/usr/share/icons/Humanity/mimes/48"
+        Path = os.path.join(icon_theme_devices_path, name+".svg")
+        if os.path.exists(Path): return Path
+        Path = os.path.join(icon_theme_places_path, name+".svg")
+        if os.path.exists(Path): return Path
+        Path = os.path.join(icon_theme_mimes_path, name+".svg")
+        if os.path.exists(Path): return Path
+
+        return path
 
     def errorDialog(self, msg):
         self.error_dialog = QErrorMessage()
@@ -1213,6 +1798,12 @@ class FileViewerWidget(QMainWindow):
 
     def open(self, folder: str="~"):
         '''open a file/folder location.'''
+        try:
+            print(self.dash_window)
+            i = self.dash_window.tabs.currentIndex()
+            self.dash_window.tabs.setTabText(i, folder)
+        except AttributeError:
+            print("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
         # expand user.
         folder = os.path.expanduser(folder) 
         # call xdg-open if a file is clicked instead of a folder.
@@ -1324,7 +1915,12 @@ class FileViewerWidget(QMainWindow):
         if file_ext == "":
             file_ext = ".ext"
         # print(file_ext)
+        icon = self.getIcon(item)
+        mimetype = self.mime_database.mimeTypeForFile(item).name()
         self.menu.pathgroup.updateExt(file_ext)
+        self.menu.opengroup.updateMimeBtn(
+            mimetype=mimetype, icon=icon
+        )
 
     def onUrlChange(self):
         self.webview.setZoomFactor(self.zoom_factor)
@@ -1353,6 +1949,10 @@ class FileViewerWidget(QMainWindow):
         # print("selected all items")
         self.webview.page().runJavaScript('selectAllItems();')
 
+    def reload(self):
+        '''refresh the webview'''
+        self.webview.reload()
+
     def invertSelection(self):
         '''invert selected items.'''
         self.webview.page().runJavaScript('invertSelectedItems();')
@@ -1370,6 +1970,10 @@ class FileViewerWidget(QMainWindow):
         with open(path, "w") as f:
             f.write(self.viewer_html)
 
+    def connectWindow(self, window):
+        print("FileViewerWidget: \x1b[32;1mconnected to DashWindow\x1b[0m")
+        self.dash_window = window
+
 
 def test_fileviewer():
     import sys
@@ -1377,7 +1981,7 @@ def test_fileviewer():
     app = QApplication(sys.argv)
     fileviewer = FileViewerWidget(
         clipboard=app.clipboard(),
-        background="/home/atharva/Pictures/Wallpapers/anime/beautiful-crowded-city.jpg",
+        background="/home/atharva/GUI/fig-dash/bartender_anime.png",
         font_color="#fff",
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")

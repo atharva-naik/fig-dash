@@ -14,5 +14,6 @@ if __name__ == '__main__':
         x=100, y=100, w=1000, h=850,
         maximize_by_default=False, 
         icon="/home/atharva/GUI/fig-dash/resources/icons/logo.png",        
+        wallpaper="/home/atharva/GUI/fig-dash/bartender_anime.png",
         resources="/home/atharva/GUI/fig-dash/resources",
     )
