@@ -10,7 +10,9 @@ from PyQt5.QtGui import QIcon, QFont
 
 class AssetManager:
     '''A class to bundle path completion resources for fig'''
-    def __init__(self, resource_dir: str=""):
+    def __init__(self, resource_dir: str="~/GUI/fig-dash/resources"):
+        resource_dir = os.path.expanduser(resource_dir)
+        # print(f"reading resources from: {resource_dir}")
         self.dir = resource_dir
         self.reset(resource_dir)
 
@@ -69,8 +71,10 @@ class AssetManager:
             self.static_dir,
             "temp_file_123456789.html"
         )
-        os.remove(tempPath)
-
+        try: os.remove(tempPath)
+        except FileNotFoundError:
+            pass
+            # print(f"FileNotFoundError: {tempPath}")
     def Icon(self, name:str) -> QIcon :
         '''return QIcon'''
         icon_path = self.icon(name)

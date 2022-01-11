@@ -11,7 +11,7 @@ from fig_dash.api.system.battery import Battery
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QToolBar, QToolButton, QMainWindow, QSizePolicy
+from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QSizePolicy
 
 
 # title_bar_style = '''
@@ -170,6 +170,22 @@ class WifiBtn(QToolButton):
         }''')
 
 
+class ZoomSlider(QSlider):
+    def __init__(self):
+        super(ZoomSlider, self).__init__(Qt.Horizontal)
+        self.setFixedWidth(100)
+        self.setMaximum(250)
+        self.setMinimum(25)
+        self.setValue(125)
+        self.valueChanged.connect(self.setTabZoom)
+        # self.setStyleSheet("color: #292929;")
+    def connectTabWidget(self, tabWidget):
+        self.tabWidget = tabWidget
+
+    def setTabZoom(self, zoom):
+        self.tabWidget.setTabZoom(zoom)
+
+
 class TitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None):
         super(TitleBar, self).__init__("Titlebar", parent)
@@ -257,6 +273,17 @@ class TitleBar(QToolBar):
         #     tip="open text to speech.",
         #     # callback=self.callback if parent is None else parent.tabs.save
         # )
+        self.zoomSlider = ZoomSlider()
+        self.zoomLabel = QLineEdit()
+        self.zoomLabel.setText("125")
+        self.zoomLabel.setStyleSheet("""
+        QLineEdit {
+            color: #eb5f34;
+            font-size: 16px;
+            background: transparent;
+        }""")
+        self.zoomLabel.setMaximumWidth(35)
+
         self.wifi = WifiBtn()
         self.wifi.setFixedSize(QSize(18,18))
 
@@ -290,6 +317,8 @@ class TitleBar(QToolBar):
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.zoomInBtn)
+        self.addWidget(self.zoomLabel)
+        self.addWidget(self.zoomSlider)
         self.addWidget(self.zoomOutBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.widgetsToggleBtn)
@@ -323,6 +352,13 @@ class TitleBar(QToolBar):
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         return spacer
+
+    def connectTabWidget(self, tabWidget):
+        self.tabs = tabWidget
+        self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
+        self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
+        self.saveSourceBtn.clicked.connect(self.tabs.save)
+        self.zoomSlider.connectTabWidget(self.tabs)
 
     def initBlank(self):
         btn = QToolButton(self)

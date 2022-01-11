@@ -20,7 +20,9 @@ const t=(t,e="px")=>"number"==typeof t?t+e:t;function e({style:e},s,i){if("objec
 //'''# sourceMappingURL=selection.min.js.map
 
 FileViewerStyle = r'''
-@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap');
+/* @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap'); */
+/* @import url('https://fonts.googleapis.com/css2?family=Moon+Dance&display=swap'); */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
 
 ::-webkit-scrollbar {
     width: 0.5em;
@@ -51,7 +53,7 @@ body {
 
 body {
     color: {{ FONT_COLOR }};
-    font-family: 'Roboto', sans-serif;
+    font-family: 'Noto Sans', cursive;
     background-color: rgb(72,72,72);
     background-color: linear-gradient(-45deg, rgba(72,72,72,1) 30%, rgba(41,41,41,1) 60%);
     /* backdrop-filter: blur(10px); */
@@ -281,7 +283,7 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.innerHTML = `
     <img class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
     <br>
-    <span class="item_name" style="text-align: center; font-size: 14px;">${fileViewerItems[i]}</span>`
+    <span class="item_name" style="text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
         divElement.onclick = function() {
             // console.error(this.id);
             var file_item_id = this.id;
@@ -553,39 +555,44 @@ FileViewerHtml = jinja2.Template(r'''
                 <section id="orchard" class="boxes green"></section>
             </section>
         </main>
-        <div id="background_style_panel" style="text-align:center; font-size: 14px;">
-            <span>gray scale</span>
-            <br>
-            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setGrayScale(this.value/100)">
-            <br>
-            <span>contrast</span>
-            <br>
-            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setContrast(this.value/100)">
-            <br>
-            <span>invert</span>
-            <br>
-            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setInvert(this.value/100)">
-            <br>
-            <span>opacity</span>
-            <br>
-            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
-            <br>
-            <span>saturation</span>
-            <br>
-            <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
-            <br>
-            <span>blur</span>
-            <br>
-            <input type="range" min="1" max="30" value="0" class="slider" onchange="oa.setBlurRadius(this.value)">
-            <br>
-            <span>brightness</span>
-            <br>
-            <input type="range" min="1" max="100" value="50" class="slider" onchange="oa.setBrightness(this.value/100)">
-            <br>
-            <span>sepia</span>
-            <br>
-            <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
+        <div id="background_style_panel_1" style="text-align: center; font-size: 12px; color: #000; font-weight: bold; display: flex; justify-content: center;">
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>gray scale</span><br>
+                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setGrayScale(this.value/100)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>contrast</span><br>
+                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setContrast(this.value/100)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>invert</span><br>
+                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setInvert(this.value/100)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>opacity</span><br>
+                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
+            </div>
         </div>
+
+        <div id="background_style_panel_2" style="text-align: center; font-size: 12px; color: #000; font-weight: bold; display: flex; justify-content: center;">
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>saturation</span><br>
+                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>blur radius</span><br>
+                <input type="range" min="1" max="30" value="0" class="slider" onchange="oa.setBlurRadius(this.value)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>brightness</span><br>
+                <input type="range" min="1" max="100" value="50" class="slider" onchange="oa.setBrightness(this.value/100)">
+            </div>
+            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
+                <span>sepia</span><br>
+                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
+            </div>
+        </div>
+
         <script>{{ WEBCHANNEL_JS }}</script>
         <script>{{ FILEVIEWER_CJS }}</script>
         <script type="module">{{ FILEVIEWER_MJS }}</script>
@@ -783,8 +790,8 @@ class FileViewerGroup(QWidget):
         }''')
 
         return btn 
-
-
+# backdrop-filter: drop-shadow(4px 4px 10px blue);
+# backdrop-filter: hue-rotate(120deg);
 class FileViewerFileGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerFileGroup, self).__init__(parent, "File")
@@ -1283,7 +1290,7 @@ class FileViewerAppearanceGroup(FileViewerGroup):
             "system/fileviewer", icon
         )
         btn.setIcon(FigD.Icon(path))
-        btn.setText("background\nimage")
+        # btn.setText("background\nimage")
         btn.setStyleSheet('''
         QToolButton {
             color: #fff;
@@ -1295,7 +1302,7 @@ class FileViewerAppearanceGroup(FileViewerGroup):
             color: #292929;
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
         }''')
-        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        # btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         btn.setToolTip(tip)
         btn.setStatusTip(tip)
 
@@ -1640,6 +1647,7 @@ class FileViewerWidget(QMainWindow):
         self.folderbar = FileViewerFolderBar()
         self.folderbar.setFixedHeight(34)
         self.sidebar = FileViewerSideBar()
+        self.sidebar.hide()
         # clipboard access.
         self.clipboard = args.get("clipboard")
         # shortcuts.
@@ -1650,6 +1658,7 @@ class FileViewerWidget(QMainWindow):
         self.layout.addWidget(self.folderbar)
         # add the dev tools button to the view group.
         self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
+        # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
         self.layout.addWidget(self.webview.splitter)
         self.webview.splitter.insertWidget(0, self.sidebar)
@@ -2000,3 +2009,5 @@ if __name__ == '__main__':
 #db8b72 (dull) #8a87b2
 #e0a494 (light) #c8c2e9
 #f2e3df (very light) #dfdafd
+# https://towardsdatascience.com/a-friendly-introduction-to-siamese-networks-85ab17522942#:~:text=A%20Siamese%20Neural%20Network%20is%20a%20class%20of%20neural%20network%20architectures%20that%20contain
+# https://towardsdatascience.com/case-study-2-an-unsupervised-neural-attention-model-for-aspect-extraction-1c2c97b1380a#:~:text=All%20reviews-,are,-available%20as%20a

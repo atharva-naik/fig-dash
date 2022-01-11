@@ -135,6 +135,51 @@ class TabCornerWidget(QWidget):
 
         return btn
 
+
+class ZoomFactor:
+    '''browser zoom factor'''
+    def __init__(self, zoom_factor):
+        if zoom_factor > 5:
+            zoom_factor /= 100
+        zoom_factor = max(min(zoom_factor, 5), 0.25)
+        self.value = zoom_factor
+
+    def __str__(self):
+        return f"zoom: {self.value}"
+
+    def __repr__(self):
+        return f"zoom: {self.value}"
+
+    def __eq__(self, other):
+        return self.value == other.value 
+
+    def __lt__(self, other):
+        return self.value < other.value 
+
+    def __gt__(self, other):
+        return self.value > other.value 
+
+    def gt(self, zoom_factors):
+        for value in zoom_factors:
+            # print(f"{value.value} > {self.value}: {value > self}")
+            if value > self: 
+                return value
+        return value
+
+    def lt(self, zoom_factors):
+        for value in zoom_factors:
+            # print(value)
+            if value.value < self.value: 
+                return value
+        return value
+
+    def set(self, value):
+        self.value = value
+
+    def __call__(self):
+        return self.value
+
+
 dash_tab_widget_style = jinja2.Template('''
 QTabWidget {
     background: #292929;
@@ -153,7 +198,10 @@ class DashTabWidget(QTabWidget):
         self.plusBtn = tabCornerWidget.plusBtn
         self.plusBtn.clicked.connect(lambda: self.openUrl())
         self.icon_provider = QFileIconProvider()
-        
+        # list of zoom factors.
+        self.zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+        self.zoomFactors = [ZoomFactor(zf) for zf in self.zoomFactors]
+        # print(f"\x1b[34;1m{self.zoomFactors}\x1b[0m")
         self.tabbar = TabBar()
         self.setTabBar(self.tabbar)
 
@@ -179,6 +227,7 @@ class DashTabWidget(QTabWidget):
         try: dash_window = self.dash_window
         except AttributeError as e: return
         url = browser.url().toString()
+        browser.loadDevTools()
 
         if url != "file:///tmp/fig_dash.rendered.content.html":    
             dash_window.navbar.searchbar.setText(url)
@@ -226,7 +275,7 @@ class DashTabWidget(QTabWidget):
         browser = Browser(self)
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
-        i = self.addTab(browser, FigD.Icon("browser.svg"), "  "+url.strip())
+        i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
         self.setTabText(i, "  "+url.strip())
         browser.loadFinished.connect(
             lambda _, i = i, browser = browser:
@@ -235,7 +284,7 @@ class DashTabWidget(QTabWidget):
         self.setCurrentIndex(i)
 
     def nextUrl(self, i: int):
-        currentWidget = self.currentWidget()
+        currentWidget = self.currentWidget().browser
         try:
             currentWidget.nextInHistory()
         except AttributeError as e: 
@@ -243,12 +292,47 @@ class DashTabWidget(QTabWidget):
             print(f"tab-{i} is not a browser instance") 
 
     def save(self):
-        currentWidget = self.currentWidget()
+        currentWidget = self.currentWidget().browser
         if isinstance(currentWidget, Browser):
             print(currentWidget.page())
 
+    def setTabZoom(self, zoom):
+        try:
+            browser = self.currentWidget().browser
+            browser.currentZoomFactor = zoom
+            browser.setZoomFactor(zoom)
+            print(f"setting tab zoom: {zoom}")
+        except AttributeError as e:
+            print(e)
+
+    def zoomInTab(self):
+        try:
+            browser = self.currentWidget().browser
+            currentZoom = browser.currentZoomFactor
+            zoomFactor = ZoomFactor(currentZoom).gt(
+                self.zoomFactors
+            ).value
+            # print(f"setting zoomFactor {zoomFactor}")
+            self.currentWidget().browser.setZoomFactor(zoomFactor)
+            browser.currentZoomFactor = zoomFactor
+        except AttributeError as e:
+            print(e)
+
+    def zoomOutTab(self):
+        try:
+            browser = self.currentWidget().browser
+            currentZoom = browser.currentZoomFactor
+            zoomFactor = ZoomFactor(currentZoom).lt(
+                self.zoomFactors[::-1]
+            ).value
+            # print(f"setting zoomFactor {zoomFactor}")
+            browser.setZoomFactor(zoomFactor)
+            browser.currentZoomFactor = zoomFactor
+        except AttributeError as e:
+            print(e)
+
     def prevUrl(self, i: int):
-        currentWidget = self.currentWidget()
+        currentWidget = self.currentWidget().browser
         try:
             currentWidget.prevInHistory()
         except AttributeError as e: 
@@ -256,7 +340,7 @@ class DashTabWidget(QTabWidget):
             print(f"tab-{i} is not a browser instance") 
 
     def reloadUrl(self, i: int):
-        currentWidget = self.currentWidget()
+        currentWidget = self.currentWidget().browser
         try:
             currentWidget.reload()
         except AttributeError as e: 
@@ -266,7 +350,8 @@ class DashTabWidget(QTabWidget):
     def loadUrl(self, i: int, url: str):
         qurl = QUrl(url)
         self.setCurrentIndex(i)
-        browser = self.currentWidget()
+        # use back reference from the splitter object.
+        browser = self.currentWidget().browser
         browser.setUrl(qurl)
         self.setTabText(i, "  "+url.strip())
         browser.loadFinished.connect(

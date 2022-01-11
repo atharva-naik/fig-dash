@@ -9,7 +9,7 @@ from typing import Union, Tuple, List
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy
+from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QStatusBar
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.menu import DashMenu
@@ -112,6 +112,13 @@ class DashWindow(QMainWindow):
         w = kwargs.get("w", 100)
         h = kwargs.get("h", 100)
         self.setGeometry(x, y, w, h)
+        self.statusBar().setStyleSheet("""
+        QStatusBar {
+            color: #fff;
+            font-size: 16px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }""")
+        self.statusBar().setMaximumHeight(20)
         # self.firstResizeOver = False
         self.centralWidget = self.initCentralWidget(**kwargs)
         self.setCentralWidget(self.centralWidget)
@@ -125,6 +132,7 @@ class DashWindow(QMainWindow):
             self.showMaximized()
         # add title bar.
         self.titlebar = TitleBar(self)
+        self.titlebar.connectTabWidget(self.tabs)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
         # install event filter.
         self.installEventFilter(self)
@@ -177,7 +185,7 @@ class DashWindow(QMainWindow):
         topLayout.addWidget(self.tabs.cornerWidget())
         # topLayout.addWidget(self.tabs.dropdownBtn)
         # add search bar.
-        self.navbar.setFixedHeight(30)
+        self.navbar.setFixedHeight(40)
         self.navbar.connectTabWidget(self.tabs)
         # main horizontal splitter.
         self.h_split = QSplitter(Qt.Horizontal)
@@ -230,16 +238,14 @@ class DashWindow(QMainWindow):
             #     self.tabs.dropdown.rePos(width=width, offset=170)
             # TODO: really ugly jugaad. Fix this.
         return super(DashWindow, self).eventFilter(obj, event)
-
-    def moveEvent(self, event):
-        super(DashWindow, self).moveEvent(event)
-        dropdown = self.tabs.dropdownBtn.dropdown
-        if dropdown:
-            diff = event.pos() - event.oldPos()
-            geo = dropdown.geometry()
-            geo.moveTopLeft(geo.topLeft() + diff)
-            dropdown.setGeometry(geo)
-
+    # def moveEvent(self, event):
+    #     super(DashWindow, self).moveEvent(event)
+    #     dropdown = self.tabs.dropdownBtn.dropdown
+    #     if dropdown:
+    #         diff = event.pos() - event.oldPos()
+    #         geo = dropdown.geometry()
+    #         geo.moveTopLeft(geo.topLeft() + diff)
+    #         dropdown.setGeometry(geo)
     def initDatetimeNotif(self):
         datetime_notifs_splitter = DatetimeNotifsSplitter(self)
         datetime_notifs_splitter.hide()

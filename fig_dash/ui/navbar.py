@@ -14,9 +14,10 @@ from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow,
 dash_searchbar_style = jinja2.Template('''
 QLineEdit {
     border: 0px;
-    font-size: 16px;
-    padding-top: 5px;
-    padding-bottom: 5px;
+    font-size: 17px;
+    font-family: Ubuntu;
+    padding-top: 3px;
+    padding-bottom: 3px;
     color: #fff; /* #ad3700; */
     /* background: qlineargradient(x1 : 1, y1 : 0, x2 : 0, y2: 0, stop: 0 #828282, stop: 0.5 #eee, stop: 1 #828282); */
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
@@ -48,7 +49,7 @@ class DashSearchBar(QLineEdit):
         self.bookmarkAction.setIcon(FigD.Icon("navbar/bookmark.svg"))
         self.addAction(self.bookmarkAction, self.TrailingPosition)
         self.setStyleSheet(dash_searchbar_style.render(
-            BORDER_RADIUS=14,
+            BORDER_RADIUS=16,
         ))
         self.setFixedHeight(28)
         self.label.move(30, 0)
@@ -70,7 +71,7 @@ class DashSearchBar(QLineEdit):
     def search(self):
         url = UrlOrQuery(self.text())()
         self.searchHistory.append(url)
-        self.completer = QCompleter(self.searchHistory)
+        # self.completer = QCompleter(self.searchHistory)
         dash_navbar = self.parent()
         central_widget = dash_navbar.parent()
         dash_window = central_widget.parent()
@@ -161,6 +162,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.homeBtn)
         # add search bar.
         self.searchbar = DashSearchBar(self)
+        self.searchbar.setFixedHeight(33)
         layout.addWidget(self.searchbar)
         self.setStyleSheet(dash_navbar_style.render())
         # extensions.
