@@ -278,7 +278,7 @@ class TitleBar(QToolBar):
         self.zoomLabel.setText("125")
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
-            color: #eb5f34;
+            color: #39a4e7;
             font-size: 16px;
             background: transparent;
         }""")

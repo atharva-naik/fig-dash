@@ -8,6 +8,7 @@ from typing import Union, Tuple
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.ui.browser import DebugWebView
+from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
@@ -594,6 +595,8 @@ FileViewerHtml = jinja2.Template(r'''
         </div>
 
         <script>{{ WEBCHANNEL_JS }}</script>
+        <script>{{ FIG_DESKTOP_NOTIF_JS }}</script>
+        <script>{{ FIG_FILE_MANAGER_JS }}</script>
         <script>{{ FILEVIEWER_CJS }}</script>
         <script type="module">{{ FILEVIEWER_MJS }}</script>
     </body>
@@ -1642,6 +1645,8 @@ class FileViewerWidget(QMainWindow):
         self.channel = QWebChannel()
         self.eventHandler = EventHandler(fileviewer=self)
         self.channel.registerObject("eventHandler", self.eventHandler)
+        self.systemHandler = SystemHandler()
+        self.systemHandler.connectChannel(self.channel)
         self.webview.page().setWebChannel(self.channel)
         
         self.folderbar = FileViewerFolderBar()
@@ -1910,6 +1915,7 @@ class FileViewerWidget(QMainWindow):
             "HIDDEN_FLAG_LIST": hidden_flag_list,
             "NUM_ITEMS": len(listed),
         }
+        self.params.update(self.systemHandler.js_sources)
         self.viewer_html = jinja2.Template(
             FileViewerHtml.render(**self.params)
         ).render(**self.params)

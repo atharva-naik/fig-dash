@@ -148,6 +148,7 @@ class BrowserSearchPanel(QWidget):
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(5,5,5,5)
         self.entry = QLineEdit()
+        self.label = QLabel("0/0")
         self.entry.setStyleSheet("background: #fff; color: #000;")
         self.closeBtn = BrowserSearchPanelBtn(
             icon="close.svg", size=(20,20),
@@ -162,12 +163,19 @@ class BrowserSearchPanel(QWidget):
             tip="go to next match (Enter)",
         )
         self.layout.addWidget(self.entry)
+        self.layout.addWidget(self.label)
+        self.layout.addStretch()
         self.layout.addWidget(self.prevBtn)
         self.layout.addWidget(self.nextBtn)
         self.layout.addWidget(self.closeBtn)
         self.nextBtn.clicked.connect(self.update_searching)
         self.prevBtn.clicked.connect(lambda: self.update_searching(QWebEnginePage.FindBackward))
         self.closeBtn.clicked.connect(self.closePanel)
+        self.label.setStyleSheet("""
+        QLabel {
+            color: #6e6e6e;
+            background: transparent;
+        }""")
         wrapper = QWidget()
         wrapper.setLayout(self.layout)
         wrapper.setStyleSheet("""
@@ -319,13 +327,21 @@ class DebugWebView(QWebEngineView):
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
         self.CtrlF.activated.connect(self.searchPanel.show)
         self.Esc = QShortcut(QKeySequence("Esc"), self)
-        self.Esc.activated.connect(self.searchPanel.close)
+        self.Esc.activated.connect(self.searchPanel.closePanel)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
 
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def setUrl(self, url):
+        self.searchPanel.closePanel()
+        super(DebugWebView, self).setUrl(url)
+
+    def load(self, url):
+        self.searchPanel.closePanel()
+        super(DebugWebView, self).load(url)
 
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
