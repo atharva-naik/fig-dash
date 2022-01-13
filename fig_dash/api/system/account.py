@@ -1,57 +1,90 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import json
 import sqlite3
+import requests
 # import dataclasses
-from enum import Enum
 from typing import Union
 from dataclasses import dataclass
 # from sqlite3.dbapi2 import OperationalError
-from fig_dash.api.system.database import FigDashAppDatabase, FigDashAppPassword, FigDatabaseModel
+from fig_dash.assets import FigD
+from fig_dash.api.system.database import FigDashAddressData, FigDashAppDatabase, FigDashPassword, FigDatabaseModel, FigDashMailData, FigDashImageData, FigDashAddressData, FigDashPhoneNumberData, FigDashGenderData
 
+
+def quick_geo_locator():
+    '''hacky way to get location tuple'''
+    data_js_ext_url = "https://datajsext.com/ExtService.svc/getextparams"
+    # json response.
+    response = requests.get(data_js_ext_url).text
+    try:
+        all_data = json.loads(response)
+        city = all_data['city']['en']
+        subdiv = all_data['subdiv'][0]['en']
+        country = all_data['cnames']['en']
+
+        return (city, subdiv, country)
+    
+    except KeyError as e:
+        print(e)
+        
+        return ("", "", "")
 
 DEFAULT_USERDATA_PATH = os.path.expanduser("~/.fig_dash/accounts.db")
-# possible gender identites.
-class FigDashUserGender(Enum):
-    Male = 0
-    Female = 1
-    TransMale = 2
-    TransFemale = 3
-    NonBinary = 4
-    Other = 5
-
-# email id.
-class FigDashUserEmail:
-    pass
-
-# phone number.
-class FigDashPhoneNumber:
-    pass
 # data associated with a fig-dash user.
-
-@dataclass(frozen=True)
+@dataclass
 class FigDashUser(FigDatabaseModel):
     '''the user profile of a fig-user.'''
     username: str
-    email: FigDashUserEmail
-    password: str
-    firstname: str="John"
-    lastname: str="Doe"
+    email: FigDashMailData
+    password: FigDashPassword
+    firstname: Union[str, None]=None
+    lastname: Union[str, None]=None
     age: int=18
-    gender: FigDashUserGender=FigDashUserGender.Male
-    address: Union[str, None]=None
-    phonenumber: Union[FigDashPhoneNumber, None]=None
-    image: Union[str, None]=None
+    gender: FigDashGenderData=FigDashGenderData.Male
+    address: Union[FigDashAddressData, None]=None
+    phonenumber: Union[FigDashPhoneNumberData, None]=None
+    profile_picture: Union[FigDashImageData, None]=None
+
+    def init(self, mode="partial"):
+        self.setPrimaryKey("username")
+        self.setFieldKeywords("username", "NOT NULL", "UNIQUE")
+        self.setFieldKeywords("email", "NOT NULL")
+        self.setFieldKeywords("password", "NOT NULL")
+        if self.firstname is None:
+            if self.gender == FigDashGenderData.Male:
+                self.firstname = "John"
+            elif self.gender == FigDashGenderData.Female:
+                self.firstname = "Jane"
+            elif self.gender == FigDashGenderData.TransMale:
+                self.firstname = "Michael"
+            elif self.gender == FigDashGenderData.TransFemale:
+                self.firstname = "Christine"
+            elif self.gender in [FigDashGenderData.NonBinary, FigDashGenderData.Other]:
+                self.firstname = "Morgan"
+        if self.lastname is None:
+            if self.gender in [FigDashGenderData.Female, FigDashGenderData.Male, FigDashGenderData.NonBinary, FigDashGenderData.Other]:
+                self.lastname = "Doe"
+            elif self.gender == FigDashGenderData.TransMale:
+                self.lastname = "Dillon"
+            elif self.gender == FigDashGenderData.TransFemale:
+                self.lastname = "Jorgensen"
+        self.profile_picture = FigD.icon("navbar/account.png") 
+        if mode == "full":
+            loc_tuple = quick_geo_locator()
+            location = ", ".join(loc_tuple)
+            # get address using ip geo location data.
+            self.address = FigDashAddressData.fromString(location) 
+            # this: (https://projectricochet.com/blog/most-common-phone-number)
+            self.phonenumber = FigDashPhoneNumberData.fromString("2147483648") 
 
     def __str__(self):
-        return f'''
-        {self.username} ({self.firstname} {self.lastname})
-        email: {self.email}
-        age: {self.age}
-        gender: {self.gender}
-        address: {self.address}
-        phonenumber: {self.phonenumber}
-        '''
+        return f'''{self.username} ({self.firstname} {self.lastname})
+✉ email: {self.email}
+📅 age: {self.age}
+⚥ gender: {self.gender}
+⌖ address: {self.address}
+☎ phonenumber: {self.phonenumber}'''
 # all data associated with a Fig Account.
 class FigDashAccount:
     '''fig-dash account manager.'''

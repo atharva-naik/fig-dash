@@ -4,48 +4,61 @@ import string
 import hashlib
 import sqlite3
 import dataclasses
+from enum import Enum
 from dataclasses import dataclass
 
+# email model.
+class FigDashMailData:
+    pass
 
-@dataclass(frozen=True)
-class FigDatabaseModel:
-    '''A database model class.'''
-    def toSqlRecord(self):
-        '''convert an instance of the data class to a column list for INSERT query execution in an SQlite3 database.'''
-        SQLRecord = "("
-        for field in dataclasses.fields(self):
-            field_name = field.name
-            field_type = field.type
-            field_value = getattr(self, field_name)
-            if field_type in [int, float]:
-                SQLRecord += f"{field_value}, "
-            else: 
-                SQLRecord += f"'{field_value}', "
-        SQLRecord = SQLRecord.strip(",")
-        SQLRecord += ")"
+# phonenumber model.
+class FigDashPhoneNumberData:
+    '''represents address data for fig-dash users.'''
+    def __init__(self):
+        self.number_string = ""
 
-        return SQLRecord
+    @classmethod
+    def fromString(cls, number_string: str):
+        obj = cls()
+        obj.number_string = number_string
 
-    def getSqlHeader(self, type_="SQLITE3"): 
-        '''convert the class definition to column list of field names and types for CREATE TABLE query execution in an SQlite3 database.'''
-        SQLHeader = "("
-        dtype_map: dict={
-            "str": "REAL",
-            "int": "INTEGER",
-            "double": "REAL",
-            "float": "REAL",
-        }
-        for field in dataclasses.fields(self):
-            field_name = field.name
-            field_type = self.dtype_map[field.type]
-            SQLHeader += f"{field_name} {field_type}, "         
-        SQLHeader = SQLHeader.strip(",")
-        SQLHeader += ")"
+        return obj
 
-        return SQLHeader
+    def __str__(self):
+        return self.number_string
+
+# address model.
+class FigDashAddressData:
+    '''represents address data for fig-dash users.'''
+    def __init__(self):
+        self.address_string = ""
+        self.lat_long = (None, None)
+
+    @classmethod
+    def fromString(cls, address_string: str):
+        obj = cls()
+        obj.address_string = address_string
+
+        return obj
+
+    def __str__(self):
+        return self.address_string
+
+# image model.
+class FigDashImageData:
+    pass
+
+# possible gender identites.
+class FigDashGenderData(Enum):
+    Male = 0
+    Female = 1
+    TransMale = 2 # in case trans people want to self idenitfy as such instead of the gender they have or are transitioning to 
+    TransFemale = 3
+    NonBinary = 4
+    Other = 5
 
 # app password model.
-class FigDashAppPassword:
+class FigDashPassword:
     def __init__(self, raw_str: str=""):
         '''initialize password from unsalted and unhashed string'''
         self.salt = uuid.uuid4().hex
@@ -131,6 +144,107 @@ password: {self._password}'''
         
         return obj
 
+
+class FieldNotFoundError(Exception):
+    def __init__(self, model_name, field):
+        super(FieldNotFoundError, self).__init__()
+        self.model_name = model_name
+        self.field = field
+
+    def __str__(self):
+        return f"Model '{self.model_name}' doesn't have {self.field}"
+
+
+@dataclass
+class FigDatabaseModel:
+    '''A database model class.'''
+    def setFieldKeywords(self, field, *keywords):
+        try: self.field_keywords
+        except AttributeError:
+            self.initFieldKeywords()
+        for keyword in keywords:
+            self.field_keywords[field].add(keyword)
+
+    def initFieldKeywords(self):
+        '''initialize a dictionary to store keyword descriptors for each field.'''
+        self.field_keywords = {}
+        for field in dataclasses.fields(self):
+            self.field_keywords[field.name] = set()
+
+    def setPrimaryKey(self, field: str):
+        try:
+            # hard exception for missing fields.
+            if field not in self.field_keywords:
+                model_name = type(self).__name__
+                raise FileNotFoundError(model_name, field)
+        except AttributeError:
+            # field keywords not initialized
+            self.initFieldKeywords()
+        self.field_keywords[field].add("PRIMARY KEY")
+        self.primary_key = field
+
+    def primaryKey(self):
+        return getattr(self, "primary_key", None)
+
+    def toSqlRecord(self):
+        '''convert an instance of the data class to a column list for INSERT query execution in an SQlite3 database.'''
+        SQLRecord = "("
+        for field in dataclasses.fields(self):
+            field_name = field.name
+            field_type = field.type
+            field_value = getattr(self, field_name)
+            if field_type in [int, float]:
+                SQLRecord += f"{field_value}, "
+            else: 
+                SQLRecord += f"'{field_value}', "
+        SQLRecord = SQLRecord.strip(",")
+        SQLRecord += ")"
+
+        return SQLRecord
+
+    def getFieldSqlType(self, field: str):
+        '''get SQL type information for a field.'''
+        dtype_map = {
+            str: "TEXT",
+            int: "INTEGER",
+            float: "REAL",
+            FigDashMailData: "TEXT",
+            FigDashPassword: "TEXT",
+            FigDashAddressData: "TEXT",
+            FigDashPhoneNumberData: "TEXT",
+        }
+        field = type(getattr(self, field, None))
+
+        return dtype_map.get(field, None)
+
+    def getSqlHeader(self, type_="SQLITE3"): 
+        '''convert the class definition to column list of field names and types for CREATE TABLE query execution in an SQlite3 database.'''
+        SQLHeader = "("
+        dtype_map = {
+            str: "TEXT",
+            int: "INTEGER",
+            float: "REAL",
+            FigDashMailData: "TEXT",
+            FigDashPassword: "TEXT",
+            FigDashAddressData: "TEXT",
+            FigDashPhoneNumberData: "TEXT",
+        }
+        try: self.field_keywords
+        except AttributeError:
+            self.initFieldKeywords()
+        for field in dataclasses.fields(self):
+            field_name = field.name
+            field_type = dtype_map.get(field.type, "TEXT")
+            field_init = f"{field_name} {field_type}"
+            for keyword in self.field_keywords[field_name]:
+                field_init += f" {keyword}"
+            field_init += ", "
+            SQLHeader += field_init
+        SQLHeader = SQLHeader.strip(",")
+        SQLHeader += ")"
+
+        return SQLHeader
+
 # all data associated with a Fig Application.
 class FigDashAppDatabase:
     '''fig-dash application database template.'''
@@ -177,7 +291,7 @@ class FigDashAppDatabase:
                     password: str, **data):
         '''create user account.'''
         connection = sqlite3.connect(self.path)
-        password = FigDashAppPassword(password)
+        password = FigDashPassword(password)
         user_primary_key = self.table_keys["user"]
         user_field_value = data["user"]
         user = user_model(password=password.toObjectStr(), **data)
