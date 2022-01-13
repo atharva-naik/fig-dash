@@ -150,6 +150,7 @@ class BrowserSearchPanel(QWidget):
         self.entry = QLineEdit()
         self.label = QLabel("0/0")
         self.entry.setStyleSheet("background: #fff; color: #000;")
+        self.entry.setMinimumWidth(350)
         self.closeBtn = BrowserSearchPanelBtn(
             icon="close.svg", size=(20,20),
             tip="close page search",
@@ -162,6 +163,7 @@ class BrowserSearchPanel(QWidget):
             icon="next.svg", size=(20,20),
             tip="go to next match (Enter)",
         )
+        self.entry.setClearButtonEnabled(True)
         self.layout.addWidget(self.entry)
         self.layout.addWidget(self.label)
         self.layout.addStretch()
@@ -235,7 +237,7 @@ class BrowserSearchPanel(QWidget):
         shadow.setColor(QColor(235, 95, 52, 255))
     
         wrapper.setFixedHeight(60)
-        wrapper.setFixedWidth(400)
+        wrapper.setFixedWidth(500)
         wrapper.setGraphicsEffect(shadow)
 
         dummy = QVBoxLayout()
@@ -285,7 +287,7 @@ class BrowserSearchPanel(QWidget):
     def show(self):
         self.setParent(self.browser)
         WB = self.browser.width()
-        self.move(WB/2-150, -200)
+        self.move(WB/2-250, -200)
         print("display search panel")
         super(BrowserSearchPanel, self).show()
 

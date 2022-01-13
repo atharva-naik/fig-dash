@@ -2,12 +2,12 @@
 # -*- coding: utf-8 -*-
 # titlebar for the main window
 import sys
-from fig_dash.api.system.network import NetworkHandler
 import jinja2
 from typing import Union
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.api.system.battery import Battery
+from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer

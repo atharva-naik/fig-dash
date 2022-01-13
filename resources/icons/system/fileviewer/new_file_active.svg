@@ -116,7 +116,7 @@
   </metadata>
   <g inkscape:label="Capa 1" inkscape:groupmode="layer" id="layer1" transform="translate(-326,-532.3622)">
     <g transform="translate(327,-497)" id="layer1-1" inkscape:label="Capa 1">
-      <path id="rect4139" transform="translate(0,1030.3622)" d="m 4,3 0,16 1,0 8,0 1,0 0,-0.0098 L 14.007812,19 18,15.007812 18,15 18,13.59375 18,3 17,3 5,3 4,3 Z m 1,1 12,0 0,10 -4,0 0,1 0,3 -8,0 0,-14 z" style="fill:#fff;fill-opacity:1;stroke:none" inkscape:connector-curvature="0" class="ColorScheme-Text"/>
+      <path id="rect4139" transform="translate(0,1030.3622)" d="m 4,3 0,16 1,0 8,0 1,0 0,-0.0098 L 14.007812,19 18,15.007812 18,15 18,13.59375 18,3 17,3 5,3 4,3 Z m 1,1 12,0 0,10 -4,0 0,1 0,3 -8,0 0,-14 z" style="fill:#69bfee;fill-opacity:1;stroke:none" inkscape:connector-curvature="0" class="ColorScheme-Text"/>
     </g>
   </g>
 </svg>

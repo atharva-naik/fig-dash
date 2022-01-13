@@ -10,6 +10,7 @@ from fig_dash import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
+from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence
@@ -206,8 +207,10 @@ main .boxes div {
 
 main .boxes.green div.selected {
     color: #292929;
-    background: linear-gradient(45deg, rgba(235,95,52,0.6) 40%, rgba(235,204,52,0.6) 94%);
-    background-color: rgba(255, 0, 0, 0.45);
+    background: linear-gradient(45deg, rgba(20,126,184,0.6) 40%, rgba(105,191,238,0.6) 94%);
+    background-color: rgba(255,0,0,0.45);
+    /* background: linear-gradient(45deg, rgba(235,95,52,0.6) 40%, rgba(235,204,52,0.6) 94%);
+    background-color: rgba(255, 0, 0, 0.45); */
     /* background: hsl(100, 80%, 65%);
        border: 2px solid rgba(235, 95, 52, 0.075); */
 }
@@ -704,6 +707,68 @@ selectedItemSpan.addEventListener('keypress', handleItemRename);
         '''
         self.page().runJavaScript(code)
 
+#eb5f34
+class FileViewerBtn(QToolButton):
+    '''File viewer button'''
+    def __init__(self, parent: Union[None, QWidget]=None, **args):
+        super(FileViewerBtn, self).__init__(parent)
+        tip = args.get("tip", "a tip")
+        size = args.get("size", (23,23))
+        self.hover_response = "background"
+        if "icon" in args:
+            self.inactive_icon = os.path.join("system/fileviewer", args["icon"])
+            stem, ext = os.path.splitext(Path(args["icon"]))
+            active_icon = f"{stem}_active{ext}"
+            self.active_icon = os.path.join("system/fileviewer", active_icon)
+            if os.path.exists(FigD.icon(self.active_icon)):
+                self.hover_response = "foreground"
+            self.setIcon(FigD.Icon(self.inactive_icon))
+        elif "text" in args:
+            self.setText(args["text"])
+        self.setIconSize(QSize(*size))
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        if self.hover_response == "background":
+            self.setStyleSheet('''
+            QToolButton {
+                color: #fff;
+                border: 0px;
+                font-size: 14px;
+                background: transparent;
+            }
+            QToolButton:hover {
+                color: #292929;
+                background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+            }
+            QToolTip {
+                color: #fff;
+                border: 0px;
+                background: #000;
+            }''')
+        else:
+            self.setStyleSheet('''
+            QToolButton {
+                color: #fff;
+                border: 0px;
+                font-size: 14px;
+                background: transparent;
+            }
+            QToolTip {
+                color: #fff;
+                border: 0px;
+                background: #000;
+            }''')
+
+    def leaveEvent(self, event):
+        if self.hover_response == "foreground":
+            self.setIcon(FigD.Icon(self.inactive_icon))
+        super(FileViewerBtn, self).leaveEvent(event)
+
+    def enterEvent(self, event):
+        if self.hover_response == "foreground":
+            self.setIcon(FigD.Icon(self.active_icon))
+        super(FileViewerBtn, self).enterEvent(event)
+
 
 class FileViewerGroup(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None,
@@ -730,7 +795,7 @@ class FileViewerGroup(QWidget):
         QLabel {
             border: 0px;
             padding: 6px;
-            color: #eb5f34;
+            color: #69bfee;
             font-size: 16px;
             background: transparent;
         }''')
@@ -764,35 +829,36 @@ class FileViewerGroup(QWidget):
         return btnGroup
 
     def initBtn(self, **args):
-        btn = QToolButton(self)
-        tip = args.get("tip", "a tip")
-        size = args.get("size", (23,23))
-        if "icon" in args:
-            icon = os.path.join("system/fileviewer", args["icon"])
-            btn.setIcon(FigD.Icon(icon))
-        elif "text" in args:
-            btn.setText(args["text"])
-        btn.setIconSize(QSize(*size))
-        btn.setToolTip(tip)
-        btn.setStatusTip(tip)
-        btn.setStyleSheet('''
-        QToolButton {
-            color: #fff;
-            border: 0px;
-            font-size: 14px;
-            background: transparent;
-        }
-        QToolButton:hover {
-            color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
-        }
-        QToolTip {
-            color: #fff;
-            border: 0px;
-            background: #000;
-        }''')
+        return FileViewerBtn(self, **args)
+        # btn = QToolButton(self)
+        # tip = args.get("tip", "a tip")
+        # size = args.get("size", (23,23))
+        # if "icon" in args:
+        #     icon = os.path.join("system/fileviewer", args["icon"])
+        #     btn.setIcon(FigD.Icon(icon))
+        # elif "text" in args:
+        #     btn.setText(args["text"])
+        # btn.setIconSize(QSize(*size))
+        # btn.setToolTip(tip)
+        # btn.setStatusTip(tip)
+        # btn.setStyleSheet('''
+        # QToolButton {
+        #     color: #fff;
+        #     border: 0px;
+        #     font-size: 14px;
+        #     background: transparent;
+        # }
+        # QToolButton:hover {
+        #     color: #292929;
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+        # }
+        # QToolTip {
+        #     color: #fff;
+        #     border: 0px;
+        #     background: #000;
+        # }''')
 
-        return btn 
+        # return btn 
 # backdrop-filter: drop-shadow(4px 4px 10px blue);
 # backdrop-filter: hue-rotate(120deg);
 class FileViewerFileGroup(FileViewerGroup):
@@ -822,8 +888,18 @@ class FileViewerFileGroup(FileViewerGroup):
             size=(45,45),
             tip="connect to a server",
         )
+        self.linkGroup = self.initBtnGroup([
+            {"icon": "link.svg", "size": (20,20)},
+            {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
+        ])
+        self.linkNServer = QWidget()
+        self.linkNServerLayout = QVBoxLayout()
+        self.linkNServerLayout.setContentsMargins(0, 0, 0, 0)
+        self.linkNServer.setLayout(self.linkNServerLayout)
+        self.linkNServerLayout.addWidget(self.connectToServerBtn)
+        self.linkNServerLayout.addWidget(self.linkGroup)
         self.layout.addWidget(self.creationWidget)
-        self.layout.addWidget(self.connectToServerBtn)
+        self.layout.addWidget(self.linkNServer)
 
     def connectWidget(self, widget):
         self.widget = widget
@@ -854,7 +930,7 @@ class FileViewerPathGroup(FileViewerGroup):
         self.navWidget.setLayout(self.navLayout)
         # buttons.
         self.backPathBtn = self.initBtn(
-            icon="back_path.png",
+            icon="back.svg",
             size=(25,25),
             tip="go back to parent folder",
         )
@@ -869,7 +945,7 @@ class FileViewerPathGroup(FileViewerGroup):
             tip="copy filename",
         )
         self.copyUrlBtn =  self.initBtn(
-            icon="copy_as_url.png",
+            icon="copy_as_url.svg",
             size=(25,25),
             tip="copy file path as url",
         )
@@ -918,38 +994,40 @@ class FileViewerPathGroup(FileViewerGroup):
 class FileViewerEditGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerEditGroup, self).__init__(parent, "Edit")
-        self.editWidget = QWidget() 
+        self.editWidget = QWidget()
+        self.editWidget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding) 
         self.editLayout = QVBoxLayout()
         self.editLayout.setContentsMargins(0, 0, 0, 0)
         # undo, redo, rename
         self.renameGroup = self.initBtnGroup([
-            {"icon": "undo.png", "size": (20,20), "tip": "undo rename"},
-            {"icon": "rename.svg", "size": (20,20), "tip": "rename file/folder"},
-            {"icon": "redo.png", "size": (20,20) , "tip": "redo rename"},
+            {"icon": "undo.svg", "size": (23,23), "tip": "undo rename"},
+            {"icon": "rename.svg", "size": (23,23), "tip": "rename file/folder"},
+            {"icon": "redo.svg", "size": (23,23) , "tip": "redo rename"},
         ])
         self.undoBtn = self.renameGroup.btns[0]
         self.renameBtn = self.renameGroup.btns[1]
         self.redoBtn = self.renameGroup.btns[2]
         # cut, copy, paste
         self.moveGroup = self.initBtnGroup([
-            {"icon": "cut.png", "size": (20,20), "tip": "cut selected item"},
-            {"icon": "copy.svg", "size": (20,20), "tip": "copy selected items"},
-            {"icon": "paste.png", "size": (20,20), "tip": "paste selected items from the clipboard"},
+            {"icon": "cut.png", "size": (22,22), "tip": "cut selected item"},
+            {"icon": "copy.svg", "size": (30,30), "tip": "copy selected items"},
+            {"icon": "paste.png", "size": (30,30), "tip": "paste selected items from the clipboard"},
         ])
         # make link, release link, move to trash
         self.linkGroup = self.initBtnGroup([
-            {"icon": "link.svg", "size": (20,20)},
-            {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
-            {"icon": "trash.svg", "size": (30,30), "tip": "move selected item(s) to trash"},
-        ])
+            # {"icon": "link.svg", "size": (20,20)},
+            # {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
+            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash"},
+        ], orient="vertical")
         # self.sortWidget = QWidget()
+        self.editLayout.addStretch(1)
         self.editLayout.addWidget(self.renameGroup)
         self.editLayout.addWidget(self.moveGroup)
-        self.editLayout.addWidget(self.linkGroup)
         self.editLayout.addStretch(1)
         self.editWidget.setLayout(self.editLayout)
         self.layout.addStretch(1)
         self.layout.addWidget(self.editWidget)
+        self.layout.addWidget(self.linkGroup)
         self.layout.addStretch(1)    
 
     def connectWidget(self, widget):
@@ -1041,23 +1119,52 @@ class XdgOpenDropdown(QComboBox):
     '''Dropdown of available applications for opening file of particular type.'''
     def __init__(self, mimetype: str):
         super(XdgOpenDropdown, self).__init__()
+        self.setEditable(True)
+        self.lineEdit().setAlignment(Qt.AlignCenter)
+        self.mime_to_apps = MimeTypeDefaults()
         self.populate(mimetype)
         self.currentIndexChanged.connect(self.selChanged)
-        self.setStyleSheet("background: #000; color: #fff; font-size: 14px;")
+        self.setStyleSheet("background: #292929; color: #69bfee; font-size: 15px;")
 
     def getAppsList(self, mimetype: str):
         '''get list of apps available for a given mimetype.'''
-        return ["an app", "another app", "more apps"]
+        apps = self.mime_to_apps[mimetype]
+        # print(mimetype)
+        self.desktop_files = []
+        app_names = []
+        for app in apps:
+            desktop_file = DesktopFile(app)
+            # desktop_file.read()
+            self.desktop_files.append(desktop_file)
+            # print(desktop_file)
+            app_names.append(desktop_file.app_name)
+
+        return app_names
+
+    def xdgOpen(self, file: str):
+        '''use xdg-open on a specific file'''
+        os.system(f"xdg-open {file}")
+
+    def gtkLaunch(self, app: str, file: str=""):
+        '''do a gtk launch of a specific application with or without a specific file.'''
+        # os.system(f"gtk-launch {app} '{file}'")
+        print(f"gtk-launch {app} '{file}'")
+
+    def open(self, file):
+        i = self.currentIndex()
+        self.gtkLaunch(self.apps[i], file)
 
     def populate(self, mimetype: str):
         # clear combox box.
         # get list of available apps.
+        self.clear()
         self.apps = self.getAppsList(mimetype)
         for app in self.apps:
             self.addItem(app)
 
     def selChanged(self, index: int):
         '''selected application (for xdg-open) is changed.'''
+        print(index, self.apps)
         appSelected = self.apps[index]
         print(appSelected)
 
@@ -1082,12 +1189,14 @@ class FileViewerOpenGroup(FileViewerGroup):
         self.layout.addStretch(1)   
 
     def updateMimeBtn(self, mimetype: str, 
-                      icon: QIcon):
+                      icon: QIcon, path: str):
         self.mimeBtn.setText(mimetype)
         # self.mimeBtn.setToolTip(tip)
         # self.mimeBtn.setStatusTip(tip)
         self.mimeBtn.setIcon(QIcon(icon))
         self.mimeBtn.setIconSize(QSize(35,35))
+        self.appDropdown.populate(mimetype)
+        self.mimeBtn.clicked.connect(lambda: self.appDropdown.open(path))
 
     def initXdgOpenWidget(self):
         '''change xdg-open settings.'''
@@ -1099,10 +1208,11 @@ class FileViewerOpenGroup(FileViewerGroup):
         label = QLabel("Open With")
         label.setStyleSheet('''
         QLabel {
-            color: #eb5f34;
+            color: #ccc;
             border: 0px;
-            font-size: 13px;
             padding: 2px;
+            font-size: 15px;
+            font-weight: bold;
             background: transparent;
         }''')
         
@@ -1114,24 +1224,27 @@ class FileViewerOpenGroup(FileViewerGroup):
         self.mimeBtn = QToolButton()
         self.mimeBtn.setToolTip(tip)
         self.mimeBtn.setStatusTip(tip)
-        self.mimeBtn.setText("text-plain")
+        self.mimeBtn.setText("text/plain")
         self.mimeBtn.setIcon(FigD.Icon(icon))
         self.mimeBtn.setIconSize(QSize(35,35))
         self.mimeBtn.setStyleSheet('''
         QToolButton {
             color: #fff;
             border: 0px;
-            font-size: 13px;
+            font-size: 14px;
             background: transparent;
         }
         QToolButton:hover {
             color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
         }''')
         self.mimeBtn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         # app selection dropdown.
-        self.appDropdown = XdgOpenDropdown("text-plain")
-
+        self.appDropdown = XdgOpenDropdown("text/plain")
+        self.appDropdown.setFixedWidth(130)
+        # self.mimeBtn.clicked.connect(
+        #     lambda: os.system(f"gtk-launch {} {self.selected_item}")
+        # )
         xdgOpenLayout.addWidget(self.mimeBtn, 0, Qt.AlignCenter)
         xdgOpenLayout.addWidget(label, 0, Qt.AlignCenter)
         xdgOpenLayout.addWidget(self.appDropdown)
@@ -1331,8 +1444,7 @@ class FileViewerMenu(QWidget):
         self.viewgroup = FileViewerViewGroup()
         self.opengroup = FileViewerOpenGroup()
         self.selectgroup = FileViewerSelectGroup()
-        self.appearancegroup = FileViewerAppearanceGroup()
-        
+        # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.pathgroup)
@@ -1344,8 +1456,6 @@ class FileViewerMenu(QWidget):
         self.layout.addWidget(self.opengroup)
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.selectgroup)
-        self.layout.addWidget(self.addSeparator(10))
-        self.layout.addWidget(self.appearancegroup)
         
         self.layout.addStretch(1)
         self.setLayout(self.layout)
@@ -1368,8 +1478,7 @@ class FileViewerMenu(QWidget):
         self.pathgroup.connectWidget(widget)
         # self.opengroup.connectWidget(widget)
         self.selectgroup.connectWidget(widget)
-        self.appearancegroup.connectWidget(widget)
-
+        # self.appearancegroup.connectWidget(widget)
 
 class FileViewerFolderBar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -1390,11 +1499,12 @@ class FileViewerFolderBar(QWidget):
             font-weight: bold;
             padding-top: 4px;
             padding-bottom: 4px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
         }
         QToolButton:hover {
             color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
         }
         QToolTip {
             color: #fff;
@@ -1409,7 +1519,8 @@ class FileViewerFolderBar(QWidget):
             font-weight: bold;
             padding-top: 4px;
             padding-bottom: 4px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
         }
         QToolTip {
             color: #fff;
@@ -1739,10 +1850,11 @@ class FileViewerWidget(QMainWindow):
 
     def getIcon(self, path):
         name = self.icon_provider.icon(QFileInfo(path)).name()
+        print(name)
         # paths where mimetype icons may be found.
-        icon_theme_devices_path = "/usr/share/icons/Humanity/devices/48"
-        icon_theme_places_path = "/usr/share/icons/Humanity/places/64"
-        icon_theme_mimes_path = "/usr/share/icons/Humanity/mimes/48"
+        icon_theme_devices_path = "/usr/share/icons/breeze/devices/48"
+        icon_theme_places_path = "/usr/share/icons/breeze/places/64"
+        icon_theme_mimes_path = "/usr/share/icons/breeze/mimetypes/32"
         Path = os.path.join(icon_theme_devices_path, name+".svg")
         if os.path.exists(Path): return Path
         Path = os.path.join(icon_theme_places_path, name+".svg")
@@ -1762,10 +1874,10 @@ class FileViewerWidget(QMainWindow):
         # folder icon: file:///usr/share/icons/Humanity/places/64/inode-directory.svg
         if item_type == "folder": 
             path = self.createFolder()
-            icon = "file:///usr/share/icons/Humanity/places/64/inode-directory.svg"
+            icon = "file:///usr/share/icons/breeze/places/64/inode-directory.svg"
         elif item_type == "file": 
             path = self.createFile()
-            icon = "file:///usr/share/icons/Humanity/mimes/48/text-plain.svg"
+            icon = "file:///usr/share/icons/breeze/mimetypes/32/text-plain.svg"
         name = Path(path).name
         self.webview.createItem(path, name, icon, hidden=False) 
 
@@ -1842,15 +1954,33 @@ class FileViewerWidget(QMainWindow):
                 "path": path, 
                 "mimetype": self.mime_database.mimeTypeForFile(path).name(),
                 "info": QFileInfo(path),
-            })   
-        icons = [
-            (self.icon_provider.icon(QFileInfo(path)).name(), 
-             self.mime_database.mimeTypeForFile(path).name(),
-             path) for path in full_paths
-        ]
-        icon_theme_devices_path = "/usr/share/icons/Humanity/devices/48"
-        icon_theme_places_path = "/usr/share/icons/Humanity/places/64"
-        icon_theme_mimes_path = "/usr/share/icons/Humanity/mimes/48"
+            }) 
+        humanity_to_breeze_map = {
+            "video": "video-mp4",
+        }  
+        icons = []
+        for path in full_paths:
+            iconPath = humanity_to_breeze_map.get(
+                self.icon_provider.icon(
+                    QFileInfo(path)
+                ).name(),
+                self.icon_provider.icon(
+                    QFileInfo(path)
+                ).name()
+            ) 
+            icons.append((
+                iconPath,
+                self.mime_database.mimeTypeForFile(path).name(),
+                path
+            ))
+        # icons = [
+        #     (iconPath, 
+        #      self.mime_database.mimeTypeForFile(path).name(),
+        #      path) for path in full_paths
+        # ]
+        icon_theme_devices_path = "/usr/share/icons/breeze/devices/48"
+        icon_theme_places_path = "/usr/share/icons/breeze/places/64"
+        icon_theme_mimes_path = "/usr/share/icons/breeze/mimetypes/32"
         # if os.path.exists(icon_theme_places_path):
         icon_paths = []
         for name, mimetype, full_path in icons:
@@ -1881,7 +2011,7 @@ class FileViewerWidget(QMainWindow):
                 if os.path.exists(path): 
                     icon_paths.append(QUrl.fromLocalFile(path).toString())
                     continue
-                path = "default.svg"
+                path = "/usr/share/icons/breeze/mimetypes/32/text-plain.svg"
                 icon_paths.append(QUrl.fromLocalFile(path).toString())     
         def chunk_string(string, k=12):
             result = []
@@ -1934,7 +2064,8 @@ class FileViewerWidget(QMainWindow):
         mimetype = self.mime_database.mimeTypeForFile(item).name()
         self.menu.pathgroup.updateExt(file_ext)
         self.menu.opengroup.updateMimeBtn(
-            mimetype=mimetype, icon=icon
+            mimetype=mimetype, 
+            icon=icon, path=item
         )
 
     def onUrlChange(self):
@@ -1996,7 +2127,7 @@ def test_fileviewer():
     app = QApplication(sys.argv)
     fileviewer = FileViewerWidget(
         clipboard=app.clipboard(),
-        background="/home/atharva/GUI/fig-dash/bartender_anime.png",
+        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         font_color="#fff",
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")

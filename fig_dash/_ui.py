@@ -177,6 +177,7 @@ class DashWindow(QMainWindow):
         # tabbar.
         self.tabbar = self.tabs.tabBar()
         self.tabbar.setStyleSheet(dash_tabbar_style.render())
+        
         topLayout.addWidget(self.tabbar)
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

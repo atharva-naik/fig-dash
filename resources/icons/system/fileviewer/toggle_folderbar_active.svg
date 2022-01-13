@@ -3,8 +3,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="246px" height="85px" viewBox="-0.5 -0.5 246 85">
     <defs />
     <g>
-        <rect x="123" y="2" width="120" height="80" rx="12" ry="12" fill="#000000" stroke="#ffffff" stroke-width="5" pointer-events="all" />
-        <rect x="0" y="2" width="120" height="80" rx="12" ry="12" fill="#ffffff" stroke="#ffffff" pointer-events="all" />
+        <rect x="123" y="2" width="120" height="80" rx="12" ry="12" fill="#000000" stroke="#69bfee" stroke-width="5" pointer-events="all" />
+        <rect x="0" y="2" width="120" height="80" rx="12" ry="12" fill="#69bfee" stroke="#69bfee" pointer-events="all" />
         <rect x="138" y="12" width="90" height="60" fill="none" stroke="none" pointer-events="all" />
         <g transform="translate(-0.5 -0.5)">
             <switch>
@@ -13,7 +13,7 @@
                         <div data-drawio-colors="color: rgb(0, 0, 0); " style="box-sizing: border-box; font-size: 0px; text-align: center;">
                             <div style="display: inline-block; font-size: 12px; font-family: Helvetica; color: rgb(0, 0, 0); line-height: 1.2; pointer-events: all; white-space: normal; overflow-wrap: normal;">
                                 <!-- <b>
-                                    <font style="font-size: 48px" color="#ffffff">T</font>
+                                    <font style="font-size: 48px" color="#69bfee">T</font>
                                 </b> -->
                             </div>
                         </div>
