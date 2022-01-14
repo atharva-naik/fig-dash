@@ -14,6 +14,101 @@ from ..utils import QFetchIcon
 from fig_dash.assets import FigD
 from fig_dash.api.browser.extensions import ExtensionManager
 
+WEBPAGE_ANNOT_JS = '''
+function getSafeRanges(dangerous) {
+    var a = dangerous.commonAncestorContainer;
+    // Starts -- Work inward from the start, selecting the largest safe range
+    var s = new Array(0), rs = new Array(0);
+    if (dangerous.startContainer != a)
+        for(var i = dangerous.startContainer; i != a; i = i.parentNode)
+            s.push(i)
+    ;
+    if (0 < s.length) for(var i = 0; i < s.length; i++) {
+        var xs = document.createRange();
+        if (i) {
+            xs.setStartAfter(s[i-1]);
+            xs.setEndAfter(s[i].lastChild);
+        }
+        else {
+            xs.setStart(s[i], dangerous.startOffset);
+            xs.setEndAfter(
+                (s[i].nodeType == Node.TEXT_NODE)
+                ? s[i] : s[i].lastChild
+            );
+        }
+        rs.push(xs);
+    }
+
+    // Ends -- basically the same code reversed
+    var e = new Array(0), re = new Array(0);
+    if (dangerous.endContainer != a)
+        for(var i = dangerous.endContainer; i != a; i = i.parentNode)
+            e.push(i)
+    ;
+    if (0 < e.length) for(var i = 0; i < e.length; i++) {
+        var xe = document.createRange();
+        if (i) {
+            xe.setStartBefore(e[i].firstChild);
+            xe.setEndBefore(e[i-1]);
+        }
+        else {
+            xe.setStartBefore(
+                (e[i].nodeType == Node.TEXT_NODE)
+                ? e[i] : e[i].firstChild
+            );
+            xe.setEnd(e[i], dangerous.endOffset);
+        }
+        re.unshift(xe);
+    }
+
+    // Middle -- the uncaptured middle
+    if ((0 < s.length) && (0 < e.length)) {
+        var xm = document.createRange();
+        xm.setStartAfter(s[s.length - 1]);
+        xm.setEndBefore(e[e.length - 1]);
+    }
+    else {
+        return [dangerous];
+    }
+
+    // Concat
+    rs.push(xm);
+    response = rs.concat(re);    
+
+    // Send to Console
+    return response;
+}
+
+function highlightRange(range) {
+    var newNode = document.createElement("div");
+    newNode.setAttribute(
+       "style",
+       "background-color: yellow; display: inline;"
+    );
+    newNode.setAttribute(
+        "contextmenu",
+        "highlightMenu"
+    )
+    range.surroundContents(newNode);
+}
+
+function highlightSelection() {
+    var userSelection = window.getSelection().getRangeAt(0);
+    var safeRanges = getSafeRanges(userSelection);
+    for (var i = 0; i < safeRanges.length; i++) {
+        highlightRange(safeRanges[i]);
+    }
+}
+'''
+contextMenuHtml = '''
+<menu type="context" id="highlightMenu">
+	<menuitem label="Refresh Post" onclick="window.location.reload();" icon="/images/refresh-icon.png"></menuitem>
+	<menuitem label="Skip to Comments" onclick="window.location='#comments';" icon="/images/comment_icon.gif"></menuitem>
+	<menu label="Share on..." icon="/images/share_icon.gif">
+		<menuitem label="Twitter" icon="/images/twitter_icon.gif" onclick="goTo('//twitter.com/intent/tweet?text=' + document.title + ':  ' + window.location.href);"></menuitem>
+		<menuitem label="Facebook" icon="/images/facebook_icon16x16.gif" onclick="goTo('//facebook.com/sharer/sharer.php?u=' + window.location.href);"></menuitem>
+	</menu>
+</menu>'''
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
 class DevToolsBtn(QToolButton): 
     def __init__(self, parent: Union[None, QWidget]=None, 
@@ -575,6 +670,17 @@ class Browser(DebugWebView):
             self.dash_window.menu.fileviewer.open(filename)
         else:
             super(Browser, self).dragEnterEvent(e)
+
+    def changeUserAgent(self):
+        print("changing user agent.")
+        try:
+            self.page().profile().setHttpUserAgent(
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
+            )
+            print("changed user agent.")
+            # print("lol")
+        except Exception as e:
+            print(e) 
 
     def updateTabTitle(self):
         try:

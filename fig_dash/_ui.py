@@ -138,6 +138,10 @@ class DashWindow(QMainWindow):
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_F11:
+            self.titlebar.fullscreenBtn.toggle()
+
     def initTabWidget(self):
         tabs = DashTabWidget(self)
         tabs.connectWindow(self)

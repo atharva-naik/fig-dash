@@ -236,6 +236,7 @@ class DashTabWidget(QTabWidget):
             dash_window.navbar.searchbar.setPlaceholderText("Search Google or type a URL")
 
         self.setTabText(i, "  "+browser.page().title())
+        browser.changeUserAgent()
         browser.setZoomFactor(browser.currentZoomFactor)
         browser.setScrollbar(scrollbar_style)
         browser.setWordCount()
