@@ -46,8 +46,14 @@ class FigDashAddressData:
 
 # image model.
 class FigDashImageData:
-    pass
+    '''image data'''
+    def __init__(self):
+        pass
 
+    def toObjectStr(self):
+        '''convert to object string.'''
+        objectStr = ""
+        return 
 # possible gender identites.
 class FigDashGenderData(Enum):
     Male = 0
@@ -210,6 +216,7 @@ class FigDatabaseModel:
             float: "REAL",
             FigDashMailData: "TEXT",
             FigDashPassword: "TEXT",
+            FigDashImageData: "BLOB",
             FigDashAddressData: "TEXT",
             FigDashPhoneNumberData: "TEXT",
         }
@@ -226,6 +233,7 @@ class FigDatabaseModel:
             float: "REAL",
             FigDashMailData: "TEXT",
             FigDashPassword: "TEXT",
+            FigDashImageData: "BLOB",
             FigDashAddressData: "TEXT",
             FigDashPhoneNumberData: "TEXT",
         }

@@ -177,12 +177,35 @@ class ZoomSlider(QSlider):
         self.setMaximum(250)
         self.setMinimum(25)
         self.setValue(125)
-        self.valueChanged.connect(self.setTabZoom)
+        # self.valueChanged.connect(self.setTabZoom)
+        self.sliderReleased.connect(self.setTabZoom)
         # self.setStyleSheet("color: #292929;")
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget
 
-    def setTabZoom(self, zoom):
+    def connectLabel(self, label):
+        self.label = label
+        self.label.returnPressed.connect(self.setTabZoomFromLabel)
+
+    def setTabZoom(self):
+        zoom = self.value()
+        self.label.setText(f"{zoom}")
+        self.tabWidget.setTabZoom(zoom)
+
+    def setTabZoomFromLabel(self):
+        zoom = self.label.text()
+        try:
+            zoom = int(zoom)
+        except ValueError as e:
+            print(f"{e} reseting slider, label value to 125")
+            zoom = 125
+            self.label.setText("125")
+        if zoom < 25:
+            zoom = 25
+            self.label.setText("25")
+        elif zoom > 500:
+            zoom = 500
+            self.label.setText("500")
         self.tabWidget.setTabZoom(zoom)
 
 
@@ -282,6 +305,7 @@ class TitleBar(QToolBar):
             font-size: 16px;
             background: transparent;
         }""")
+        self.zoomSlider.connectLabel(self.zoomLabel)
         self.zoomLabel.setMaximumWidth(35)
 
         self.wifi = WifiBtn()

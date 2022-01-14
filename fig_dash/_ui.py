@@ -22,7 +22,7 @@ from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
-from fig_dash.ui.system.date_time import DashClock, DashCalendar
+from fig_dash.ui.system.datetime import DashClock, DashCalendar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
@@ -195,7 +195,7 @@ class DashWindow(QMainWindow):
         # add notifications and datetime splitter.
         self.datetime_notifs_splitter = self.initDatetimeNotif()
         self.h_split.addWidget(self.datetime_notifs_splitter)
-        self.h_split.setSizes([500,330,300])
+        self.h_split.setSizes([800,200,200])
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
         self.floatmenu = FloatMenu(self.tabs)

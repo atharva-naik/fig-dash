@@ -297,11 +297,12 @@ class DashTabWidget(QTabWidget):
             print(currentWidget.page())
 
     def setTabZoom(self, zoom):
+        zoom /= 100
         try:
             browser = self.currentWidget().browser
             browser.currentZoomFactor = zoom
             browser.setZoomFactor(zoom)
-            print(f"setting tab zoom: {zoom}")
+            # print(f"setting tab zoom: {zoom}")
         except AttributeError as e:
             print(e)
 
