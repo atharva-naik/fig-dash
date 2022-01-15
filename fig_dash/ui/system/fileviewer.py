@@ -1729,6 +1729,21 @@ class FileViewerSideBar(QWidget):
             btn.connectWidget(widget)
 
 
+class FileViewerKeyPressSearch(QLineEdit):
+    def __init__(self):
+        super(FileViewerKeyPressSearch, self).__init__()
+        self.setStyleSheet("""
+        QLineEdit {
+            color: #000;
+            background: #fff;
+        }""")
+        self.setFixedWidth(100)
+        self.setFixedHeight(30)
+
+    def connectWidget(self, widget):
+        self.widget = widget
+
+
 class FileViewerWidget(QMainWindow):
     def __init__(self, parent: Union[None, QWidget]=None,
                  zoom_factor: float=1.35, **args):
@@ -1779,6 +1794,9 @@ class FileViewerWidget(QMainWindow):
         self.layout.addWidget(self.webview.splitter)
         self.webview.splitter.insertWidget(0, self.sidebar)
         self.webview.splitter.setSizes([200, 600, 200])
+        self.keypress_search = FileViewerKeyPressSearch()
+        self.keypress_search.connectWidget(self)
+        self.keypress_search.hide()
 
         self.central_widget = QWidget()
         self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
@@ -1791,6 +1809,19 @@ class FileViewerWidget(QMainWindow):
         self.folderbar.connectWidget(self)
         self.webview.connectWidget(self)
         self.sidebar.connectWidget(self)
+        self.current_keypress_search_string = ""
+        # connect Esc key shortcut to Esc handler.
+        self.webview.Esc.setEnabled(False)
+        self.EscKey = QShortcut(QKeySequence("Esc"), self)
+        self.EscKey.activated.connect(self.EscHandler)
+
+    def EscHandler(self):
+        '''handle ESC key'''
+        # print("pressed ESC key")
+        if self.keypress_search.isVisible():
+            self.keypress_search.hide()
+        if self.webview.searchPanel.isVisible():
+            self.webview.searchPanel.closePanel()
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -1870,14 +1901,14 @@ class FileViewerWidget(QMainWindow):
         self.error_dialog.showMessage(msg)
         # print(msg)
     def createDialogue(self, item_type="file"):
-        # file icon: file:///usr/share/icons/Humanity/mimes/48/text-plain.svg
-        # folder icon: file:///usr/share/icons/Humanity/places/64/inode-directory.svg
         if item_type == "folder": 
             path = self.createFolder()
             icon = "file:///usr/share/icons/breeze/places/64/inode-directory.svg"
+            # file icon: file:///usr/share/icons/Humanity/mimes/48/text-plain.svg
         elif item_type == "file": 
             path = self.createFile()
             icon = "file:///usr/share/icons/breeze/mimetypes/32/text-plain.svg"
+            # folder icon: file:///usr/share/icons/Humanity/places/64/inode-directory.svg
         name = Path(path).name
         self.webview.createItem(path, name, icon, hidden=False) 
 
@@ -2068,6 +2099,24 @@ class FileViewerWidget(QMainWindow):
             icon=icon, path=item
         )
 
+    def keyPressEvent(self, event):
+        print(event.key()) # print("opened keypress search")
+        try:
+            letter = chr(event.key())
+            self.keypress_search.setText(letter.lower())
+            self.keypress_search.show()
+            fvW, fvH = self.width(), self.height()
+            ksW, ksH = self.keypress_search.width(), self.keypress_search.height()
+            self.keypress_search.setParent(self)
+            self.keypress_search.move(fvW-ksW, fvH-ksH)
+            self.keypress_search.setFocus()
+            # print("changed focus")
+        except (TypeError, ValueError) as e:
+            pass
+            # print(e)
+            # fail silently.
+        super(FileViewerWidget, self).keyPressEvent(event)
+
     def onUrlChange(self):
         self.webview.setZoomFactor(self.zoom_factor)
         self.webview.loadFinished.connect(self.webview.loadDevTools)
@@ -2132,6 +2181,8 @@ def test_fileviewer():
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
     fileviewer.open("~/GUI/FileViewerTest")
+    fileviewer.setGeometry(200, 200, 800, 600)
+    fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
     # fileviewer.saveScreenshot("fileviewer.html")
     fileviewer.show()
     app.exec()
