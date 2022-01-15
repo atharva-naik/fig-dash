@@ -133,6 +133,7 @@ class DashWindow(QMainWindow):
         # add title bar.
         self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
+        self.tabs.connectTitleBar(self.titlebar)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
         # install event filter.
         self.installEventFilter(self)

@@ -79,16 +79,44 @@ function getSafeRanges(dangerous) {
     return response;
 }
 
+// add style for annotation_context_menu
+const style = document.createElement("style");
+style.textContent = `
+#fig_webpage_annotation_context_menu {
+    color: #fff;
+    font-weight: bold;
+    background-color: #000;
+    padding-left: 20px;
+    padding-right: 20px;
+}`
+document.head.appendChild(style);
+let annotation_context_menu = document.createElement("div");
+annotation_context_menu.id = "fig_webpage_annotation_context_menu";
+annotation_context_menu.innerHTML = `
+<p>Change highlight color</p>
+<p>Clear highlight</p>
+<p>Add a note</p>
+<p onclick='alert("Thank you!")'>Upvote</p>`;
+annotation_context_menu.style.position = "absolute";
+annotation_context_menu.style.display = 'none'
+document.body.appendChild(annotation_context_menu);
+annotation_context_menu.onmouseleave = () => annotation_context_menu.style.display = 'none'
+
+function highlightContextMenu(event) {
+    event.preventDefault();
+    annotation_context_menu.style.top = `${event.pageY+10}px`;
+    annotation_context_menu.style.left = `${event.pageX+10}px`;
+    console.log(event.pageY, event.pageX);
+    annotation_context_menu.style.display = '';
+}
+
 function highlightRange(range) {
     var newNode = document.createElement("div");
+    newNode.classList.add("fig_webpage_annotation");
     newNode.setAttribute(
        "style",
        "background-color: yellow; display: inline;"
     );
-    newNode.setAttribute(
-        "contextmenu",
-        "highlightMenu"
-    )
     range.surroundContents(newNode);
 }
 
@@ -98,6 +126,9 @@ function highlightSelection() {
     for (var i = 0; i < safeRanges.length; i++) {
         highlightRange(safeRanges[i]);
     }
+    document.querySelectorAll('.fig_webpage_annotation').forEach(item => {
+        item.addEventListener('contextmenu', highlightContextMenu);
+    })
 }
 '''
 contextMenuHtml = '''
@@ -422,7 +453,7 @@ class DebugWebView(QWebEngineView):
         self.searchPanel.move(50,50)
         # shortcuts.
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.CtrlF.activated.connect(self.searchPanel.show)
+        self.CtrlF.activated.connect(self.reactToCtrlF)
         self.Esc = QShortcut(QKeySequence("Esc"), self)
         self.Esc.activated.connect(self.searchPanel.closePanel)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
@@ -431,6 +462,18 @@ class DebugWebView(QWebEngineView):
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def reactToCtrlF(self):
+        # print("is browser pane in focus: ", self.hasFocus())
+        self.searchPanel.show()
+
+    def focusInEvent(self, event):
+        print("entering focus")
+        self.CtrlF.setEnabled(True)
+
+    def focusOutEvent(self, event):
+        print("exiting focus")
+        self.CtrlF.setEnabled(False)
 
     def setUrl(self, url):
         self.searchPanel.closePanel()
@@ -444,10 +487,6 @@ class DebugWebView(QWebEngineView):
         self.menu = self.page().createStandardContextMenu()
         # print(dir(self.menu))
         self.menu.setStyleSheet("background: #292929; color: #fff;")
-        self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
-        self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
-        self.menu.addSeparator()
-        self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
         self.menu.popup(event.globalPos())
 
     def alert(self, msg: str):
@@ -617,6 +656,20 @@ class Browser(DebugWebView):
     #             is_svg
     #         )
     #         pprint(icon_path)
+    def contextMenuEvent(self, event):
+        self.menu = self.page().createStandardContextMenu()
+        # print(dir(self.menu))
+        self.menu.setStyleSheet("background: #292929; color: #fff;")
+        self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
+        self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
+        self.menu.addSeparator()
+        self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
+        # print(f"context menu has {len(self.menu.actions())} actions")
+        # self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
+        # highlight action.
+        self.menu.actions()[-2].triggered.connect(self.highlightSelectedText)
+        self.menu.popup(event.globalPos())
+
     def append(self, url: Union[str, QUrl]):
         '''append url to browsing history.'''
         try: url = url.toString()
@@ -736,6 +789,15 @@ class Browser(DebugWebView):
         try: self.dash_window = tabWidget.dash_window
         except AttributeError as e:
             print("TabWidget not connected to DashWindow") 
+
+    def highlightSelectedText(self):
+        '''highlight selected text by using the highlightSelection() function.'''
+        print("\x1b[33;1mhighlighting selected text\x1b[0m")
+        self.page().runJavaScript("highlightSelection()")
+
+    def execAnnotationJS(self):
+        '''execute javascript needed for annotation shit'''
+        self.page().runJavaScript(WEBPAGE_ANNOT_JS)
 
     def setScrollbar(self, style: str=scrollbar_style):
         code = f'''Style = `{scrollbar_style}`

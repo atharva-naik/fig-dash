@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+import time
 import jinja2
 import getpass
 from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon, QColor
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QGraphicsDropShadowEffect, QInputDialog
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -204,6 +204,7 @@ class DashTabWidget(QTabWidget):
         # print(f"\x1b[34;1m{self.zoomFactors}\x1b[0m")
         self.tabbar = TabBar()
         self.setTabBar(self.tabbar)
+        self.tabbar.tabs = self
 
         self.setTabsClosable(True)
         self.setElideMode(Qt.ElideRight)
@@ -218,6 +219,13 @@ class DashTabWidget(QTabWidget):
     def connectWindow(self, window):
         self.dash_window = window
 
+    def triggerFind(self):
+        '''trigger the default response of the browser to Ctrl+F'''
+        try: 
+            debug_web_view_splitter = self.currentWidget()
+            debug_web_view_splitter.browser.reactToCtrlF()
+        except Exception as e: print(e)
+
     def connectDropdown(self, splitter):
         splitter.addWidget(self.dropdown)
         self.splitter = splitter
@@ -227,24 +235,48 @@ class DashTabWidget(QTabWidget):
         try: dash_window = self.dash_window
         except AttributeError as e: return
         url = browser.url().toString()
+        s = time.time()
         browser.loadDevTools()
-
+        print(f"loaded dev tools in: {time.time()-s}")
         if url != "file:///tmp/fig_dash.rendered.content.html":    
             dash_window.navbar.searchbar.setText(url)
         else:
             dash_window.navbar.searchbar.setText("")
             dash_window.navbar.searchbar.setPlaceholderText("Search Google or type a URL")
-
+        s = time.time()
         self.setTabText(i, "  "+browser.page().title())
+        print("set tab title and navbar lineedit in:", time.time()-s)
+        s = time.time()
         browser.changeUserAgent()
+        print("changed user agent in:", time.time()-s)
+        s = time.time()
         browser.setZoomFactor(browser.currentZoomFactor)
+        print("set zoom factor in:", time.time()-s)
+        browser.execAnnotationJS()
+        print("scheduled execution of annotation js in:", time.time()-s)
         browser.setScrollbar(scrollbar_style)
+        print("set scrollbar style in:", time.time()-s)
         browser.setWordCount()
+        print("calculated word count in:", time.time()-s)
         browser.setSelectionStyle()
+        print("set scrollbar style in:", time.time()-s)
         browser.setIcon(tabs=self, i=i)
+        print("set browser icon in:", time.time()-s)
         # print(icon.isNull())
         # if not icon.isNull(): 
             # self.setTabIcon(i, icon) 
+    def renameTab(self, text):
+        i = self.currentIndex()
+        self.setTabText(i, text)
+
+    def renameDialog(self):
+        '''initiate an input dialog to rename the current tab.'''
+        i = self.currentIndex()
+        currentText = self.tabText(i).strip()
+        newText, done = renameDialog = QInputDialog.getText(self, f"Rename tab '{currentText}'", "Rename tab to")
+        if done:
+            self.setTabText(i, newText)
+
     def home(self):
         currentWidget = self.currentWidget()
         if isinstance(currentWidget, Browser):
@@ -317,6 +349,9 @@ class DashTabWidget(QTabWidget):
             # print(f"setting zoomFactor {zoomFactor}")
             self.currentWidget().browser.setZoomFactor(zoomFactor)
             browser.currentZoomFactor = zoomFactor
+            # print(zoomFactor)
+            self.titlebar.zoomSlider.setValue(100*zoomFactor)
+            self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
             print(e)
 
@@ -330,8 +365,15 @@ class DashTabWidget(QTabWidget):
             # print(f"setting zoomFactor {zoomFactor}")
             browser.setZoomFactor(zoomFactor)
             browser.currentZoomFactor = zoomFactor
+            # print(zoomFactor)
+            self.titlebar.zoomSlider.setValue(100*zoomFactor)
+            self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
             print(e)
+
+    def connectTitleBar(self, titlebar):
+        '''connect the title bar with tab widget so that the zoom slider and zoom label may be modified when the zoom in and zoom out buttons are clicked.'''
+        self.titlebar = titlebar
 
     def prevUrl(self, i: int):
         currentWidget = self.currentWidget().browser
@@ -406,6 +448,7 @@ class TabBar(QTabBar):
         addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
         addToGroup = contextMenu.addAction("Add tab to group")
         moveTab = contextMenu.addAction("Move tab to new window")
+        renameTab = contextMenu.addAction("Rename tab")
         contextMenu.addSeparator()
         reloadAct = contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
         duplicate = contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
@@ -434,6 +477,9 @@ class TabBar(QTabBar):
             background: #484848;
         }''')
         action = contextMenu.exec_(self.mapToGlobal(event.pos()))
+        if action == renameTab:
+            try: self.tabs.renameDialog()
+            except Exception as e: print(e)
 
     def resizeEvent(self, event):
         """Resize the widget and make sure the plus button is in the correct location."""

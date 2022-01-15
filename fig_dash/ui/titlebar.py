@@ -379,6 +379,7 @@ class TitleBar(QToolBar):
 
     def connectTabWidget(self, tabWidget):
         self.tabs = tabWidget
+        self.findBtn.clicked.connect(self.tabs.triggerFind)
         self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
         self.saveSourceBtn.clicked.connect(self.tabs.save)
@@ -395,7 +396,6 @@ class TitleBar(QToolBar):
         btn.setToolTip(kwargs.get("tip", "a tip"))
         btn.setIcon(FigD.Icon(icon))
         size = kwargs.get("size", (22,22))
-        print(icon, size)
         btn.setIconSize(QSize(*size))
         btn.clicked.connect(kwargs.get("callback", self.callback))
         btn.setStyleSheet(title_btn_style)

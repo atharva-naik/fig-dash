@@ -64,7 +64,7 @@ body {
     background-position: center;
     background-size: cover;
     background-attachment: fixed;
-    backdrop-filter: brightness(50%);
+    backdrop-filter: blur(2px) brightness(50%);
 }
 
 *::-webkit-scrollbar {
@@ -590,7 +590,7 @@ FileViewerHtml = jinja2.Template(r'''
             </div>
             <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
                 <span>blur radius</span><br>
-                <input type="range" min="1" max="30" value="0" class="slider" onchange="oa.setBlurRadius(this.value)">
+                <input type="range" min="1" max="30" value="2" class="slider" onchange="oa.setBlurRadius(this.value)">
             </div>
             <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
                 <span>brightness</span><br>
@@ -1625,7 +1625,8 @@ class FileViewerShortcutBtn(QToolButton):
         }
         QToolButton:hover {
             color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
         }
         QToolTip {
             color: #fff;
