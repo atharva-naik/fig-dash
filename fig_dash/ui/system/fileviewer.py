@@ -420,6 +420,11 @@ class OrchardAppearance {
 }
 let oa = new OrchardAppearance();
 
+function selectItemById(id) {
+    selectedItem = document.getElementById(id);
+    selectedItem.classList.add("selected");
+}
+
 function createItem(path, name, icon, hidden) {
     var item = document.createElement('div');
     item.id = path;
@@ -1737,11 +1742,19 @@ class FileViewerKeyPressSearch(QLineEdit):
             color: #000;
             background: #fff;
         }""")
-        self.setFixedWidth(100)
-        self.setFixedHeight(30)
+        self.h, self.w = 30, 100
+        self.setFixedWidth(self.w)
+        self.setFixedHeight(self.h)
+
+    def showPanel(self, parent, w: int, h: int):
+        self.setParent(parent)
+        self.move(w-self.w, h-self.h)
+        self.setFocus()
+        self.show()
 
     def connectWidget(self, widget):
         self.widget = widget
+        self.textChanged.connect(self.widget.searchByFileName)
 
 
 class FileViewerWidget(QMainWindow):
@@ -1809,7 +1822,6 @@ class FileViewerWidget(QMainWindow):
         self.folderbar.connectWidget(self)
         self.webview.connectWidget(self)
         self.sidebar.connectWidget(self)
-        self.current_keypress_search_string = ""
         # connect Esc key shortcut to Esc handler.
         self.webview.Esc.setEnabled(False)
         self.EscKey = QShortcut(QKeySequence("Esc"), self)
@@ -1817,11 +1829,11 @@ class FileViewerWidget(QMainWindow):
 
     def EscHandler(self):
         '''handle ESC key'''
-        # print("pressed ESC key")
-        if self.keypress_search.isVisible():
-            self.keypress_search.hide()
         if self.webview.searchPanel.isVisible():
             self.webview.searchPanel.closePanel()
+        elif self.keypress_search.isVisible():
+            self.keypress_search.hide()
+        else: self.clearSelection()
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -1831,6 +1843,18 @@ class FileViewerWidget(QMainWindow):
             self.hidden_visible = True
             self.webview.page().runJavaScript('showHiddenFiles();')
         
+    def searchByFileName(self):
+        '''search by top level filenames in the currently opened folder only, and scroll it into view. (this search is case insensitive)'''
+        query = self.keypress_search.text()
+        selIndex = None
+        for i, filename in enumerate(self.listed_filenames):
+            filename = filename.lower()
+            if filename.startswith(query): selIndex = i
+        if selIndex is not None:
+            id = self.listed_full_paths[selIndex]
+            self.highlightItem(id)
+            self.scrollToItem(id)
+
     def openParent(self):
         path = str(self.folder.parent)
         self.open(path)
@@ -1979,7 +2003,11 @@ class FileViewerWidget(QMainWindow):
         self.folderbar.setPath(folder)  
         self.browsing_history.append(folder)
         listed, full_paths, hidden_flag_list = self.listFiles(folder)
-        
+        # populate content for searching.
+        self.listed_filenames = listed
+        self.listed_full_paths = full_paths
+        self.listed_hidden_files = hidden_flag_list
+
         for path in full_paths:
             self.loaded_file_items.append({
                 "path": path, 
@@ -2100,20 +2128,18 @@ class FileViewerWidget(QMainWindow):
         )
 
     def keyPressEvent(self, event):
-        print(event.key()) # print("opened keypress search")
+        # print(event.key()) # print("opened keypress search")
         try:
             letter = chr(event.key())
+            self.keypress_search.showPanel(
+                parent=self, 
+                w=self.width(),
+                h=self.height(),
+            )
             self.keypress_search.setText(letter.lower())
-            self.keypress_search.show()
-            fvW, fvH = self.width(), self.height()
-            ksW, ksH = self.keypress_search.width(), self.keypress_search.height()
-            self.keypress_search.setParent(self)
-            self.keypress_search.move(fvW-ksW, fvH-ksH)
-            self.keypress_search.setFocus()
             # print("changed focus")
         except (TypeError, ValueError) as e:
-            pass
-            # print(e)
+            pass# print(e)
             # fail silently.
         super(FileViewerWidget, self).keyPressEvent(event)
 
@@ -2148,9 +2174,19 @@ class FileViewerWidget(QMainWindow):
         '''refresh the webview'''
         self.webview.reload()
 
+    def scrollToItem(self, id: str):
+        '''scroll item into view by id.'''
+        code = f"document.getElementById('{id}').scrollIntoView()"
+        self.webview.page().runJavaScript(code)
+
     def invertSelection(self):
         '''invert selected items.'''
         self.webview.page().runJavaScript('invertSelectedItems();')
+
+    def highlightItem(self, id: str):
+        '''select a specific item by id'''
+        self.clearSelection()
+        self.webview.page().runJavaScript(f"selectItemById('{id}')")
 
     def clearSelection(self):
         '''clear selected items.'''
