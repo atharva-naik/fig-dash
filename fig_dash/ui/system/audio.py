@@ -54,6 +54,10 @@ class VolumeSlider(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         # widgets.
         self.label = QLabel("Adjust Volume")
+        self.label.setStyleSheet("""
+        QLabel {
+            font-size: 20px;
+        }""")
         self.label.setAlignment(Qt.AlignCenter)
         self.sliderWidget = self.initSlider()
         self.formWidget = self.initForm()

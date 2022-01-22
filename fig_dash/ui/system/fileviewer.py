@@ -1153,7 +1153,7 @@ class XdgOpenDropdown(QComboBox):
     def gtkLaunch(self, app: str, file: str=""):
         '''do a gtk launch of a specific application with or without a specific file.'''
         # os.system(f"gtk-launch {app} '{file}'")
-        print(f"gtk-launch {app} '{file}'")
+        # print(f"gtk-launch {app} '{file}'")
 
     def open(self, file):
         i = self.currentIndex()
@@ -1169,10 +1169,9 @@ class XdgOpenDropdown(QComboBox):
 
     def selChanged(self, index: int):
         '''selected application (for xdg-open) is changed.'''
-        print(index, self.apps)
+        # print(index, self.apps)
         appSelected = self.apps[index]
-        print(appSelected)
-
+        # print(appSelected)
 
 class FileViewerOpenGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -1256,7 +1255,39 @@ class FileViewerOpenGroup(FileViewerGroup):
         xdgOpenWidget.setLayout(xdgOpenLayout)
 
         return xdgOpenWidget
-# class FileViewerShareGroup(QWidget):
+
+class FileViewerShareGroup(FileViewerGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerShareGroup, self).__init__(parent, "Share")
+        # QR, devices, bluetooth, email, copy to clipboard (contents)
+        # twitter, reddit, facebook, youtube, instagram
+        self.nativeGroup = self.initBtnGroup([
+            {"icon": "qr.svg", "size":(20,20),
+            'tip': "create qr code for file"},
+            {"icon": "devices.svg", "size":(20,20),
+            'tip': "share to linked devices"},
+            {"icon": "bluetooth.svg", "size":(20,20),
+            'tip': "share using bluetooth"},
+            {"icon": "email.svg", "size":(20,20),
+            'tip': "share file as email attachment"},
+            {"copy": "copy.svg", "size":(20,20),
+            'tip': "copy file contents to clipboard"}
+        ])
+        self.appsGroup = self.initBtnGroup([
+            {"icon": "twitter.svg", "size":(30,30),
+            'tip': "share on twitter"},
+            {"icon": "reddit.svg", "size":(30,30),
+            'tip': "share on reddit"},
+        ])
+        self.shareWidget = QWidget()
+        self.shareLayout = QVBoxLayout()
+        self.shareLayout.addWidget(self.nativeGroup)
+        self.shareLayout.addWidget(self.appsGroup)
+        self.shareWidget.setLayout(self.shareLayout)
+
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.shareWidget)
+        self.layout.addStretch(1)   
 # class FileViewerPropGroup(QWidget):
 # class FileViewerFilterGroup(QWidget):
 # class FileViewerUtilsGroup(QWidget): encryption, compression, file conversion (for images, videos,document formats etc.)
@@ -1448,6 +1479,7 @@ class FileViewerMenu(QWidget):
         self.editgroup = FileViewerEditGroup()
         self.viewgroup = FileViewerViewGroup()
         self.opengroup = FileViewerOpenGroup()
+        self.sharegroup = FileViewerShareGroup()
         self.selectgroup = FileViewerSelectGroup()
         # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
@@ -1461,7 +1493,9 @@ class FileViewerMenu(QWidget):
         self.layout.addWidget(self.opengroup)
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.selectgroup)
-        
+        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.sharegroup)
+
         self.layout.addStretch(1)
         self.setLayout(self.layout)
 
@@ -1666,6 +1700,12 @@ class FileViewerSideBar(QWidget):
         self.bookmarkBtns = []
         home = os.path.expanduser("~")
         self.layout.setSpacing(5)
+        self.recentBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Recent"),
+            icon="recent.svg",
+            tip=f"recently opened files",
+            text="Recent",
+        )
         self.homeBtn = self.initShortcutBtn(
             path=home,
             icon="home.svg",
@@ -1687,11 +1727,30 @@ class FileViewerSideBar(QWidget):
             icon="document.svg",
             tip="open documents folder",
         )
+        self.musicBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Music"),
+            icon="music.svg",
+            tip="open music folder",
+        )
+        self.picturesBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Pictures"),
+            icon="pictures.svg",
+            tip="open pictures folder",
+        )
+        self.templatesBtn = self.initShortcutBtn(
+            path=os.path.join(home, "Templates"),
+            icon="templates.svg",
+            tip="open templates folder",
+        )
         # add buttons to layout.
+        self.layout.addWidget(self.recentBtn)
         self.layout.addWidget(self.homeBtn)
         self.layout.addWidget(self.desktopBtn)
-        self.layout.addWidget(self.downloadsBtn)
         self.layout.addWidget(self.documentsBtn)
+        self.layout.addWidget(self.downloadsBtn)
+        self.layout.addWidget(self.musicBtn)
+        self.layout.addWidget(self.picturesBtn)
+        self.layout.addWidget(self.templatesBtn)
         self.layout.addStretch(1)
         self.setLayout(self.layout)
 
@@ -1795,7 +1854,7 @@ class FileViewerWidget(QMainWindow):
         self.sidebar.hide()
         # clipboard access.
         self.clipboard = args.get("clipboard")
-        # shortcuts.
+        # # shortcuts.
         self.CtrlA = QShortcut(QKeySequence("Ctrl+A"), self)
         self.CtrlA.activated.connect(self.selectAll)
         # add widgets to layout.

@@ -452,17 +452,21 @@ class DebugWebView(QWebEngineView):
         self.searchPanel.connectBrowser(self)
         self.searchPanel.move(50,50)
         # shortcuts.
-        self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.CtrlF.activated.connect(self.reactToCtrlF)
         self.Esc = QShortcut(QKeySequence("Esc"), self)
         self.Esc.activated.connect(self.searchPanel.closePanel)
+        # self.CtrlA = QShortcut(QKeySequence("Ctrl+A"), self)
+        # self.CtrlA.activated.connect(self.selectAll)
+        self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
+        self.CtrlF.activated.connect(self.reactToCtrlF)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
 
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
-
+    # def selectAll(self):
+    #     print("select all")
+    #     self.page().runJavaScript('''document.execCommand("selectAll");''')
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
         self.searchPanel.show()
@@ -725,13 +729,12 @@ class Browser(DebugWebView):
             super(Browser, self).dragEnterEvent(e)
 
     def changeUserAgent(self):
-        print("changing user agent.")
+        # print("changing user agent.")
         try:
             self.page().profile().setHttpUserAgent(
                 "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
             )
-            print("changed user agent.")
-            # print("lol")
+            # print("changed user agent.")
         except Exception as e:
             print(e) 
 

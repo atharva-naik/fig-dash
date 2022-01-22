@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # titlebar for the main window
+from gc import callbacks
 import sys
 import jinja2
 from typing import Union
@@ -280,6 +281,11 @@ class TitleBar(QToolBar):
             tip="open ubuntu's bluetooth panel.",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.sysUtilsBtn = self.initTitleBtn(
+            "titlebar/sysutils.svg", 
+            tip="open system utilites menu.",
+            callback=self.callback if parent is None else parent.sysutilsbar.toggle, 
+        )
         self.bluetoothBtn.setFixedSize(QSize(15,15))
         # self.onScreenKeyboard = self.initTitleBtn(
         #     "titlebar/onscreenkeyboard.svg", 
@@ -310,6 +316,9 @@ class TitleBar(QToolBar):
 
         self.wifi = WifiBtn()
         self.wifi.setFixedSize(QSize(18,18))
+
+        # self.volume = VolumeSlider() 
+        # self.volume
 
         self.battery = BatteryIndicator(self)
         self.battery.setFixedSize(QSize(30,30))
@@ -346,6 +355,7 @@ class TitleBar(QToolBar):
         self.addWidget(self.zoomOutBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.widgetsToggleBtn)
+        self.addWidget(self.sysUtilsBtn)
         self.addWidget(self.wordCountBtn)
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
@@ -413,9 +423,12 @@ class TitleBar(QToolBar):
     def mouseMoveEvent(self, event):
         parent = self.parent()
         if parent is None: return
-        delta = QPoint(event.globalPos() - parent.oldPos)
-        parent.move(parent.x() + delta.x(), parent.y() + delta.y())
-        parent.oldPos = event.globalPos()
+        try:
+            delta = QPoint(event.globalPos() - parent.oldPos)
+            parent.move(parent.x() + delta.x(), parent.y() + delta.y())
+            parent.oldPos = event.globalPos()
+        except Exception as e:
+            print(e)
 
 
 def titlebar_test():

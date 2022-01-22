@@ -133,11 +133,14 @@ class SysUtilsBar(QWidget):
     #     self.ideasBtn.clicked.connect(dash_window.ideas.toggle)
     #     self.weatherBtn.clicked.connect(dash_window.weather.toggle)
     def toggle(self):
-        '''toggle visibility of dashboard widgets.'''
-        if self.isVisible(): 
-            self.hide()
-        else: 
-            self.show()
+        '''toggle visibility of system utilities panel.'''
+        if self.isVisible(): self.hide()
+        else: self.show()
+
+    def connectTitleBar(self, titlebar):
+        pass
+        # self.titlebar = titlebar
+        # self.titlebar.sysUtilsBtn.clicked.connect(self.toggle)
 
     def initBtn(self, icon, **kwargs):
         btn = QToolButton(self)

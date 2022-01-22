@@ -9,6 +9,43 @@
         <title>Welcome {{ USERNAME }}</title>
     </head>
     <body>
+        <div id="dashboard" class="container">
+            <br>
+            <div class="search-bar">
+                <input class="search-input" placeholder="search with google"></input>
+            </div>
+            <br>
+            <div style="margin-left: auto; margin-right: auto; text-align: center;">
+                <span class="card-title">Search Engines</span>
+            </div>
+            <div class="cards">
+                <div class="search-engine-card" onclick="location.href='http://google.com/'">
+                    <img src="file:///home/atharva/GUI/fig-dash/resources/icons/browser/google.png" width="60px"/>
+                    <br>
+                    <span class="search-engine-title">Google</span>
+                </div>
+                <div class="search-engine-card" onclick="location.href='https://www.bing.com/'">
+                    <img src="file:///home/atharva/GUI/fig-dash/resources/icons/browser/bing.png" width="52px"/>
+                    <br>
+                    <span class="search-engine-title">Bing</span>
+                </div>
+                <div class="search-engine-card" onclick="location.href='https://duckduckgo.com/'">
+                    <img src="file:///home/atharva/GUI/fig-dash/resources/icons/browser/duckduckgo.png" width="70px"/>
+                    <br>
+                    <span class="search-engine-title">DuckDuckGo</span>
+                </div>
+                <div class="search-engine-card" onclick="location.href='https://in.search.yahoo.com/?fr2=inr'">
+                    <img src="file:///home/atharva/GUI/fig-dash/resources/icons/browser/yahoo.png" width="95px"/>
+                    <br>
+                    <span class="search-engine-title">Yahoo</span>
+                </div>
+                <div class="search-engine-card" onclick="location.href='https://www.ecosia.org/?c=en'">
+                    <img src="file:///home/atharva/GUI/fig-dash/resources/icons/browser/ecosia.svg" width="73px"/>
+                    <br>
+                    <span class="search-engine-title">Ecosia</span>
+                </div>
+            </div>
+        </div>
         <!-- <script src="home.js"></script> -->
     </body>
 </html>

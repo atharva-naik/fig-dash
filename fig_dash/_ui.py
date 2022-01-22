@@ -8,8 +8,8 @@ from typing import Union, Tuple, List
 # from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QStatusBar
+from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize 
+from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QStatusBar, QShortcut
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.menu import DashMenu
@@ -39,16 +39,14 @@ QTabBar {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 #eb5f34, stop : 0.6 #ebcc34);
 }
 QTabBar::close-button {
-    border: 0px;
+    background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
     background-repeat: no-repeat;
     background-position: center;
-    subcontrol-position: right;
 }
 QTabBar::close-button:hover {
-    background-color: rgba(235, 235, 235, 0.50);
+    background: url("/home/atharva/GUI/fig-dash/resources/icons/close-active.png");
     background-repeat: no-repeat;
     background-position: center;
-    subcontrol-position: right;
 }
 QTabBar::tab {
     border: 0px;
@@ -133,12 +131,30 @@ class DashWindow(QMainWindow):
         # add title bar.
         self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
+        self.sysutilsbar.connectTitleBar(self.titlebar)
         self.tabs.connectTitleBar(self.titlebar)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
         # install event filter.
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
+        # shortcuts.
+        self.FnF3 = QShortcut(Qt.Key_F3, self)
+        self.FnF3.activated.connect(self.showVolumeSlider)
 
+    def initVolumeSlider(self):
+        from fig_dash.ui.system.audio import VolumeSlider
+        self.volume_slider = VolumeSlider()
+        self.volume_slider.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Popup)
+        self.volume_slider.setGeometry(1400, 100, 200, 50)
+        self.volume_slider.show()
+
+    def showVolumeSlider(self):
+        '''pop out the volume slider'''
+        try:
+            self.volume_slider.show()
+        except AttributeError:
+            self.initVolumeSlider()
+            
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_F11:
             self.titlebar.fullscreenBtn.toggle()
