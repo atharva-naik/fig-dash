@@ -270,6 +270,7 @@ var fileViewerPaths = {{ FILEVIEWER_PATHS }};
 var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
 {{ FILEVIEWER_JS }}
 
+// drag and drop callbacks.
 [
     ['.boxes.green', {{ NUM_ITEMS }}]
 ].forEach(([selector, items]) => {
@@ -284,8 +285,25 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.setAttributeNode(hiddenFileFlag)
         divElement.className = "file_item";
         divElement.style.textAlign = 'center';
+        
+        // drag and drop events.
+        divElement.draggable = true;
+        divElement.addEventListener('dragstart', function(event){
+            // console.log(this.id);
+            event.dataTransfer.setData("text", this.id);
+        })
+        divElement.addEventListener('drop', function(event){
+            event.preventDefault();
+            var path = event.dataTransfer.getData("text");
+            console.log(`Dragged ${path} into ${this.id}`);
+        })
+        divElement.addEventListener('dragover', function(event){
+            event.preventDefault();
+            console.log("drag over");
+        })
+        
         divElement.innerHTML = `
-    <img class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
+    <img id="thumbnail_${fileViewerPaths[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
     <br>
     <span class="item_name" style="text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
         divElement.onclick = function() {
@@ -348,6 +366,20 @@ const filesSelection = new SelectionArea({
 
 FileViewerCustomJS = r'''
 // create file item.
+function itemDrag(event) {
+    console.log(event.target.id);
+    event.dataTransfer.setData("text", event.target.id);
+}
+function enableItemDrop(event) {
+    event.preventDefault();
+}
+function itemDrop(element, event) {
+    event.preventDefault();
+    var data = event.dataTransfer.getData("text");
+    console.error(`Dragged ${data} into ${element.id}`);
+    // event.target.appendChild(document.getElementById(data));
+}
+
 class OrchardAppearance {
     constructor() {
         var body = document.body

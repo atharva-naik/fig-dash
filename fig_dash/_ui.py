@@ -138,21 +138,37 @@ class DashWindow(QMainWindow):
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
         # shortcuts.
+        self.FnF2 = QShortcut(Qt.Key_F2, self)
+        self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
-        self.FnF3.activated.connect(self.showVolumeSlider)
+        self.FnF3.activated.connect(self.incVolSlider)
 
     def initVolumeSlider(self):
         from fig_dash.ui.system.audio import VolumeSlider
+        print("initialized volume slider")
         self.volume_slider = VolumeSlider()
         self.volume_slider.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.Popup)
-        self.volume_slider.setGeometry(1400, 100, 200, 50)
+        self.volume_slider.setGeometry(1400, 100, 500, 100)
         self.volume_slider.show()
 
-    def showVolumeSlider(self):
+    def incVolSlider(self):
         '''pop out the volume slider'''
         try:
-            self.volume_slider.show()
-        except AttributeError:
+            if not self.volume_slider.isVisible():
+                self.volume_slider.show()
+            self.volume_slider.decrease()
+        except AttributeError as e:
+            print(e)
+            self.initVolumeSlider()
+
+    def decVolSlider(self):
+        '''pop out the volume slider'''
+        try:
+            if not self.volume_slider.isVisible():
+                self.volume_slider.show()
+            self.volume_slider.increase()
+        except AttributeError as e:
+            print(e)
             self.initVolumeSlider()
             
     def keyPressEvent(self, event):

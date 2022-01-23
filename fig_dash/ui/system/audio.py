@@ -5,7 +5,7 @@ import platform
 from typing import Union
 # Qt5 imports.
 from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtWidgets import QApplication, QWidget, QSlider, QLabel, QHBoxLayout, QVBoxLayout, QLineEdit, QToolButton
+from PyQt5.QtWidgets import QApplication, QWidget, QSlider, QLabel, QHBoxLayout, QVBoxLayout, QLineEdit, QToolButton, QShortcut
 # fig-dash import.
 from fig_dash.assets import FigD
 from fig_dash.api.system.audio import PulseController
@@ -61,29 +61,57 @@ class VolumeSlider(QWidget):
         self.label.setAlignment(Qt.AlignCenter)
         self.sliderWidget = self.initSlider()
         self.formWidget = self.initForm()
+        self._step = 10
         # add widgets to the layout.
         self.layout.addWidget(self.label)
         self.layout.addWidget(self.sliderWidget)
         self.layout.addWidget(self.formWidget)
         self.setLayout(self.layout)
         self.setStyleSheet(volume_slider_widget_style)
+        # set shortcuts.
+        self.FnF2 = QShortcut(Qt.Key_F2, self)
+        self.FnF2.activated.connect(self.decrease)
+        self.FnF3 = QShortcut(Qt.Key_F3, self)
+        self.FnF3.activated.connect(self.increase)
+        try:
+            import chime
+            chime.theme('material')
+            print(f"using chime theme: {chime.theme()}")
+            self._chime = chime
+        except ImportError as e:
+            print(e)
+
+    def setStep(self, step):
+        self._step = step
+
+    def increase(self):
+        self.setVolume(self._slider.value()+self._step)
+        print(f"{self._slider.value()}: increased volume by {self._step}")
+        self._chime.info()
+
+    def decrease(self):
+        self.setVolume(self._slider.value()-self._step)
+        print(f"{self._slider.value()}: decreased volume by {self._step}")
+        self._chime.info()
+
+    def setVolume(self, value):
+        # print("volume:", displayVolume)
+        self._slider.setValue(value)
 
     def updateVolume(self, value):
-        # convert scale
-        volume = 1.50*(value/99) # ranges from 0 to 120
-        displayVolume = int(100*volume)
         # print("volume:", displayVolume)
-        self.backend.set_volume(volume)
-        self._readout.setText(f"{displayVolume}  ")
-        self._form.setText(str(round(100*volume, 2)))
-        self.setSliderColor(volume)
-        self.setVolumeIcon(volume)
+        self.backend.set_volume(value/100)
+        self._readout.setText(f"{int(value)}  ")
+        self._form.setText(str(value))
+        self.setSliderColor(value/100)
+        self.setVolumeIcon(value)
 
-    def setVolume(self):
+    def setVolumeFromForm(self):
+        '''expect values in the range of 0 to 150'''
         try: 
             volume = float(self._form.text())
-            self.backend.set_volume(volume/150)
-            self._slider.setValue(int(99*(volume/150)))
+            self.backend.set_volume(volume/100)
+            self._slider.setValue(volume)
             # self._readout.setText(f"{volume:.0f}  ")
             # self.setSliderColor(volume/150)
             # self.setVolumeIcon(volume/150)
@@ -131,8 +159,7 @@ class VolumeSlider(QWidget):
 
     def backendToSlider(self, volume: float):
         '''converts volume from backend to slider scale'''
-        volume = min(volume, 1.5)
-        return int(99*(volume/1.5))
+        return int(100*volume)
 
     def initForm(self):
         '''form/ lineedit to set volume'''
@@ -144,7 +171,7 @@ class VolumeSlider(QWidget):
         sink_volumes = self.backend.get_volume()
         self._form.setText(str(round(100*sink_volumes[0], 2)))
         self._form.setAlignment(Qt.AlignCenter)
-        self._form.returnPressed.connect(self.setVolume)
+        self._form.returnPressed.connect(self.setVolumeFromForm)
         self._form.setMaximumWidth(100)
 
         # add widgets to form container.
@@ -158,7 +185,7 @@ class VolumeSlider(QWidget):
 
     def initMotif(self):
         motif = QToolButton(self)
-        motif.setIconSize(QSize(20,20))
+        motif.setIconSize(QSize(40,40))
 
         return motif
 
@@ -169,6 +196,8 @@ class VolumeSlider(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         
         self._slider = QSlider(self)
+        self._slider.setMaximum(150)
+        self._slider.setMinimum(0)
         self._slider.setOrientation(Qt.Horizontal)
         sink_volumes = self.backend.get_volume()
         self._slider.setValue(self.backendToSlider(sink_volumes[0]))
