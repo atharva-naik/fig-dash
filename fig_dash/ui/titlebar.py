@@ -155,7 +155,7 @@ class WifiBtn(QToolButton):
     def __init__(self, parent: Union[QWidget, None]=None, **kwargs):
         super(WifiBtn, self).__init__(parent)
         self.setToolTip("open wifi settings")
-        self.setIcon(FigD.Icon("titlebar/wifi-1.png"))
+        self.setIcon(FigD.Icon("titlebar/wifi_3.svg"))
         self.setStyleSheet('''
         QToolButton {
             border: 0px;
@@ -165,30 +165,45 @@ class WifiBtn(QToolButton):
         self.netName = QLabel(name)
         self.netName.setStyleSheet('''
         QLabel {
-            color: #eb5f34;
-            font-size: 14px;
+            color: #6e6e6e;
+            font-size: 15px;
             background: transparent;
+            padding-left: 3px;
+            padding-right: 3px;
         }''')
+
+
+class VolumeBtn(QToolButton):
+    def __init__(self, parent: Union[QWidget, None]=None, default=None):
+        super(VolumeBtn, self).__init__(parent)
+        self.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            padding: 0px;
+            background: transparent;
+        }""")
+        self.level = "high"
+        self.setIcon(FigD.Icon(f"titlebar/{self.level}.svg"))
+        self.setIconSize(QSize(20,20))
+    
+    def enterEvent(self, event):
+        self.setIcon(FigD.Icon(f"titlebar/{self.level}_active.svg"))
+        super(VolumeBtn, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIcon(FigD.Icon(f"titlebar/{self.level}.svg"))
+        super(VolumeBtn, self).leaveEvent(event)
+
 
 class VolumeLabel(QWidget):
     def __init__(self, parent: Union[QWidget, None]=None, default=None):
         super(VolumeLabel, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setSpacing(0)
         self.setLayout(self.layout)
         # volume change button        
-        self.btn = QToolButton()
-        self.btn.setIcon(FigD.Icon("system/audio/high.svg"))
-        self.btn.setStyleSheet("""
-        QToolButton {
-            border: 0px;
-            padding: 0px;
-            background: transparent;
-        }
-        QToolButton:hover {
-            background: orange;
-        }""")
-        self.btn.setIconSize(QSize(20,20))
+        self.btn = VolumeBtn()
         self.layout.addWidget(self.btn)
         # volume level readout label.
         if default is None:
@@ -199,27 +214,25 @@ class VolumeLabel(QWidget):
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.label.setStyleSheet("""
         QLabel {
-            color: #eb5f34;
-            font-size: 14px;
-            padding: 0px;
+            color: #fff;
             margin: 0px;
+            padding: 0px;
+            font-size: 14px;
             background: transparent;
         }""")
-        self.layout.addStretch(1)
-        self.setFixedWidth(80)
 
     def set(self, value):
         if not isinstance(value, (float, int)): 
             print(f"tried to set value using a {type(value)} argument")
             return
         if value == 0:
-            self.btn.setIcon(FigD.Icon("system/audio/mute.svg"))
+            self.btn.setIcon(FigD.Icon("titlebar/mute.svg"))
         elif value < 33:
-            self.btn.setIcon(FigD.Icon("system/audio/low.svg"))
+            self.btn.setIcon(FigD.Icon("titlebar/low.svg"))
         elif value <= 66:
-            self.btn.setIcon(FigD.Icon("system/audio/medium.svg"))
+            self.btn.setIcon(FigD.Icon("titlebar/medium.svg"))
         else: 
-            self.btn.setIcon(FigD.Icon("system/audio/high.svg"))
+            self.btn.setIcon(FigD.Icon("titlebar/high.svg"))
         self.label.setText(str(int(value)))
 
 class ZoomSlider(QSlider):
@@ -410,9 +423,9 @@ class TitleBar(QToolBar):
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
-        self.addWidget(self.volume)
         self.addWidget(self.wifi)
         self.addWidget(self.wifi.netName)
+        self.addWidget(self.volume)
         self.addWidget(self.langBtn)
         self.addWidget(self.bluetoothBtn)
         self.addWidget(self.battery.pluggedIcon)

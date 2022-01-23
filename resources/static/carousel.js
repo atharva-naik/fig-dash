@@ -56,6 +56,24 @@ class Carousel {
     });
   }
  
+  addItem(input) {
+    console.log(input);
+    const src = input[0].name;
+    const newItem = document.createElement('img');
+    const latestItem = this.carouselArray.length;
+    const latestIndex = this.carouselArray.findIndex(item => item.getAttribute('data-index') == this.carouselArray.length)+1;
+    // Assign the necessary properties for new gallery item
+    Object.assign(newItem, {
+      className: 'gallery-item',
+      src: `http://fakeimg.pl/300/?text=${this.carouselArray.length+1}`
+    });
+    newItem.setAttribute('data-index', this.carouselArray.length+1);
+    console.log(src);
+    // Then add it to the carouselArray and update the gallery
+    this.carouselArray.splice(latestIndex, 0, newItem);
+    document.querySelector(`[data-index="${latestItem}"]`).after(newItem);
+    this.updateGallery();
+  }
   // Add a click event listener to trigger setCurrentState method to rearrange carousel
   useControls() {
     const triggers = [...galleryControlsContainer.childNodes];
@@ -63,25 +81,30 @@ class Carousel {
     triggers.forEach(control => {
       control.addEventListener('click', e => {
         e.preventDefault();
+        // if (control.className == 'gallery-controls-add') {
+        //   const newItem = document.createElement('img');
+        //   const latestItem = this.carouselArray.length;
+        //   const latestIndex = this.carouselArray.findIndex(item => item.getAttribute('data-index') == this.carouselArray.length)+1;
 
+        //   // Assign the necessary properties for new gallery item
+        //   Object.assign(newItem,{
+        //     className: 'gallery-item',
+        //     src: `http://fakeimg.pl/300/?text=${this.carouselArray.length+1}`
+        //   });
+        //   newItem.setAttribute('data-index', this.carouselArray.length+1);
+
+        //   // Then add it to the carouselArray and update the gallery
+        //   this.carouselArray.splice(latestIndex, 0, newItem);
+        //   document.querySelector(`[data-index="${latestItem}"]`).after(newItem);
+        //   this.updateGallery();
+
+        // } 
         if (control.className == 'gallery-controls-add') {
-          const newItem = document.createElement('img');
-          const latestItem = this.carouselArray.length;
-          const latestIndex = this.carouselArray.findIndex(item => item.getAttribute('data-index') == this.carouselArray.length)+1;
-
-          // Assign the necessary properties for new gallery item
-          Object.assign(newItem,{
-            className: 'gallery-item',
-            src: `http://fakeimg.pl/300/?text=${this.carouselArray.length+1}`
-          });
-          newItem.setAttribute('data-index', this.carouselArray.length+1);
-
-          // Then add it to the carouselArray and update the gallery
-          this.carouselArray.splice(latestIndex, 0, newItem);
-          document.querySelector(`[data-index="${latestItem}"]`).after(newItem);
-          this.updateGallery();
-
-        } else {
+          // Trigger native file dialog.
+          var fileInput = document.getElementById("gallery-file-input");
+          fileInput.click();
+        }
+        else {
           this.setCurrentState(control);
         }
 
