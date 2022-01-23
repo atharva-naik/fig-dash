@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
         <link rel="stylesheet" href="{{ HOME_CSS }}" />
+        <link rel="stylesheet" href="{{ CAROUSEL_CSS }}">
         <!-- <link rel="stylesheet" href="home.css" /> -->
         <title>Welcome {{ USERNAME }}</title>
     </head>
@@ -46,6 +47,29 @@
                 </div>
             </div>
         </div>
+        <br>
+        <div class="gallery">
+            <div class="gallery-container">
+                <!-- {% for wallpaper in WALLPAPERS %} -->
+                
+                <!-- {% endfor %} -->
+                <img class="gallery-item gallery-item-1" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/lava_lamp.gif" data-index="1" onclick="change_bg(this)">
+                <img class="gallery-item gallery-item-2" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/lava_lamp2.gif" data-index="2" onclick="change_bg(this)">
+                <img class="gallery-item gallery-item-3" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/ironman.gif" data-index="3" onclick="change_bg(this)">
+                <img class="gallery-item gallery-item-4" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/sunset.gif" data-index="4" onclick="change_bg(this)">
+                <img class="gallery-item gallery-item-5" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/utopia.gif" data-index="5" onclick="change_bg(this)">
+                <img class="gallery-item" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/night.gif" data-index="6" onclick="change_bg(this)">
+                <img class="gallery-item" src="/home/atharva/GUI/fig-dash/resources/icons/wallpaper/horror.gif" data-index="7" onclick="change_bg(this)">
+            </div>
+            <div class="gallery-controls"></div>
+        </div>
+        <script>
+            function change_bg(img) {
+                console.log(img.src);
+                document.body.style.backgroundImage = `url(${img.src})`;
+            }
+        </script>
+        <script src="{{ CAROUSEL_JS }}"></script>
         <!-- <script src="home.js"></script> -->
     </body>
 </html>

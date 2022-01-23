@@ -903,6 +903,11 @@ document.head.appendChild(newSelectStyle);
 #     def closeEvent(self, event):
 #         self.saveSettings()
 #         super(MainWindow, self).closeEvent(event)
+class HomePageView(Browser):
+    def dragEnterEvent(self, e):
+        e.ignore()
+
+
 def test_page_info():
     FigD("/home/atharva/GUI/fig-dash/resources")
     import sys

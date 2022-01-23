@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconP
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import Browser
+from fig_dash.ui.browser import Browser, HomePageView
 
 
 scrollbar_style = '''*::-webkit-scrollbar {
@@ -286,15 +286,30 @@ class DashTabWidget(QTabWidget):
                     "home.html",
                     USERNAME=getpass.getuser(),
                     HOME_CSS=FigD.staticUrl("home.css"),
+                    CAROUSEL_JS=FigD.staticUrl("carousel.js"),
+                    CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
                 )
             )
 
     def openHome(self):
-        self.openUrl(url=FigD.static(
+        url=FigD.static(
             "home.html",
             USERNAME=getpass.getuser(),
             HOME_CSS=FigD.staticUrl("home.css"),
-        ).toString())
+            CAROUSEL_JS=FigD.staticUrl("carousel.js"),
+            CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
+        ).toString()
+        qurl = QUrl(url)
+        browser = HomePageView(self)
+        browser.connectTabWidget(self)
+        browser.setUrl(qurl)
+        i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
+        self.setTabText(i, "  "+url.strip())
+        browser.loadFinished.connect(
+            lambda _, i = i, browser = browser:
+				self.setupTabForBrowser(i, browser)
+        )
+        self.setCurrentIndex(i)
 
     def openFolder(self, folder: str):
         pass

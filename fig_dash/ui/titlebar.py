@@ -12,7 +12,7 @@ from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QSizePolicy
+from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QSizePolicy, QHBoxLayout
 
 
 # title_bar_style = '''
@@ -165,11 +165,62 @@ class WifiBtn(QToolButton):
         self.netName = QLabel(name)
         self.netName.setStyleSheet('''
         QLabel {
-            color: #fff;
+            color: #eb5f34;
             font-size: 14px;
             background: transparent;
         }''')
 
+class VolumeLabel(QWidget):
+    def __init__(self, parent: Union[QWidget, None]=None, default=None):
+        super(VolumeLabel, self).__init__(parent)
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0,0,0,0)
+        self.setLayout(self.layout)
+        # volume change button        
+        self.btn = QToolButton()
+        self.btn.setIcon(FigD.Icon("system/audio/high.svg"))
+        self.btn.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            padding: 0px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: orange;
+        }""")
+        self.btn.setIconSize(QSize(20,20))
+        self.layout.addWidget(self.btn)
+        # volume level readout label.
+        if default is None:
+            self.label = QLabel("100")
+        else:
+            self.label = QLabel(str(default))
+        self.layout.addWidget(self.label)
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        self.label.setStyleSheet("""
+        QLabel {
+            color: #eb5f34;
+            font-size: 14px;
+            padding: 0px;
+            margin: 0px;
+            background: transparent;
+        }""")
+        self.layout.addStretch(1)
+        self.setFixedWidth(80)
+
+    def set(self, value):
+        if not isinstance(value, (float, int)): 
+            print(f"tried to set value using a {type(value)} argument")
+            return
+        if value == 0:
+            self.btn.setIcon(FigD.Icon("system/audio/mute.svg"))
+        elif value < 33:
+            self.btn.setIcon(FigD.Icon("system/audio/low.svg"))
+        elif value <= 66:
+            self.btn.setIcon(FigD.Icon("system/audio/medium.svg"))
+        else: 
+            self.btn.setIcon(FigD.Icon("system/audio/high.svg"))
+        self.label.setText(str(int(value)))
 
 class ZoomSlider(QSlider):
     def __init__(self):
@@ -317,8 +368,7 @@ class TitleBar(QToolBar):
         self.wifi = WifiBtn()
         self.wifi.setFixedSize(QSize(18,18))
 
-        # self.volume = VolumeSlider() 
-        # self.volume
+        self.volume = VolumeLabel()
 
         self.battery = BatteryIndicator(self)
         self.battery.setFixedSize(QSize(30,30))
@@ -360,6 +410,7 @@ class TitleBar(QToolBar):
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
+        self.addWidget(self.volume)
         self.addWidget(self.wifi)
         self.addWidget(self.wifi.netName)
         self.addWidget(self.langBtn)
