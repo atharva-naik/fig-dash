@@ -280,8 +280,8 @@ class DashTabWidget(QTabWidget):
 
     def home(self):
         currentWidget = self.currentWidget()
-        if isinstance(currentWidget, Browser):
-            currentWidget.load(
+        try:
+            currentWidget.browser.load(
                 FigD.static(
                     "home.html",
                     USERNAME=getpass.getuser(),
@@ -290,6 +290,7 @@ class DashTabWidget(QTabWidget):
                     CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
                 )
             )
+        except AttributeError as e: print(e)
 
     def openHome(self):
         url=FigD.static(

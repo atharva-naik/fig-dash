@@ -3,7 +3,7 @@
 import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import QEvent, Qt
+from PyQt5.QtCore import QEvent, Qt, QT_VERSION_STR
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
 # fig-dash imports.
 # try:
@@ -12,8 +12,6 @@ from fig_dash._ui import DashWindow
 # except ImportError:
 # print("ImportError: most likely in DashWindow")
 # Contains all the fig dashboard code.
-
-
 class DashUI(QApplication):
     def __init__(self, argv, **kwargs):
         FigD(kwargs.get("resources", "resources"))
@@ -49,6 +47,7 @@ class DashUI(QApplication):
         # self.window.tabs.dropdown.initPos(width=width)
         self.setWindowFlags("frameless", "ontop")
         self.setCursor()
+        print(f"using Qt {QT_VERSION_STR}")
         # self.window.setWindowIcon(QIcon(kwargs.get("icon")))
     def setWindowFlags(self, *flags):
         self.window.setFlags(*flags)

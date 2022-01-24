@@ -13,8 +13,8 @@ from fig_dash.api.system.audio import PulseController
 
 volume_slider_widget_style = '''
 QWidget {
-    border: 0px;
     color: #fff;
+    border: 0px;
     background: transparent;
 }
 QLineEdit {

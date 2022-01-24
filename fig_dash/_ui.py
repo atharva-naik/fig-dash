@@ -23,6 +23,7 @@ from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.datetime import DashClock, DashCalendar
+from fig_dash.ui.shortcut_sidebar import ShortcutSidebar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
@@ -76,6 +77,8 @@ QTabBar::tab:selected {
     font-size: 18px;
     font-weight: bold;
 }''')
+# #eb5f34, #ebcc34
+# #a11f53, #eb5f34
 # all the splitters.
 class DatetimeNotifsSplitter(QSplitter):
     '''Date, time and notifs panel contained in the splitter'''
@@ -131,9 +134,13 @@ class DashWindow(QMainWindow):
         # add title bar.
         self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
+        # add shortcuts sidebar.
+        self.shortcut_sidebar = ShortcutSidebar()
+        self.shortcut_sidebar.connectTabs(self.tabs)
         self.sysutilsbar.connectTitleBar(self.titlebar)
         self.tabs.connectTitleBar(self.titlebar)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
+        self.addToolBar(Qt.LeftToolBarArea, self.shortcut_sidebar)
         # install event filter.
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())

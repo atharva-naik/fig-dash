@@ -1128,7 +1128,8 @@ class FileViewerSelectGroup(FileViewerGroup):
         self.selectionWidget = QWidget() 
         self.selectionLayout = QVBoxLayout()
         self.selectionLayout.setContentsMargins(0, 0, 0, 0)
-    
+        self.selectionLayout.setSpacing(0)
+
         self.selectionGroup = self.initBtnGroup([
             {"icon": "clear_selection.png", "size": (25,25), "tip": "clear current selection"},
             {"icon": "select_all.png", "size": (25,25), "tip": "select all items"},
@@ -1302,19 +1303,28 @@ class FileViewerShareGroup(FileViewerGroup):
             'tip': "share using bluetooth"},
             {"icon": "email.svg", "size":(20,20),
             'tip': "share file as email attachment"},
-            {"copy": "copy.svg", "size":(20,20),
+            {"copy": "copy_content.svg", "size":(20,20),
             'tip': "copy file contents to clipboard"}
         ])
-        self.appsGroup = self.initBtnGroup([
-            {"icon": "twitter.svg", "size":(30,30),
+        self.appsGroup1 = self.initBtnGroup([
+            {"icon": "youtube.png", "size":(30,30),
+            'tip': "share video on youtube"},
+            {"icon": "twitter.png", "size":(30,30),
             'tip': "share on twitter"},
-            {"icon": "reddit.svg", "size":(30,30),
+            {"icon": "reddit.png", "size":(30,30),
             'tip': "share on reddit"},
+        ])
+        self.appsGroup2 = self.initBtnGroup([
+            {"icon": "whatsapp.png", "size":(30,30),
+            'tip': "share video on youtube"},
         ])
         self.shareWidget = QWidget()
         self.shareLayout = QVBoxLayout()
+        # self.shareLayout.setSpacing(0)
+        self.shareLayout.setContentsMargins(0,0,0,0)
         self.shareLayout.addWidget(self.nativeGroup)
-        self.shareLayout.addWidget(self.appsGroup)
+        self.shareLayout.addWidget(self.appsGroup1)
+        self.shareLayout.addWidget(self.appsGroup2)
         self.shareWidget.setLayout(self.shareLayout)
 
         self.layout.addStretch(1)
