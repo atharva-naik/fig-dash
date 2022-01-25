@@ -1080,9 +1080,9 @@ class FileViewerViewGroup(FileViewerGroup):
         self.viewLayout.setContentsMargins(0, 0, 0, 0)
         # layout of file items
         self.layoutGroup = self.initBtnGroup([
-            {"icon": "tileview.svg", "size": (25,25), "tip": "tile view"},
-            {"icon": "listview.svg", "size": (25,25), "tip": "list view"},
-            {"icon": "treeview.svg", "size": (25,25), "tip": "tree view"},
+            {"icon": "gridview.svg", "size": (25,25), "tip": "tile view"},
+            {"icon": "list_view.svg", "size": (20,20), "tip": "list view"},
+            {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view"},
         ])
         # hidden files, folder bar visibility, side bar visibility, search bar visibility.
         self.visibilityGroup = self.initBtnGroup([
@@ -1896,9 +1896,12 @@ class FileViewerWidget(QMainWindow):
         self.sidebar.hide()
         # clipboard access.
         self.clipboard = args.get("clipboard")
+        
         # # shortcuts.
-        self.CtrlA = QShortcut(QKeySequence("Ctrl+A"), self)
-        self.CtrlA.activated.connect(self.selectAll)
+        # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
+        # self.SelectAll.activated.connect(self.selectAll)
+        # self.SelectAll.setEnabled(False)
+        
         # add widgets to layout.
         self.layout.addWidget(self.menu)
         self.layout.addWidget(self.folderbar)

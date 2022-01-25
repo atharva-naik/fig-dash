@@ -214,6 +214,7 @@ class DashWindow(QMainWindow):
         # top bar.
         self.topbar = QWidget()
         topLayout = QHBoxLayout()
+        topLayout.setSpacing(0)
         topLayout.setContentsMargins(0, 0, 0, 0)
         self.topbar.setLayout(topLayout)
         # self.topbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -221,8 +222,8 @@ class DashWindow(QMainWindow):
         # tabbar.
         self.tabbar = self.tabs.tabBar()
         self.tabbar.setStyleSheet(dash_tabbar_style.render())
-        
         topLayout.addWidget(self.tabbar)
+
         spacer = QWidget()
         spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         topLayout.addWidget(spacer)

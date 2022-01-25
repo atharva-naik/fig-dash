@@ -5,9 +5,9 @@ import jinja2
 import getpass
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon, QColor
+from PyQt5.QtGui import QIcon, QColor, QKeySequence
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QGraphicsDropShadowEffect, QInputDialog
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -215,6 +215,9 @@ class DashTabWidget(QTabWidget):
         self.setObjectName("DashTabWidget")
         self.setStyleSheet(dash_tab_widget_style.render())
         self.tabIcons = []
+        # keyboard shortcuts.
+        self.CtrlW = QShortcut(QKeySequence("Ctrl+W"), self)
+        self.CtrlW.activated.connect(lambda: self.removeTab(self.currentIndex()))
         # print(dash_tab_widget_style.render())
     def connectWindow(self, window):
         self.dash_window = window
@@ -249,6 +252,7 @@ class DashTabWidget(QTabWidget):
         s = time.time()
         browser.changeUserAgent()
         # print("changed user agent in:", time.time()-s)
+        browser.page().linkHovered.connect(self.showLinkOnStatusBar)
         s = time.time()
         browser.setZoomFactor(browser.currentZoomFactor)
         # print("set zoom factor in:", time.time()-s)
@@ -266,7 +270,13 @@ class DashTabWidget(QTabWidget):
         # print(icon.isNull())
         # if not icon.isNull(): 
             # self.setTabIcon(i, icon) 
-    def renameTab(self, text):
+    def showLinkOnStatusBar(self, link):
+        try:
+            self.dash_window.statusBar().showMessage(link)
+        except Exception as e:
+            print(e)
+
+    def renameCurrentTab(self, text):
         i = self.currentIndex()
         self.setTabText(i, text)
 
@@ -274,7 +284,7 @@ class DashTabWidget(QTabWidget):
         '''initiate an input dialog to rename the current tab.'''
         i = self.currentIndex()
         currentText = self.tabText(i).strip()
-        newText, done = renameDialog = QInputDialog.getText(self, f"Rename tab '{currentText}'", "Rename tab to")
+        newText, done = QInputDialog.getText(self, f"Rename tab '{currentText}'", "Rename tab to")
         if done:
             self.setTabText(i, newText)
 
@@ -465,7 +475,7 @@ class TabBar(QTabBar):
         addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
         addToGroup = contextMenu.addAction("Add tab to group")
         moveTab = contextMenu.addAction("Move tab to new window")
-        renameTab = contextMenu.addAction("Rename tab")
+        renameTab = contextMenu.addAction("Rename active tab")
         contextMenu.addSeparator()
         reloadAct = contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
         duplicate = contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
@@ -495,6 +505,7 @@ class TabBar(QTabBar):
         }''')
         action = contextMenu.exec_(self.mapToGlobal(event.pos()))
         if action == renameTab:
+            # print(event.x(), event.y())
             try: self.tabs.renameDialog()
             except Exception as e: print(e)
 

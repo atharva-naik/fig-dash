@@ -82,21 +82,39 @@ function getSafeRanges(dangerous) {
 // add style for annotation_context_menu
 const style = document.createElement("style");
 style.textContent = `
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro&display=swap');
 #fig_webpage_annotation_context_menu {
     color: #fff;
-    font-weight: bold;
-    background-color: #000;
-    padding-left: 20px;
-    padding-right: 20px;
+    font-size: 14px;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    background-color: rgba(29, 29, 29, 0.9);
+    backdrop-filter: blur(5px);
+}
+.fig_webpage_annotation_menu_item {
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin: 0;
+}
+.fig_webpage_annotation_menu_item:hover {
+    color: #292929;
+    background-color: orange;
 }`
+function figWebAnnotationClear() {
+    console.log(selectedWebAnnotation);
+    selectedWebAnnotation.outerHTML = selectedWebAnnotation.innerHTML
+    // selectedWebAnnotation
+}
 document.head.appendChild(style);
+var selectedWebAnnotation = "";
 let annotation_context_menu = document.createElement("div");
 annotation_context_menu.id = "fig_webpage_annotation_context_menu";
 annotation_context_menu.innerHTML = `
-<p>Change highlight color</p>
-<p>Clear highlight</p>
-<p>Add a note</p>
-<p onclick='alert("Thank you!")'>Upvote</p>`;
+<p class="fig_webpage_annotation_menu_item">Change highlight color</p>
+<p class="fig_webpage_annotation_menu_item" onclick="figWebAnnotationClear(this)">Clear highlight</p>
+<p class="fig_webpage_annotation_menu_item">Add a note</p>
+<p class="fig_webpage_annotation_menu_item" onclick='alert("Thank you!")'>Upvote</p>`;
 annotation_context_menu.style.position = "absolute";
 annotation_context_menu.style.display = 'none'
 document.body.appendChild(annotation_context_menu);
@@ -108,6 +126,7 @@ function highlightContextMenu(event) {
     annotation_context_menu.style.left = `${event.pageX+10}px`;
     console.log(event.pageY, event.pageX);
     annotation_context_menu.style.display = '';
+    selectedWebAnnotation = event.path[0];
 }
 
 function highlightRange(range) {
@@ -454,8 +473,6 @@ class DebugWebView(QWebEngineView):
         # shortcuts.
         self.Esc = QShortcut(QKeySequence("Esc"), self)
         self.Esc.activated.connect(self.searchPanel.closePanel)
-        # self.CtrlA = QShortcut(QKeySequence("Ctrl+A"), self)
-        # self.CtrlA.activated.connect(self.selectAll)
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
         self.CtrlF.activated.connect(self.reactToCtrlF)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
@@ -464,9 +481,7 @@ class DebugWebView(QWebEngineView):
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
-    # def selectAll(self):
-    #     print("select all")
-    #     self.page().runJavaScript('''document.execCommand("selectAll");''')
+
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
         self.searchPanel.show()
@@ -643,6 +658,29 @@ class Browser(DebugWebView):
         # self.currentZoomFactor = zoomFactor
         # self.setZoomFactor(self.currentZoomFactor)
         # self.extension_manager = ExtensionManager()
+        self.progress = 0
+        self.loadProgress.connect(self.setProgress)
+        # # shortcuts.
+        # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
+        # self.SelectAll.activated.connect(self.selectAll)
+        # self.Deselect = QShortcut(QKeySequence.Deselect, self)
+        # self.Deselect.activated.connect(self.deselect)
+    
+    def setProgress(self, progress):
+        self.progress = progress
+        if self.progress == 100: return 
+        try:
+            i = self.tabWidget.currentIndex()
+            self.tabWidget.setTabText(i, f"Loading {self.progress}")
+        except Exception as e:
+            print(e)
+
+    def deselect(self):
+        pass
+
+    def selectAll(self):
+        print("select all")
+        self.page().runJavaScript('''document.execCommand("selectAll");''')
     # def pageIconCallback(self, html: str):
     #     from bs4 import BeautifulSoup
     #     soup = BeautifulSoup(html, features="html.parser")
@@ -665,13 +703,13 @@ class Browser(DebugWebView):
         # print(dir(self.menu))
         self.menu.setStyleSheet("background: #292929; color: #fff;")
         self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
-        self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
+        highlightAction = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
         self.menu.addSeparator()
         self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
         # print(f"context menu has {len(self.menu.actions())} actions")
         # self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
         # highlight action.
-        self.menu.actions()[-2].triggered.connect(self.highlightSelectedText)
+        highlightAction.triggered.connect(self.highlightSelectedText)
         self.menu.popup(event.globalPos())
 
     def append(self, url: Union[str, QUrl]):
@@ -904,9 +942,9 @@ document.head.appendChild(newSelectStyle);
 #         self.saveSettings()
 #         super(MainWindow, self).closeEvent(event)
 class HomePageView(Browser):
-    def dragEnterEvent(self, e):
-        e.ignore()
-
+    # def dragEnterEvent(self, e):
+    #     e.ignore()
+    pass
 
 def test_page_info():
     FigD("/home/atharva/GUI/fig-dash/resources")
