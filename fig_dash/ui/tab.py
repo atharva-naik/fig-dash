@@ -267,10 +267,11 @@ class DashTabWidget(QTabWidget):
         except AttributeError as e: return
         s = time.time()
         browser.loadDevTools()
-        print(f"loaded dev tools in: {time.time()-s}")
+        # print(f"loaded dev tools in: {time.time()-s}")
         dash_window.navbar.searchbar.setUrl(browser.url())
         s = time.time()
         self.setTabText(i, "  "+browser.page().title())
+        print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
         # print("set tab title and navbar lineedit in:", time.time()-s)
         s = time.time()
         browser.changeUserAgent()

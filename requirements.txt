@@ -1,4 +1,5 @@
 bs4
+tqdm
 parse
 PyQt5
 jinja2

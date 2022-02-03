@@ -232,6 +232,12 @@ class GShortcutBtn(QToolButton):
         self.tabs = tabs
 # #eb5f34, #ebcc34
 # #a11f53, #eb5f34
+def windowSwitcher():
+    # pyautogui.keyDown("alt")
+    # pyautogui.hotkey("tab")
+    print("exited")
+
+
 class ShortcutSidebar(QToolBar):
     '''
     Shortcut sidebar to jump to well known sites:
@@ -239,7 +245,7 @@ class ShortcutSidebar(QToolBar):
     google utilities: images, videos, news, shopping, travel, maps, books, flights, finance
     '''
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
-        super(ShortcutSidebar, self).__init__(parent)
+        super(ShortcutSidebar, self).__init__("Shortcuts", parent)
         self.app_launcher = AppLauncher()
         # desktop utilties.
         self.desktopBtn = SystemBtn(
@@ -247,8 +253,8 @@ class ShortcutSidebar(QToolBar):
             callback=lambda : pyautogui.hotkey("win","d")
         )
         self.workspaceBtn = SystemBtn(
-            "workspace", tip="open workspace switcher", 
-            callback=lambda : pyautogui.hotkey("win","d")
+            "window_switcher", callback=windowSwitcher,
+            tip="open window switcher (Alt+Tab) on Linux", 
         )
         self.screenshotBtn = SystemBtn(
             "screenshot", tip="print screen (screenshot)", 
@@ -414,23 +420,37 @@ class ShortcutSidebar(QToolBar):
         self.toggleBtn.setIconSize(QSize(55,55))
         self.toggleBtn.setFixedHeight(60)
         self.toggleBtn.setFixedWidth(60)
-        self.setPos()
+        self.hide()
+        self.setPos(0)
         # self.toggleBtn.setFixedSize(QSize(50,50))
         # print("parent:", parent)
-    def setPos(self):
+    def setPos(self, w=55):
         parent = self.parent()
         if parent is None: height = 400
         else: height = parent.height()//2 
-        self.toggleBtn.move(55, height)
+        self.toggleBtn.move(0, height)
         self.h = height
+
+    def focusInEvent(self, event):
+        # print(f"\x1b[33mShortcutSidebar: focus in\x1b[0m")
+        super(ShortcutSidebar, self).focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        super(ShortcutSidebar, self).focusOutEvent(event)
+        # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
+        self.hide()
+        self.toggleBtn.show()
 
     def toggle(self):
         if self.isVisible():
             self.hide()
-            self.toggleBtn.move(0,self.h)
+            self.toggleBtn.show()
+            # self.toggleBtn.move(0,self.h)
         else:
-            self.toggleBtn.move(55,self.h)
+            # self.toggleBtn.move(55,self.h)
+            self.toggleBtn.hide()
             self.show()
+            self.setFocus()
 
     def addSpacer(self):
         spacer = QWidget()

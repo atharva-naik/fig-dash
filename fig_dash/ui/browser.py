@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
+from tqdm import tqdm
 from pprint import pprint
 from typing import Union, Tuple
 from requests.exceptions import MissingSchema, InvalidSchema
@@ -659,6 +660,7 @@ class Browser(DebugWebView):
         self.mime_database = QMimeDatabase()
         self.historyIndex = 0
         self.browsingHistory = []
+        # self.pbar = tqdm(range(100)) 
         # self.currentZoomFactor = zoomFactor
         # self.setZoomFactor(self.currentZoomFactor)
         # self.extension_manager = ExtensionManager()
@@ -671,10 +673,14 @@ class Browser(DebugWebView):
         # self.Deselect.activated.connect(self.deselect)
     def setProgress(self, progress):
         self.progress = progress
-        if self.progress == 100: return 
+        if self.progress == 100: 
+            # self.pbar = tqdm(range(100))
+            return 
         try:
             i = self.tabWidget.currentIndex()
-            self.tabWidget.setTabText(i, f"Loading {self.progress}")
+            # self.tabWidget.setTabText(i, f"Loading {self.progress}")
+            # print(f"Loaded {self.url().toString()} {self.progress}%")
+            # self.pbar.update(progress-self.pbar.n)
         except Exception as e:
             print(e)
 
@@ -727,7 +733,7 @@ class Browser(DebugWebView):
                 return
             else:
                 self.dash_window.browsingHistory.append(url)
-                print(f"\x1b[31;1m{self.dash_window.browsingHistory}\x1b[0m")
+                print(f"\x1b[44;1m{self.dash_window.browsingHistory}\x1b[0m")
         except AttributeError as e:
             print("not connected to a DashWindow")
             return    
@@ -789,23 +795,24 @@ class Browser(DebugWebView):
                 self.url().toString(QUrl.FullyEncoded)
             )
             self.dash_window.statusBar().clearMessage()
+            print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
         except AttributeError as e:
-            print("not connected to DashWindow") 
+            print(f"\x1b[31;1mupdateTabTitle:\x1b[0m \x1b[31m{e}\x1b[0m") 
         self.append(self.url())
         try:
-            # change title ofthe tab that contains this browser only.
-            if self != self.tabWidget.currentWidget(): return
+            # change title of the tab that contains this browser only.
+            if self != self.tabWidget.currentWidget().browser: return
             i = self.tabWidget.currentIndex()
             if i < 0: return
-            print(f"updating title for tab-{i}")
-            self.loadFinished.connect(
+            print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
+            self.page().mainFrame().loadFinished.connect(
                 lambda: self.tabWidget.setupTabForBrowser(
                     i=i, browser=self,
                 )
             )
         except AttributeError as e:
-            print("not connected to a TabWidget")
-
+            print(f"\x1b[31;1mupdateTabTitle:\x1b[0m \x1b[31m{e}\x1b[0m") 
+            # print("not connected to a TabWidget")
     def setUrl(self, url):
         self.append(url)
         self.dash_window.statusBar().showMessage(f"loading {url.toString()}")

@@ -16,4 +16,5 @@ if __name__ == '__main__':
         icon="/home/atharva/GUI/fig-dash/resources/icons/logo.png",        
         wallpaper="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         resources="/home/atharva/GUI/fig-dash/resources",
+        windowFlags=["frameless"],
     ) # /home/atharva/Pictures/Wallpapers/3339083.jpg

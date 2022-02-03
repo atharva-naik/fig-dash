@@ -68,6 +68,11 @@ class DashSearchBar(QLineEdit):
         # glow_effect.setColor(QColor(235, 156, 52))
         self.setGraphicsEffect(glow_effect)
 
+    def mousePressEvent(self, event):
+        '''select text on click'''
+        super(DashSearchBar, self).mousePressEvent(event)
+        self.selectAll()
+
     def setUrl(self, url: Union[QUrl, str]):
         if isinstance(url, QUrl):
             url = url.toString(QUrl.FullyEncoded)
