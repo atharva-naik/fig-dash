@@ -7,7 +7,7 @@ from fig_dash import FigD
 from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QSize, QPoint
+from PyQt5.QtCore import Qt, QSize, QPoint, QUrl
 from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
@@ -68,6 +68,16 @@ class DashSearchBar(QLineEdit):
         # glow_effect.setColor(QColor(235, 156, 52))
         self.setGraphicsEffect(glow_effect)
 
+    def setUrl(self, url: Union[QUrl, str]):
+        if isinstance(url, QUrl):
+            url = url.toString(QUrl.FullyEncoded)
+        if url != "file:///tmp/fig_dash.rendered.content.html":    
+            self.setText(url)
+        else:
+            self.setText("")
+            self.setPlaceholderText("Search Google or type a URL")
+        self.setCursorPosition(0)
+
     def search(self):
         url = UrlOrQuery(self.text())()
         self.searchHistory.append(url)
@@ -77,7 +87,7 @@ class DashSearchBar(QLineEdit):
         dash_window = central_widget.parent()
         tabs = dash_window.tabs
         i = tabs.currentIndex()
-        tabs.loadUrl(i, url)
+        tabs.loadUrlForIndex(i, url)
 
     def formatQueryOrUrl(self, query_or_url: str):
         pass

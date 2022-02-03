@@ -131,18 +131,26 @@ class FullScreenBtn(QToolButton):
         self.setIconSize(QSize(22,22))
         self.clicked.connect(self.toggle)
         self.setStyleSheet(title_btn_style)
+        self.titlebar = None
+
+    def connectTitleBar(self, titlebar):
+        self.titlebar = titlebar
 
     def fullscreen(self):
-        print("fullscreen mode")
+        print("fullscreen mode")        
         self.window().showFullScreen()
         self.setIcon(self.efs_icon)
         self.is_fullscreen = True
+        if self.titlebar:
+            self.titlebar.showInfo()
 
     def exit_fullscreen(self):
         print("exiting fullscreen mode")
         self.window().showNormal()
         self.setIcon(self.fs_icon)
         self.is_fullscreen = False
+        if self.titlebar:
+            self.titlebar.hideInfo()
 
     def toggle(self):
         if self.is_fullscreen:
@@ -159,6 +167,7 @@ class WifiBtn(QToolButton):
         self.setStyleSheet('''
         QToolButton {
             border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
         }''')
         self.network_manager = NetworkHandler().manager
         name = self.network_manager.net_info.name
@@ -166,10 +175,11 @@ class WifiBtn(QToolButton):
         self.netName.setStyleSheet('''
         QLabel {
             color: #6e6e6e;
-            font-size: 15px;
+            font-size: 17px;
             background: transparent;
             padding-left: 3px;
             padding-right: 3px;
+            font-family: 'Be Vietnam Pro', sans-serif;
         }''')
 
 
@@ -217,8 +227,9 @@ class VolumeLabel(QWidget):
             color: #fff;
             margin: 0px;
             padding: 0px;
-            font-size: 14px;
+            font-size: 16px;
             background: transparent;
+            font-family: 'Be Vietnam Pro', sans-serif;
         }""")
 
     def set(self, value):
@@ -350,7 +361,8 @@ class TitleBar(QToolBar):
             tip="open system utilites menu.",
             callback=self.callback if parent is None else parent.sysutilsbar.toggle, 
         )
-        self.bluetoothBtn.setFixedSize(QSize(15,15))
+        self.bluetoothBtn.setFixedSize(QSize(17,17))
+        self.fullscreenBtn.connectTitleBar(self)
         # self.onScreenKeyboard = self.initTitleBtn(
         #     "titlebar/onscreenkeyboard.svg", 
         #     tip="open on screen keyboard.",
@@ -400,7 +412,8 @@ class TitleBar(QToolBar):
         QToolButton {
             color: #fff;
             border: 0px;
-            font-size: 14px;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
         }
         QToolButton:hover {
             background: rgba(255, 255, 255, 0.5);
@@ -436,6 +449,27 @@ class TitleBar(QToolBar):
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         self.setMaximumHeight(30)
+        self.hideInfo()
+
+    def hideInfo(self):
+        print("\x1b[33;1mhiding info\x1b[0m")
+        self.wifi.hide()
+        self.wifi.netName.hide()
+        self.volume.hide()
+        self.langBtn.hide()
+        self.bluetoothBtn.hide()
+        self.battery.pluggedIcon.hide()
+        self.battery.hide()
+
+    def showInfo(self):
+        print("\x1b[33;1mshowing info\x1b[0m")
+        self.wifi.show()
+        self.wifi.netName.show()
+        self.volume.show()
+        self.langBtn.show()
+        self.bluetoothBtn.show()
+        self.battery.pluggedIcon.show()
+        self.battery.show()
 
     def maximize(self):
         parent = self.parent()

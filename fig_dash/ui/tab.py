@@ -13,7 +13,6 @@ from ..utils import collapseuser
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import Browser, HomePageView
 
-
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;
     height: 7px;
@@ -103,6 +102,22 @@ class TabPlusBtn(QToolButton):
         super(TabPlusBtn, self).__init__(parent)
         self.setObjectName("TabPlusBtn")
         self.setIcon(FigD.Icon("tabbar/new_tab.svg"))
+        self.setStyleSheet(tab_btn_style.render()) 
+
+
+class TabSplitVBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TabSplitVBtn, self).__init__(parent)
+        self.setObjectName("TabSplitVBtn")
+        self.setIcon(FigD.Icon("tabbar/tab_split_h.svg"))
+        self.setStyleSheet(tab_btn_style.render())    
+
+
+class TabSplitHBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TabSplitHBtn, self).__init__(parent)
+        self.setObjectName("TabSplitHtn")
+        self.setIcon(FigD.Icon("tabbar/tab_split_v.svg"))
         self.setStyleSheet(tab_btn_style.render())    
 
 
@@ -116,9 +131,13 @@ class TabCornerWidget(QWidget):
         self.dropdownBtn = TabsSearchBtn(self)
         self.dropdown = self.dropdownBtn.dropdown
         self.plusBtn = TabPlusBtn(self)
+        self.splitHBtn = TabSplitHBtn(self)
+        self.splitVBtn = TabSplitVBtn(self)
 
         self.layout.addWidget(self.initBlank())
         self.layout.addWidget(self.plusBtn)
+        self.layout.addWidget(self.splitHBtn)
+        self.layout.addWidget(self.splitVBtn)
         self.layout.addWidget(self.dropdownBtn)
         self.layout.addWidget(self.initBlank())
         # self.layout.addStretch(1)
@@ -209,6 +228,7 @@ class DashTabWidget(QTabWidget):
         self.setTabsClosable(True)
         self.setElideMode(Qt.ElideRight)
         self.setDocumentMode(False)
+        self.currentChanged.connect(self.onTabChange)
         self.tabCloseRequested.connect(self.removeTab)
         self.setMovable(True)
         self.setCornerWidget(tabCornerWidget)
@@ -221,6 +241,14 @@ class DashTabWidget(QTabWidget):
         # print(dash_tab_widget_style.render())
     def connectWindow(self, window):
         self.dash_window = window
+
+    def onTabChange(self, i: int):
+        try: dash_window = self.dash_window
+        except AttributeError as e: 
+            print(e)
+            return
+        browser = self.widget(i).browser
+        self.dash_window.navbar.searchbar.setUrl(browser.url())
 
     def triggerFind(self):
         '''trigger the default response of the browser to Ctrl+F'''
@@ -237,15 +265,10 @@ class DashTabWidget(QTabWidget):
     def setupTabForBrowser(self, i: int, browser):
         try: dash_window = self.dash_window
         except AttributeError as e: return
-        url = browser.url().toString()
         s = time.time()
         browser.loadDevTools()
         print(f"loaded dev tools in: {time.time()-s}")
-        if url != "file:///tmp/fig_dash.rendered.content.html":    
-            dash_window.navbar.searchbar.setText(url)
-        else:
-            dash_window.navbar.searchbar.setText("")
-            dash_window.navbar.searchbar.setPlaceholderText("Search Google or type a URL")
+        dash_window.navbar.searchbar.setUrl(browser.url())
         s = time.time()
         self.setTabText(i, "  "+browser.page().title())
         # print("set tab title and navbar lineedit in:", time.time()-s)
@@ -258,11 +281,11 @@ class DashTabWidget(QTabWidget):
         # print("set zoom factor in:", time.time()-s)
         browser.execAnnotationJS()
         # print("scheduled execution of annotation js in:", time.time()-s)
-        browser.setScrollbar(scrollbar_style)
+        # browser.setScrollbar(scrollbar_style)
         # print("set scrollbar style in:", time.time()-s)
-        browser.setWordCount()
+        # browser.setWordCount()
         # print("calculated word count in:", time.time()-s)
-        browser.setSelectionStyle()
+        # browser.setSelectionStyle()
         # print("set scrollbar style in:", time.time()-s)
         browser.setIcon(tabs=self, i=i)
         # print("set browser icon in:", time.time()-s)
@@ -307,6 +330,7 @@ class DashTabWidget(QTabWidget):
             "home.html",
             USERNAME=getpass.getuser(),
             HOME_CSS=FigD.staticUrl("home.css"),
+            HOME_ICON="file:///home/atharva/GUI/fig-dash/resources/icons/logo.png",
             CAROUSEL_JS=FigD.staticUrl("carousel.js"),
             CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
         ).toString()
@@ -418,10 +442,22 @@ class DashTabWidget(QTabWidget):
             i = self.currentIndex()
             print(f"tab-{i} is not a browser instance") 
 
-    def loadUrl(self, i: int, url: str):
+    def loadUrlForIndex(self, i: int, url: str):
         qurl = QUrl(url)
         self.setCurrentIndex(i)
         # use back reference from the splitter object.
+        browser = self.currentWidget().browser
+        browser.setUrl(qurl)
+        self.setTabText(i, "  "+url.strip())
+        browser.loadFinished.connect(
+            lambda _, i = i, browser = browser:
+				self.setupTabForBrowser(i, browser)
+        )
+
+    def loadUrl(self, url: str):
+        qurl = QUrl(url)
+        # use back reference from the splitter object.
+        i = self.currentIndex()
         browser = self.currentWidget().browser
         browser.setUrl(qurl)
         self.setTabText(i, "  "+url.strip())
@@ -487,18 +523,22 @@ class TabBar(QTabBar):
         closeToRight = contextMenu.addAction(FigD.Icon("tabbar/close-all-tabs.png"), "Close tabs to the right")
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
-        glow_effect.setOffset(3,3)
+        glow_effect.setOffset(0,0)
         glow_effect.setColor(QColor(235, 95, 52))
-        contextMenu.setGraphicsEffect(glow_effect)
+        # contextMenu.setGraphicsEffect(glow_effect)
+        contextMenu.setWindowOpacity(0.9)
         contextMenu.setStyleSheet('''
         QMenu {
             color: #fff;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+            font-family: 'Be Vietnam Pro', sans-serif;
+            /* background: rgba(29,29,29,0.8); */
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(0,0,0,0.9), stop : 0.6 rgba(29,29,29,0.9));
         }
         QMenu:selected  {
             color: #292929;
             font-weight: bold;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            background: #eb5f34; /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
         }
         QMenu::separator {
             background: #484848;

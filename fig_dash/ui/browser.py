@@ -4,9 +4,9 @@
 import os
 from pprint import pprint
 from typing import Union, Tuple
-from requests.exceptions import MissingSchema
+from requests.exceptions import MissingSchema, InvalidSchema
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PyQt5.QtGui import QColor, QKeySequence
+from PyQt5.QtGui import QColor, QKeySequence, QIcon
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut
 # fig_dash
@@ -159,6 +159,8 @@ contextMenuHtml = '''
 		<menuitem label="Facebook" icon="/images/facebook_icon16x16.gif" onclick="goTo('//facebook.com/sharer/sharer.php?u=' + window.location.href);"></menuitem>
 	</menu>
 </menu>'''
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-features=-webengine-proprietary-codecs"
+# "--blink-settings=darkMode=4,darkModeImagePolicy=2"
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
 class DevToolsBtn(QToolButton): 
     def __init__(self, parent: Union[None, QWidget]=None, 
@@ -429,11 +431,13 @@ class BrowserSearchPanel(QWidget):
     def connectBrowser(self, browser):
         self.browser = browser
 
-    def show(self):
-        self.setParent(self.browser)
+    def setPos(self):
         WB = self.browser.width()
         self.move(WB/2-250, -200)
-        print("display search panel")
+
+    def show(self):
+        self.setParent(self.browser)
+        self.setPos()
         super(BrowserSearchPanel, self).show()
 
 
@@ -665,7 +669,6 @@ class Browser(DebugWebView):
         # self.SelectAll.activated.connect(self.selectAll)
         # self.Deselect = QShortcut(QKeySequence.Deselect, self)
         # self.Deselect.activated.connect(self.deselect)
-    
     def setProgress(self, progress):
         self.progress = progress
         if self.progress == 100: return 
@@ -677,10 +680,9 @@ class Browser(DebugWebView):
 
     def deselect(self):
         pass
-
-    def selectAll(self):
-        print("select all")
-        self.page().runJavaScript('''document.execCommand("selectAll");''')
+    # def selectAll(self):
+    #     print("select all")
+    #     self.page().runJavaScript('''document.execCommand("selectAll");''')
     # def pageIconCallback(self, html: str):
     #     from bs4 import BeautifulSoup
     #     soup = BeautifulSoup(html, features="html.parser")
@@ -764,14 +766,19 @@ class Browser(DebugWebView):
             self.dash_window.menu.fileviewer.connectWindow(self.dash_window)
             self.dash_window.menu.fileviewer.open(filename)
         else:
+            # if mimetype == "application/octet-stream":
+            #     import urllib.parse
+            #     # url = urllib.parse.urlencode(filename)
+            #     url = QUrl(filename)
+            #     print(filename, url.toString())
+            #     self.dash_window.tabs.loadUrl(filename)
             super(Browser, self).dragEnterEvent(e)
 
     def changeUserAgent(self):
-        # print("changing user agent.")
         try:
-            self.page().profile().setHttpUserAgent(
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
-            )
+            userAgentStr = "Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0" 
+            # userAgentStr = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
+            self.page().profile().setHttpUserAgent(userAgentStr)
             # print("changed user agent.")
         except Exception as e:
             print(e) 
@@ -779,7 +786,7 @@ class Browser(DebugWebView):
     def updateTabTitle(self):
         try:
             self.dash_window.navbar.searchbar.setText(
-                self.url().toString()
+                self.url().toString(QUrl.FullyEncoded)
             )
             self.dash_window.statusBar().clearMessage()
         except AttributeError as e:
@@ -869,7 +876,9 @@ document.head.appendChild(newSelectStyle);
             try:
                 pageIcon = QFetchIcon(icon_path, is_svg)
             except MissingSchema:
-                pageIcon = FigD.Icon("browser.svg")    
+                pageIcon = FigD.Icon("browser.svg")
+            except InvalidSchema:  
+                pageIcon = QIcon(icon_path.replace("file://",""))
         else:
             pageIcon = FigD.Icon("browser.svg")
         self.tabs.setTabIcon(self.i, pageIcon)
@@ -945,6 +954,10 @@ class HomePageView(Browser):
     # def dragEnterEvent(self, e):
     #     e.ignore()
     pass
+
+class ChromeBrowserContainer:
+    pass
+
 
 def test_page_info():
     FigD("/home/atharva/GUI/fig-dash/resources")

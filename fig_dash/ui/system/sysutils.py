@@ -106,11 +106,11 @@ class SysUtilsBar(QWidget):
             icon="system/sysutils/tts.svg", 
             tip="open text to speech.",
         )
-        self.fileExplorerBtn = SysUtilsBtn(
-            parent=self,
-            icon="system/sysutils/file_explorer.svg", 
-            tip="toggle file explorer.",
-        )
+        # self.fileExplorerBtn = SysUtilsBtn(
+        #     parent=self,
+        #     icon="system/sysutils/file_explorer.svg", 
+        #     tip="toggle file explorer.",
+        # )
         self.systemMonitorBtn = SysUtilsBtn(
             parent=self,
             icon="system/sysutils/system_monitor.svg", 
@@ -120,7 +120,7 @@ class SysUtilsBar(QWidget):
         self.layout.addWidget(self.ideasJarBtn, 0, Qt.AlignCenter)
         self.layout.addWidget(self.onScreenKeyboardBtn, 0, Qt.AlignCenter)
         self.layout.addWidget(self.systemMonitorBtn, 0, Qt.AlignCenter)
-        self.layout.addWidget(self.fileExplorerBtn, 0, Qt.AlignCenter)
+        # self.layout.addWidget(self.fileExplorerBtn, 0, Qt.AlignCenter)
         self.layout.addWidget(self.transBtn, 0, Qt.AlignCenter)
         self.layout.addWidget(self.ttsBtn, 0, Qt.AlignCenter)
         self.layout.addWidget(self.trashBtn, 0, Qt.AlignCenter)

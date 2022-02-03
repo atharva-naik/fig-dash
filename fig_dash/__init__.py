@@ -3,7 +3,7 @@
 import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import QEvent, Qt, QT_VERSION_STR
+from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
 # fig-dash imports.
 # try:
@@ -23,6 +23,9 @@ class DashUI(QApplication):
         super(DashUI, self).__init__(argv)
         QFontDatabase.addApplicationFont(
             FigD.font("datetime/digital-7.ttf")
+        )
+        QFontDatabase.addApplicationFont(
+            FigD.font("BeVietnamPro-Regular.ttf")
         )
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
@@ -46,6 +49,11 @@ class DashUI(QApplication):
         self.trayIcon.show()
         # self.window.tabs.dropdown.initPos(width=width)
         self.setWindowFlags("frameless", "ontop")
+        print(self.window.windowIcon())
+        print("\x1b[32;1mapp icon:\x1b[0m", FigD.icon("logo.png"))
+        self.setWindowIcon(FigD.Icon("logo.png"))
+        self.window.setWindowIcon(FigD.Icon("logo.png"))
+        # self.window.windowIcon().pixmap(QSize(128,128)).save("WOWOWOWOWOWO.png")
         self.setCursor()
         print(f"using Qt {QT_VERSION_STR}")
         # self.window.setWindowIcon(QIcon(kwargs.get("icon")))

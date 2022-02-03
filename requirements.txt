@@ -5,4 +5,5 @@ jinja2
 pillow
 pyttsx3
 requests
+pyautogui
 PyQtWebEngine

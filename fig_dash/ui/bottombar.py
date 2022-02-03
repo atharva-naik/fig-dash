@@ -9,8 +9,7 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QToolBar, QToolButton, QLabel, 
 from fig_dash.assets import FigD
 
 
-class StatusBar(QToolBar):
+class BottomBar(QToolBar):
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(StatusBar, self).__init__(parent)
-
+        super(BottomBar, self).__init__(parent)
     # def 

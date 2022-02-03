@@ -42,8 +42,9 @@ QTabBar {
 QTabBar::tab {
     border: 0px;
     color: #fff;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: bold;
+    font-family: 'Be Vietnam Pro', sans-serif;
     padding-top: 2px;
     padding-left: 10px;
     padding-right: 10px;
@@ -62,15 +63,15 @@ QTabBar::tab:hover {
 QTabBar::tab:selected {
     border: 0px;
     color: #eb5f34;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: bold;
     padding-top: 2px;
     padding-left: 10px;
     padding-right: 10px;
     padding-bottom: 5px;
+    margin-top: 3px;
     margin-left: 10px;
     margin-right: 10px;
-    margin-top: 3px;
     margin-bottom: 3px;
     border-bottom: 2px solid #eb5f34;
     /* border-bottom: 4px solid #bf3636; */
@@ -82,9 +83,13 @@ class DashMenu(QTabWidget):
         self.toggleBtn = self.initToggleBtn()
         self.filemenu = self.initFileMenu(**args)
         self.editmenu = self.initEditMenu(**args)
+        self.viewmenu = self.initViewMenu(**args)
         self.codemenu = self.initCodeMenu(**args)
+        self.formatmenu = self.initFormatMenu(**args)
         self.addTab(self.filemenu, "File")        
         self.addTab(self.editmenu, "Edit")
+        self.addTab(self.formatmenu, "Format")
+        self.addTab(self.viewmenu, "View")
         self.addTab(self.codemenu, "Code")        
         self.collapse()
         # self.currentChanged.connect(self.onTabChange)
@@ -150,6 +155,25 @@ class DashMenu(QTabWidget):
         filemenu.setObjectName("DashMenuTab")
 
         return filemenu
+
+    def initViewMenu(self, **args):
+        viewmenu = QWidget()
+        # layout = QHBoxLayout()
+        # layout.setContentsMargins(0, 0, 0, 0)
+        # self.fileviewer = FileViewerWidget(
+        #     background=args.get("wallpaper")
+        # )
+        # layout.addWidget(self.viewmenu)
+        # viewmenu.setLayout(layout)
+        viewmenu.setObjectName("DashMenuTab")
+
+        return viewmenu
+
+    def initFormatMenu(self, **args):
+        formatmenu = QWidget()
+        formatmenu.setObjectName("DashMenuTab")
+
+        return formatmenu
 
     def initBrowserMenu(self, **args):
         browsermenu = QWidget()

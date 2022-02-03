@@ -1096,8 +1096,8 @@ class FileViewerViewGroup(FileViewerGroup):
         self.searchbarBtn = self.visibilityGroup.btns[2]
         self.sidebarBtn = self.visibilityGroup.btns[3]
         self.arrangeGroup = self.initBtnGroup([
-            {"icon": "sidebar_left.svg", "size": (20,20), "tip": "sidebar to the left"},
-            {"icon": "sidebar_right.svg", "size": (20,20), "tip": "sidebar to the right"},
+            {"icon": "sidebar_left.svg", "size": (25,25), "tip": "sidebar to the left"},
+            {"icon": "sidebar_right.svg", "size": (25,25), "tip": "sidebar to the right"},
         ])     
         self.viewLayout.addWidget(self.layoutGroup)
         self.viewLayout.addWidget(self.visibilityGroup)
@@ -1898,8 +1898,8 @@ class FileViewerWidget(QMainWindow):
         self.clipboard = args.get("clipboard")
         
         # # shortcuts.
-        # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
-        # self.SelectAll.activated.connect(self.selectAll)
+        self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
+        self.SelectAll.activated.connect(self.selectAll)
         # self.SelectAll.setEnabled(False)
         
         # add widgets to layout.
@@ -2321,7 +2321,7 @@ def test_fileviewer():
         font_color="#fff",
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
-    fileviewer.open("~/GUI/FileViewerTest")
+    fileviewer.open("~")
     fileviewer.setGeometry(200, 200, 800, 600)
     fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
     # fileviewer.saveScreenshot("fileviewer.html")

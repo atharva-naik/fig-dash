@@ -1,10 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro&display=swap');
 body {
+    background-size: cover;
     background-color: #0A031D;
-    background-image: url("/home/atharva/GUI/fig-dash/resources/icons/wallpaper/ironman.gif");
+    background-image: url("/home/atharva/GUI/fig-dash/resources/icons/wallpaper/lava_lamp2.gif");
     background-repeat: no-repeat;
     background-position: 50% 25%;
-    background-size: cover;
+    background-attachment: fixed;
 }
 
 .container {

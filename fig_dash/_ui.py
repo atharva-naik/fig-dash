@@ -37,7 +37,7 @@ QMainWindow {
 dash_tabbar_style = jinja2.Template('''
 QTabBar {
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 #eb5f34, stop : 0.6 #ebcc34);
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220));
 }
 QTabBar::close-button {
     background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
@@ -58,23 +58,24 @@ QTabBar::tab {
     padding-bottom: 5px;
     margin-left: 1px;
     margin-right: 1px;
-    font-size: 18px;
+    font-size: 17px;
+    font-family: 'Be Vietnam Pro', sans-serif;
     max-width: 300px;
 }
 QTabBar::tab:hover {
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34);
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220));
 }
 QTabBar::tab:selected {
     color: #fff;
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220));
     padding-top: 5px;
     padding-left: 9px;
     padding-right: 5px;
     padding-bottom: 5px;
     margin-left: 1px;
     margin-right: 1px;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: bold;
 }''')
 # #eb5f34, #ebcc34
@@ -117,7 +118,8 @@ class DashWindow(QMainWindow):
         QStatusBar {
             color: #fff;
             font-size: 16px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+            background: #000;
         }""")
         self.statusBar().setMaximumHeight(20)
         # self.firstResizeOver = False
@@ -135,7 +137,7 @@ class DashWindow(QMainWindow):
         self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
         # add shortcuts sidebar.
-        self.shortcut_sidebar = ShortcutSidebar()
+        self.shortcut_sidebar = ShortcutSidebar(self)
         self.shortcut_sidebar.connectTabs(self.tabs)
         self.sysutilsbar.connectTitleBar(self.titlebar)
         self.tabs.connectTitleBar(self.titlebar)
@@ -248,6 +250,7 @@ class DashWindow(QMainWindow):
         self.floatmenu.move(2,30)
         # system utilities bar.
         self.sysutilsbar = SysUtilsBar(self.tabs)
+        self.sysutilsbar.hide()
         # page info.
         self.page_info = PageInfo(self.tabs)
         self.page_info.hide()
@@ -292,6 +295,16 @@ class DashWindow(QMainWindow):
     #         geo = dropdown.geometry()
     #         geo.moveTopLeft(geo.topLeft() + diff)
     #         dropdown.setGeometry(geo)
+    def resizeEvent(self, event):
+        self.shortcut_sidebar.setPos()
+        self.shortcut_sidebar.morePagesBtn.setPos()
+        self.shortcut_sidebar.moreSocialBtn.setPos()
+        self.shortcut_sidebar.moreSystemBtn.setPos()
+        try: 
+            self.tabs.currentWidget().browser.searchPanel.setPos()
+        except Exception as e: print(e)
+        super(DashWindow, self).resizeEvent(event)
+
     def initDatetimeNotif(self):
         datetime_notifs_splitter = DatetimeNotifsSplitter(self)
         datetime_notifs_splitter.hide()
