@@ -243,12 +243,13 @@ class DashTabWidget(QTabWidget):
         self.dash_window = window
 
     def onTabChange(self, i: int):
-        try: dash_window = self.dash_window
+        try: 
+            dash_window = self.dash_window
+            browser = self.widget(i).browser
+            self.dash_window.navbar.searchbar.setUrl(browser.url())
         except AttributeError as e: 
             print(e)
             return
-        browser = self.widget(i).browser
-        self.dash_window.navbar.searchbar.setUrl(browser.url())
 
     def triggerFind(self):
         '''trigger the default response of the browser to Ctrl+F'''
@@ -265,35 +266,22 @@ class DashTabWidget(QTabWidget):
     def setupTabForBrowser(self, i: int, browser):
         try: dash_window = self.dash_window
         except AttributeError as e: return
-        s = time.time()
         browser.loadDevTools()
-        # print(f"loaded dev tools in: {time.time()-s}")
-        dash_window.navbar.searchbar.setUrl(browser.url())
-        s = time.time()
         self.setTabText(i, "  "+browser.page().title())
         print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
-        # print("set tab title and navbar lineedit in:", time.time()-s)
-        s = time.time()
-        browser.changeUserAgent()
-        # print("changed user agent in:", time.time()-s)
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)
-        s = time.time()
         browser.setZoomFactor(browser.currentZoomFactor)
-        # print("set zoom factor in:", time.time()-s)
-        browser.execAnnotationJS()
-        # print("scheduled execution of annotation js in:", time.time()-s)
-        # browser.setScrollbar(scrollbar_style)
-        # print("set scrollbar style in:", time.time()-s)
-        # browser.setWordCount()
-        # print("calculated word count in:", time.time()-s)
-        # browser.setSelectionStyle()
-        # print("set scrollbar style in:", time.time()-s)
-        browser.setIcon(tabs=self, i=i)
-        # print("set browser icon in:", time.time()-s)
-        
-        # print(icon.isNull())
-        # if not icon.isNull(): 
-            # self.setTabIcon(i, icon) 
+        if browser.isTerminalized():
+            browser.execTerminalJS()
+        else:
+            browser.changeUserAgent()
+            browser.execAnnotationJS()
+            browser.setWordCount()
+            browser.setIcon(tabs=self, i=i)
+            dash_window.navbar.searchbar.setUrl(browser.url())
+        browser.setSelectionStyle()
+        browser.setScrollbar(scrollbar_style)
+
     def showLinkOnStatusBar(self, link):
         try:
             self.dash_window.statusBar().showMessage(link)
@@ -349,6 +337,18 @@ class DashTabWidget(QTabWidget):
 
     def openFolder(self, folder: str):
         pass
+
+    def terminal(self):
+        '''terminalize current terminal.'''
+        self.currentWidget().browser.terminalize()
+
+    def unterminal(self):
+        '''terminalize current terminal.'''
+        self.currentWidget().browser.unterminalize()
+
+    def openTerminal(self):
+        self.openHome()
+        self.terminal()
 
     def openWidget(self, widget: QWidget, 
                    title: str="", icon: str=""):

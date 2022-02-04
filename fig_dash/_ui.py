@@ -23,7 +23,7 @@ from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.datetime import DashClock, DashCalendar
-from fig_dash.ui.shortcut_sidebar import ShortcutSidebar
+from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
@@ -137,16 +137,18 @@ class DashWindow(QMainWindow):
         self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
         # add shortcuts sidebar.
-        self.shortcut_sidebar = ShortcutSidebar(self)
-        self.shortcut_sidebar.connectTabs(self.tabs)
+        self.shortcutbar = ShortcutBar(self)
+        self.shortcutbar.connectTabs(self.tabs)
         self.sysutilsbar.connectTitleBar(self.titlebar)
         self.tabs.connectTitleBar(self.titlebar)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
-        self.addToolBar(Qt.LeftToolBarArea, self.shortcut_sidebar)
+        self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar)
         # install event filter.
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
         # shortcuts.
+        self.FnF1 = QShortcut(Qt.Key_F1, self)
+        self.FnF1.activated.connect(self.toggleMuteVolSlider)
         self.FnF2 = QShortcut(Qt.Key_F2, self)
         self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
@@ -170,6 +172,16 @@ class DashWindow(QMainWindow):
             print(e)
             self.initVolumeSlider()
 
+    def toggleMuteVolSlider(self):
+        '''pop out the volume slider'''
+        print("toggling mute.")
+        # try:
+        #     if not self.volume_slider.isVisible():
+        #         self.volume_slider.show()
+        #     self.volume_slider.decrease()
+        # except AttributeError as e:
+        #     print(e)
+        #     self.initVolumeSlider()
     def decVolSlider(self):
         '''pop out the volume slider'''
         try:
@@ -296,10 +308,10 @@ class DashWindow(QMainWindow):
     #         geo.moveTopLeft(geo.topLeft() + diff)
     #         dropdown.setGeometry(geo)
     def resizeEvent(self, event):
-        self.shortcut_sidebar.setPos()
-        self.shortcut_sidebar.morePagesBtn.setPos()
-        self.shortcut_sidebar.moreSocialBtn.setPos()
-        self.shortcut_sidebar.moreSystemBtn.setPos()
+        self.shortcutbar.setPos()
+        self.shortcutbar.morePagesBtn.setPos()
+        self.shortcutbar.moreSocialBtn.setPos()
+        self.shortcutbar.moreSystemBtn.setPos()
         try: 
             self.tabs.currentWidget().browser.searchPanel.setPos()
         except Exception as e: print(e)
@@ -310,7 +322,7 @@ class DashWindow(QMainWindow):
         datetime_notifs_splitter.hide()
         datetime_notifs_splitter.notifsPanel.pushNotif(
             name="fig-dash",
-            icon=FigD.icon("logo.png"),
+            icon=FigD.icon("logo.svg"),
             msg=f"Hi <b>{getpass.getuser()}</b>! Click <a href='https://github.com/atharva-naik/fig-dash' style='color: #269e92;'>here</a> to get started with <b>fig-dash</b>."
         )
         datetime_notifs_splitter.notifsPanel.pushNotif(

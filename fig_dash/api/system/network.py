@@ -156,7 +156,7 @@ class IWConfig:
         self.net_info = self.probe()
 
     def probe(self):
-        result = subprocess.Popen('iwconfig', stdout=subprocess.PIPE)
+        result = subprocess.Popen('iwconfig', stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         raw_str = result.communicate()[0].decode('utf-8')
         ret_code = result.returncode
         # create LinuxNetInfo

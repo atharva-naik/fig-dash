@@ -7,8 +7,34 @@ from PyQt5.QtCore import Qt, QT_VERSION_STR
 def collapseuser(path: str):
     return path.replace(os.path.expanduser("~"), "~")
 
-def description():
-    pass
+def pyqtSleep(time: int=1000):
+    '''
+    A pyqt5 friendly version of time.sleep.
+    time to wait in millis
+    '''
+    loop = QEventLoop()
+    QTimer.singleShot(time, loop.quit)
+    loop.exec_()
+
+def truncStr(string):
+    if len(string) > 20:
+        return string[:10]+"..."+string[-6:]
+    else:
+        return string
+
+def notify(msg=None, icon=None, title="Fig Dashboard", critical=False):
+    import getpass
+    import platform
+    if msg is None: 
+        msg = f"Hello {getpass.getuser()}!"
+    # /home/atharva/GUI/fig-dash/resources/icons/logo.svg
+    if platform.system() == "Linux":
+        # use notify send for Linux.
+        code = f'''notify-send "Fig Dashboard" "{msg}"'''
+        if icon: code += f" -i {icon}" 
+        if critical: code += f" -u critical"
+        print("\x1b[34;1mcode:\x1b[0m", code)
+        os.system(code)
 
 def secs_to_hms(secs):
     hrs = secs // 3600

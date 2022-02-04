@@ -20,7 +20,10 @@ class AssetManager:
         self.icon_dir = os.path.join(resource_dir, "icons")
         self.font_dir = os.path.join(resource_dir, "fonts")
         self.style_dir = os.path.join(resource_dir, "style")
+        self.theme_dir = os.path.join(resource_dir, "theme")
         self.static_dir = os.path.join(resource_dir, "static")
+        # set constants.
+        self.TempURLPath = QUrl.fromLocalFile(self.static_dir).toString()
 
     def __call__(self, resource_dir: str):
         self.dir = resource_dir
@@ -37,6 +40,10 @@ class AssetManager:
     def asset(self, path: str) -> str:
         '''return absolute path of an asset'''
         return os.path.join(self.resource_dir, path)
+
+    def theme(self, path: str) -> str:
+        '''return absolute path of theme file'''
+        return os.path.join(self.theme_dir, path)
 
     def static(self, path: str, **params) -> str:
         '''give relative path and get absolute static path.'''

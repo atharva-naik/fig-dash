@@ -2,6 +2,12 @@
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
+import jinja2
+import socket
+import getpass
+import pathlib
+import platform
+import subprocess
 from tqdm import tqdm
 from pprint import pprint
 from typing import Union, Tuple
@@ -14,7 +20,27 @@ from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, Q
 from ..utils import QFetchIcon
 from fig_dash.assets import FigD
 from fig_dash.api.browser.extensions import ExtensionManager
+    
 
+WEBPAGE_TERMINAL_JS = '''
+var FigWebPageTerminal = document.getElementById("term-output");
+class FigWebPageTerminalHandler {
+	constructor(name, age) {
+    	this.cwd=`'''+os.getcwd()+'''`;
+        this.user=`'''+getpass.getuser()+'''`;
+        this.hostname=`'''+socket.gethostname()+'''`;
+    }
+    clear() {
+        FigWebPageTerminal.innerHTML = `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> <br>`;
+    }
+    writeLine(cmd, line) {
+        FigWebPageTerminal.innerHTML = FigWebPageTerminal.innerHTML + `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> ${cmd} <br> ${line} <br>`
+    }
+}
+var FigTerminal = new FigWebPageTerminalHandler()
+// welcome user and give guidelines on how to use!
+FigTerminal.writeLine("welcome", "Welcome '''+getpass.getuser()+'''!, type a command in the navigation bar to execute quick terminal commands");
+'''
 WEBPAGE_ANNOT_JS = '''
 function getSafeRanges(dangerous) {
     var a = dangerous.commonAncestorContainer;
@@ -163,6 +189,31 @@ contextMenuHtml = '''
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-features=-webengine-proprietary-codecs"
 # "--blink-settings=darkMode=4,darkModeImagePolicy=2"
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
+
+TermViewerJS = """  """
+TermViewerCSS = r"""
+body {
+    color: #fff;
+    background: #000;
+    font-family: 'Monospace';
+}
+"""
+TermViewerHtml = jinja2.Template(r"""
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Terminal</title>
+        <style>{{ TERM_VIEWER_CSS }}</style>
+    </head>
+    <body>
+        <div id="term-output" class="fig-html-web-terminal"></div>
+        <script>{{ TERM_VIEWER_JS }}</script>
+    </body>
+</html>""")
+
+
 class DevToolsBtn(QToolButton): 
     def __init__(self, parent: Union[None, QWidget]=None, 
                 size: Tuple[int, int]=(23,23)):
@@ -654,6 +705,15 @@ class PageInfo(QWidget):
         self.word_count.setText(f" {word_count} words")
         self.time_to_read.setText(f" {word_count // 200} mins")
         # self.setFixedHeight(100)
+
+# class BrowserHistory:
+#     def __init__(self, path: str=CHROME_LINUX_PATH):
+#         self.history = []
+#         # open chrome's browsing history file.
+#         if os.path.exists(path):
+#         # use custom history file
+#         elif os.p
+#         else:        
 class Browser(DebugWebView):
     def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25):
         super(Browser, self).__init__(parent=parent)
@@ -665,12 +725,26 @@ class Browser(DebugWebView):
         # self.setZoomFactor(self.currentZoomFactor)
         # self.extension_manager = ExtensionManager()
         self.progress = 0
+        self._is_bookmarked = False
+        self._is_terminalized = False
         self.loadProgress.connect(self.setProgress)
         # # shortcuts.
         # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
         # self.SelectAll.activated.connect(self.selectAll)
         # self.Deselect = QShortcut(QKeySequence.Deselect, self)
         # self.Deselect.activated.connect(self.deselect)
+    def setBookmark(self, status: bool):
+        self._is_bookmarked = status
+
+    def setTerminalized(self, status: bool):
+        self._is_terminalized = status
+
+    def isBookmarked(self):
+        return self._is_bookmarked
+
+    def isTerminalized(self):
+        return self._is_terminalized
+
     def setProgress(self, progress):
         self.progress = progress
         if self.progress == 100: 
@@ -706,6 +780,31 @@ class Browser(DebugWebView):
     #             is_svg
     #         )
     #         pprint(icon_path)
+    def execTerminalCommand(self, cmd: str=""):
+        cmd = cmd.strip()
+        if cmd == "clear":
+            self.page().runJavaScript(f"FigTerminal.clear();")            
+            return
+        argv = cmd.split()
+        if argv[0] == "cd":
+            path = cmd.strip("cd ").strip()
+            if path == ".": pass
+            elif path == "..":
+                parent = pathlib.Path(os.getcwd()).parent
+                os.chdir(parent)
+            else: os.chdir(path)
+            self.page().runJavaScript(
+                f"FigTerminal.writeLine(`{cmd}`, ``);"
+            )
+            return
+        result = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        op_str = result.communicate()[0].decode('utf-8')
+        ret_code = result.returncode
+        if ret_code == 0:
+            self.page().runJavaScript(
+                f"FigTerminal.writeLine(`{cmd}`, `{op_str}`);"
+            )
+
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
         # print(dir(self.menu))
@@ -854,6 +953,10 @@ class Browser(DebugWebView):
         '''execute javascript needed for annotation shit'''
         self.page().runJavaScript(WEBPAGE_ANNOT_JS)
 
+    def execTerminalJS(self):
+        '''execute javascript needed for running terminal related shit'''
+        self.page().runJavaScript(WEBPAGE_TERMINAL_JS)
+
     def setScrollbar(self, style: str=scrollbar_style):
         code = f'''Style = `{scrollbar_style}`
 newScrollbarStyle = document.createElement('style');
@@ -894,6 +997,33 @@ document.head.appendChild(newSelectStyle);
         self.i = i
         self.tabs = tabs
         self.page().toHtml(self.iconSetCallback)
+
+    def terminalize(self):
+        rendered = TermViewerHtml.render(
+            TERM_VIEWER_JS=TermViewerJS,
+            TERM_VIEWER_CSS=TermViewerCSS,
+        )
+        self.setTerminalized(True)
+        url = FigD.createTempUrl(rendered)
+        self.load(QUrl(url))
+
+    def unterminalize(self):
+        self.setTerminalized(False)
+        self.back()
+        # try: 
+        #     print(self.browsingHistory)
+        #     item = self.browsingHistory[-1]
+        # except IndexError as e:
+        #     print(e) 
+        #     item = "file:///tmp/fig_dash.rendered.content.html"
+        # if item.startswith("file://"):
+        #     item = item[7:]
+        #     print(item)
+        #     url = QUrl.fromLocalFile(item)
+        #     print(url.toString())
+        # else:
+        #     url = QUrl(item)
+        # self.load(url)
     # def fetchIcon(self):
     #     self.page().toHtml(self.pageIconCallback)
 # class MainWindow(QWidget):

@@ -2,16 +2,15 @@
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
-from fig_dash.ui.system.app import AppLauncher
-import pyautogui
 from pprint import pprint
 from typing import Union, Tuple, List
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize, QPoint
-from PyQt5.QtWidgets import QToolBar, QToolButton, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy
+from PyQt5.QtWidgets import QToolBar, QToolButton, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.ui.system.app import AppLauncher
+from fig_dash.api.system.audio import PulseController
 
 
 class SocialMediaBtn(QToolButton):
@@ -20,11 +19,11 @@ class SocialMediaBtn(QToolButton):
         self.site = site
         self.url = args.get("url")
         self.inactive_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.site+".svg"
         )
         self.active_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.site+"_active.svg"
         )
         self.setIcon(FigD.Icon(self.inactive_icon_path))
@@ -67,11 +66,11 @@ class SystemBtn(QToolButton):
     def __init__(self, icon, **args) -> None:
         super(SystemBtn, self).__init__(None)
         self.inactive_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             icon+".svg"
         )
         self.active_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             icon+"_active.svg"
         )
         self.setIcon(FigD.Icon(self.inactive_icon_path))
@@ -88,6 +87,10 @@ class SystemBtn(QToolButton):
             padding: 5px;
             background: transparent;
         }""")
+
+    def setCallback(self, callback):
+        '''set callback.'''
+        self.clicked.connect(callback)
 
     def enterEvent(self, event):
         if os.path.exists(FigD.icon(self.active_icon_path)):
@@ -110,17 +113,18 @@ class PlayPauseBtn(SystemBtn):
         self.clicked.connect(self.toggle)
 
     def toggle(self):
+        import pyautogui
         pyautogui.hotkey("playpause")
         if self.mode == "play":
             self.mode = "pause"
         else:
             self.mode = "play"
         self.inactive_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.mode+".svg"
         )
         self.active_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.mode+"_active.svg"
         )
         self.setIcon(FigD.Icon(self.active_icon_path))
@@ -130,8 +134,8 @@ class MoreBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, 
                  buttons: List[SocialMediaBtn]=[]) -> None:
         super(MoreBtn, self).__init__(parent)
-        self.inactive_icon_path = "shortcut_sidebar/more.svg"
-        self.active_icon_path = "shortcut_sidebar/more_active.svg"
+        self.inactive_icon_path = "shortcutbar/more.svg"
+        self.active_icon_path = "shortcutbar/more_active.svg"
         self.setIcon(FigD.Icon(self.inactive_icon_path))
         tip = "show more options"
         self.setToolTip(tip)
@@ -187,11 +191,11 @@ class GShortcutBtn(QToolButton):
         super(GShortcutBtn, self).__init__(parent)
         self.type = args.get("type")
         self.inactive_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.type+".svg"
         )
         self.active_icon_path = os.path.join(
-            "shortcut_sidebar", 
+            "shortcutbar", 
             self.type+"_active.svg"
         )
         # self.size = args.get("size", (30,30)) 
@@ -238,16 +242,20 @@ def windowSwitcher():
     print("exited")
 
 
-class ShortcutSidebar(QToolBar):
-    '''
-    Shortcut sidebar to jump to well known sites:
-    famous social media sites: whatsapp, twitch, twitter, linkedin, reddit
-    google utilities: images, videos, news, shopping, travel, maps, books, flights, finance
+class ShortcutBar(QToolBar):
+    '''[summary]
+    ## Purpose
+    Shortcut bar for various functions
+    ### google shortcuts 
+    images, videos, news, shopping, travel, maps, books, flights, finance
+    ### social media sites
+    whatsapp, twitch, twitter, linkedin, reddit
     '''
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
-        super(ShortcutSidebar, self).__init__("Shortcuts", parent)
+        super(ShortcutBar, self).__init__("Shortcuts", parent)
         self.app_launcher = AppLauncher()
         # desktop utilties.
+        import pyautogui
         self.desktopBtn = SystemBtn(
             "desktop", tip="show desktop", 
             callback=lambda : pyautogui.hotkey("win","d")
@@ -294,6 +302,7 @@ class ShortcutSidebar(QToolBar):
             "backward", tip="previous track",
             callback=lambda: pyautogui.hotkey("prevtrack"),
         ) 
+        self.volume_backend = PulseController()
         # create GShortcut buttons.
         self.imagesBtn = GShortcutBtn(type="images", tip="open Google images search")
         self.videosBtn = GShortcutBtn(type="video", tip="open Google video search")
@@ -399,29 +408,40 @@ class ShortcutSidebar(QToolBar):
         self.toggleBtn.setStyleSheet("""
         QToolButton {
             color: #fff;
-            border: 0px;
+            border: 4px solid orange;
             margin: 0px;
             padding: 10px;
-            border-top-left-radius: 0px;
-            border-top-right-radius: 29px;
-            border-bottom-left-radius: 0px;
-            border-bottom-right-radius: 29px;
+            border-radius: 29px;
             background: transparent;
             /* background: transparent; */
         }
         QToolButton:hover {
-            background: qradialgradient(cx: 0.75, cy: 0.75, radius: 0.7, stop : 0.3 rgba(235, 204, 52, 220), stop : 0.6 rgba(235, 95, 52, 175));
+            border: 0px;
+            border-top-left-radius: 0px;
+            border-top-right-radius: 29px;
+            border-bottom-left-radius: 0px;
+            border-bottom-right-radius: 29px;
+            background: qradialgradient(cx: 0.75, cy: 0.75, radius: 0.7, stop : 0.3 rgba(235, 204, 52, 255), stop : 0.6 rgba(235, 95, 52, 225));
         }
         QToolTip {
             color: #fff;
             border: 0px;
             background: transparentl
         }""")
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(0,0)
+        shadow.setColor(QColor(255, 165, 0))
+        
         self.toggleBtn.setIconSize(QSize(55,55))
+        self.toggleBtn.setGraphicsEffect(shadow)
         self.toggleBtn.setFixedHeight(60)
         self.toggleBtn.setFixedWidth(60)
+        
         self.hide()
         self.setPos(0)
+        self.volumeUpBtn.setCallback(self.volume_backend.increase)
+        self.volumeDownBtn.setCallback(self.volume_backend.decrease)
         # self.toggleBtn.setFixedSize(QSize(50,50))
         # print("parent:", parent)
     def setPos(self, w=55):
@@ -433,10 +453,10 @@ class ShortcutSidebar(QToolBar):
 
     def focusInEvent(self, event):
         # print(f"\x1b[33mShortcutSidebar: focus in\x1b[0m")
-        super(ShortcutSidebar, self).focusInEvent(event)
+        super(ShortcutBar, self).focusInEvent(event)
 
     def focusOutEvent(self, event):
-        super(ShortcutSidebar, self).focusOutEvent(event)
+        super(ShortcutBar, self).focusOutEvent(event)
         # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
         self.hide()
         self.toggleBtn.show()
@@ -462,7 +482,19 @@ class ShortcutSidebar(QToolBar):
         }""")
         spacer.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
         self.addWidget(spacer)
-
+    # def connectVolMethods(self, **methods):
+    #     '''
+    #     connect instance of the VolumeSlider class.
+    #     must have these functions:
+    #     1) increase
+    #     2) decrease
+    #     3) toggleMute
+    #     '''
+    #     btns = [self.volumeUpBtn, self.volumeDownBtn, self.volumeMuteBtn]
+    #     method_api = ["increase", "decrease", "toggleMute"]
+    #     for btn, method in zip(btns, method_api):
+    #         if method not in methods: continue
+    #         btn.setCallback(methods[method])
     def connectTabs(self, tabs):
         self.tabs = tabs
         self.imagesBtn.connectTabs(tabs)

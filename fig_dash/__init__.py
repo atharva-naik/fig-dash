@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
@@ -7,11 +8,26 @@ from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
 # fig-dash imports.
 # try:
+from fig_dash.config import *
 from fig_dash.assets import FigD
 from fig_dash._ui import DashWindow
 # except ImportError:
 # print("ImportError: most likely in DashWindow")
 # Contains all the fig dashboard code.
+def welcomeUser(tray_icon):
+    '''
+    welcome the user.
+    This should be cross platform.
+    '''
+    import getpass
+    import platform
+    if platform.system() == "Linux":
+        # this code gets higher resolution image for linux.
+        utils.notify(msg=f"Welcome to fig dashboard {getpass.getuser()}!", icon=FigD.icon("logo.svg"), title="")
+    else:
+        tray_icon.showMessage("Fig Dashboard", f"Welcome to fig dashboard {getpass.getuser()}!", FigD.Icon("tray_icon.png"), 1000)
+
+
 class DashUI(QApplication):
     def __init__(self, argv, **kwargs):
         FigD(kwargs.get("resources", "resources"))
@@ -44,16 +60,15 @@ class DashUI(QApplication):
         self.trayMenu.addAction(self.quitAction)
         self.trayMenu.addAction(self.supportAction)
         # tray icon button.
-        self.trayIcon = QSystemTrayIcon(QIcon(kwargs.get("icon")), self)
+        self.trayIcon = QSystemTrayIcon(FigD.Icon("tray_icon.svg"), self)
         self.trayIcon.setContextMenu(self.trayMenu)
         self.trayIcon.show()
-        # self.window.tabs.dropdown.initPos(width=width)
+        # welcomeUser(self.trayIcon)
         windowFlags = kwargs.get("windowFlags", ["frameless", "ontop"])
         self.setWindowFlags(*windowFlags)
-        print(self.window.windowIcon())
-        print("\x1b[32;1mapp icon:\x1b[0m", FigD.icon("logo.png"))
-        self.setWindowIcon(FigD.Icon("logo.png"))
-        self.window.setWindowIcon(FigD.Icon("logo.png"))
+        # print("\x1b[32;1mapp icon:\x1b[0m", FigD.icon("logo.png"))
+        self.setWindowIcon(FigD.Icon("logo.svg"))
+        self.window.setWindowIcon(FigD.Icon("logo.svg"))
         # self.window.windowIcon().pixmap(QSize(128,128)).save("WOWOWOWOWOWO.png")
         self.setCursor()
         print(f"using Qt {QT_VERSION_STR}")

@@ -86,12 +86,12 @@ class VolumeSlider(QWidget):
 
     def increase(self):
         self.setVolume(self._slider.value()+self._step)
-        print(f"{self._slider.value()}: increased volume by {self._step}")
+        # print(f"{self._slider.value()}: increased volume by {self._step}")
         self._chime.info()
 
     def decrease(self):
         self.setVolume(self._slider.value()-self._step)
-        print(f"{self._slider.value()}: decreased volume by {self._step}")
+        # print(f"{self._slider.value()}: decreased volume by {self._step}")
         self._chime.info()
 
     def setVolume(self, value):

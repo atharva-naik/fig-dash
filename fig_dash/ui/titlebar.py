@@ -175,7 +175,7 @@ class WifiBtn(QToolButton):
         self.netName.setStyleSheet('''
         QLabel {
             color: #6e6e6e;
-            font-size: 17px;
+            font-size: 15px;
             background: transparent;
             padding-left: 3px;
             padding-right: 3px;
@@ -227,7 +227,7 @@ class VolumeLabel(QWidget):
             color: #fff;
             margin: 0px;
             padding: 0px;
-            font-size: 16px;
+            font-size: 15px;
             background: transparent;
             font-family: 'Be Vietnam Pro', sans-serif;
         }""")
@@ -393,11 +393,16 @@ class TitleBar(QToolBar):
         self.wifi = WifiBtn()
         self.wifi.setFixedSize(QSize(18,18))
 
+        self.infoDisplay = QWidget()
+        self.infoLayout = QHBoxLayout()
+        self.infoLayout.setSpacing(0)
+        self.infoLayout.setContentsMargins(0,0,0,0)
+        self.infoDisplay.setLayout(self.infoLayout)
+
         self.volume = VolumeLabel()
 
         self.battery = BatteryIndicator(self)
-        self.battery.setFixedSize(QSize(30,30))
-        self.battery.setIconSize(QSize(30,30))
+        self.battery.setFixedSize(QSize(25,25))
         self.battery.pluggedIcon.setFixedSize(QSize(17,17))
         # window title
         self.title = QLabel()
@@ -436,16 +441,25 @@ class TitleBar(QToolBar):
         self.addWidget(self.initSpacer())
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
-        self.addWidget(self.wifi)
-        self.addWidget(self.wifi.netName)
-        self.addWidget(self.volume)
-        self.addWidget(self.langBtn)
-        self.addWidget(self.bluetoothBtn)
-        self.addWidget(self.battery.pluggedIcon)
-        self.addWidget(self.battery)
+        self.infoLayout.addWidget(self.wifi)
+        self.infoLayout.addWidget(self.wifi.netName)
+        self.infoLayout.addWidget(self.volume)
+        self.infoLayout.addWidget(self.langBtn)
+        self.infoLayout.addWidget(self.bluetoothBtn)
+        self.infoLayout.addWidget(self.battery.pluggedIcon, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.infoLayout.addWidget(self.battery)
+        self.addWidget(self.infoDisplay)
+        # self.addWidget(self.wifi)
+        # self.addWidget(self.wifi.netName)
+        # self.addWidget(self.volume)
+        # self.addWidget(self.langBtn)
+        # self.addWidget(self.bluetoothBtn)
+        # self.addWidget(self.battery.pluggedIcon)
+        # self.addWidget(self.battery)
         # self.addWidget(self.onScreenKeyboard)
         # self.addWidget(self.transBtn)
         # self.addWidget(self.ttsBtn)
+        self.addWidget(self.initBlank())
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         self.setMaximumHeight(30)

@@ -820,9 +820,9 @@ class FileViewerGroup(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         # self.layout.setSpacing(2)
         self.group.setLayout(self.layout)
-        layout.addWidget(self.Label(name))
         layout.addWidget(self.group)
         layout.addStretch(1)
+        layout.addWidget(self.Label(name))
         self.setLayout(layout)
 
     def Label(self, name):
@@ -834,18 +834,23 @@ class FileViewerGroup(QWidget):
             padding: 6px;
             color: #69bfee;
             font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
         }''')
         return name
 
     def initBtnGroup(self, btn_args, 
-                     orient="horizontal"):
+                     orient="horizontal", 
+                     alignment_flag=None,
+                     spacing=None):
         btnGroup = QWidget()
         btnGroup.btns = []
         if orient == "horizontal":
             layout = QHBoxLayout()
         elif orient == "vertical":
             layout = QVBoxLayout()
+        if spacing:
+            layout.setSpacing(spacing)
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
         btnGroup.setLayout(layout)
@@ -859,7 +864,10 @@ class FileViewerGroup(QWidget):
         for args in btn_args:
             btn = self.initBtn(**args)
             btnGroup.btns.append(btn)
-            layout.addWidget(btn, 0, Qt.AlignCenter)
+            if alignment_flag is None:
+                layout.addWidget(btn, 0, Qt.AlignCenter)
+            else:
+                layout.addWidget(btn, 0, alignment_flag)
         layout.addStretch(1)
         btnGroup.setLayout(layout)
 
@@ -922,7 +930,7 @@ class FileViewerFileGroup(FileViewerGroup):
         # connect to server.
         self.connectToServerBtn = self.initBtn(
             icon="connect_to_server.svg",
-            size=(45,45),
+            size=(40,40),
             tip="connect to a server",
         )
         self.linkGroup = self.initBtnGroup([
@@ -1037,18 +1045,18 @@ class FileViewerEditGroup(FileViewerGroup):
         self.editLayout.setContentsMargins(0, 0, 0, 0)
         # undo, redo, rename
         self.renameGroup = self.initBtnGroup([
-            {"icon": "undo.svg", "size": (23,23), "tip": "undo rename"},
-            {"icon": "rename.svg", "size": (23,23), "tip": "rename file/folder"},
-            {"icon": "redo.svg", "size": (23,23) , "tip": "redo rename"},
+            {"icon": "undo.svg", "size": (25,25), "tip": "undo rename"},
+            {"icon": "rename.svg", "size": (25,25), "tip": "rename file/folder"},
+            {"icon": "redo.svg", "size": (25,25) , "tip": "redo rename"},
         ])
         self.undoBtn = self.renameGroup.btns[0]
         self.renameBtn = self.renameGroup.btns[1]
         self.redoBtn = self.renameGroup.btns[2]
         # cut, copy, paste
         self.moveGroup = self.initBtnGroup([
-            {"icon": "cut.png", "size": (22,22), "tip": "cut selected item"},
-            {"icon": "copy.svg", "size": (30,30), "tip": "copy selected items"},
-            {"icon": "paste.png", "size": (30,30), "tip": "paste selected items from the clipboard"},
+            {"icon": "cut.png", "size": (28,28), "tip": "cut selected item"},
+            {"icon": "copy.svg", "size": (35,35), "tip": "copy selected items"},
+            {"icon": "paste.png", "size": (37,37), "tip": "paste selected items from the clipboard"},
         ])
         # make link, release link, move to trash
         self.linkGroup = self.initBtnGroup([
@@ -1125,27 +1133,28 @@ class FileViewerViewGroup(FileViewerGroup):
 class FileViewerSelectGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerSelectGroup, self).__init__(parent, "Select")
-        self.selectionWidget = QWidget() 
-        self.selectionLayout = QVBoxLayout()
-        self.selectionLayout.setContentsMargins(0, 0, 0, 0)
-        self.selectionLayout.setSpacing(0)
-
-        self.selectionGroup = self.initBtnGroup([
-            {"icon": "clear_selection.png", "size": (25,25), "tip": "clear current selection"},
-            {"icon": "select_all.png", "size": (25,25), "tip": "select all items"},
-            {"icon": "invert_selection.png", "size": (25,25), "tip": "invert selected items"},
-        ], orient="vertical")
-        self.clearBtn = self.selectionGroup.btns[0]
-        self.selectAllBtn = self.selectionGroup.btns[1]
-        self.invertBtn = self.selectionGroup.btns[2]
-        self.selectionLayout.addWidget(self.selectionGroup)
-        self.selectionLayout.addStretch(1)
-        self.selectionWidget.setLayout(self.selectionLayout)
-
-        self.layout.addStretch(1)
-        self.layout.addWidget(self.selectionWidget)
-        self.layout.addStretch(1)    
-
+        # self.selectionWidget = QWidget() 
+        # self.selectionLayout = QVBoxLayout()
+        # self.selectionLayout.setContentsMargins(0, 0, 0, 0)
+        # self.selectionLayout.setSpacing(0)
+        self.selectionGroup1 = self.initBtnGroup([
+            {"icon": "clear_selection.png", "size": (30,30), "tip": "clear current selection", "icon_size": (30,30)},
+            {"icon": "select_all.png", "size": (30,30), "tip": "select all items", "icon_size": (30,30)},
+        ], orient="vertical", spacing=0)
+        self.selectionGroup2 = self.initBtnGroup([
+            {"icon": "invert_selection.png", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
+        ], orient="vertical", spacing=0)
+        self.clearBtn = self.selectionGroup1.btns[0]
+        self.selectAllBtn = self.selectionGroup1.btns[1]
+        self.invertBtn = self.selectionGroup2.btns[0]
+        self.layout.addWidget(self.selectionGroup1)
+        self.layout.addWidget(self.selectionGroup2, 0, Qt.AlignCenter | Qt.AlignBottom)
+        # self.selectionLayout.addWidget(self.selectionGroup)
+        # self.selectionLayout.addStretch(1)
+        # self.selectionWidget.setLayout(self.selectionLayout)
+        # self.layout.addStretch(1)
+        # self.layout.addWidget(self.selectionWidget)
+        # self.layout.addStretch(1)    
     def connectWidget(self, widget):
         self.widget = widget
         self.clearBtn.clicked.connect(widget.clearSelection)
@@ -1241,18 +1250,18 @@ class FileViewerOpenGroup(FileViewerGroup):
         xdgOpenLayout = QVBoxLayout()
         xdgOpenLayout.setContentsMargins(0, 0, 0, 0)
         xdgOpenLayout.setSpacing(0)
-        # open with label.
-        label = QLabel("Open With")
-        label.setStyleSheet('''
-        QLabel {
-            color: #ccc;
-            border: 0px;
-            padding: 2px;
-            font-size: 15px;
-            font-weight: bold;
-            background: transparent;
-        }''')
-        
+        # # open with label.
+        # label = QLabel("Open With")
+        # label.setStyleSheet('''
+        # QLabel {
+        #     color: #ccc;
+        #     border: 0px;
+        #     padding: 2px;
+        #     font-size: 13px;
+        #     font-weight: bold;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     background: transparent;
+        # }''')
         tip = "open selected file with selected app"
         icon = os.path.join(
             "system/fileviewer", 
@@ -1269,6 +1278,7 @@ class FileViewerOpenGroup(FileViewerGroup):
             color: #fff;
             border: 0px;
             font-size: 14px;
+            font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
         }
         QToolButton:hover {
@@ -1283,7 +1293,7 @@ class FileViewerOpenGroup(FileViewerGroup):
         #     lambda: os.system(f"gtk-launch {} {self.selected_item}")
         # )
         xdgOpenLayout.addWidget(self.mimeBtn, 0, Qt.AlignCenter)
-        xdgOpenLayout.addWidget(label, 0, Qt.AlignCenter)
+        # xdgOpenLayout.addWidget(label, 0, Qt.AlignCenter)
         xdgOpenLayout.addWidget(self.appDropdown)
         xdgOpenWidget.setLayout(xdgOpenLayout)
 

@@ -13,7 +13,7 @@ if __name__ == '__main__':
     main(
         x=100, y=100, w=1000, h=850,
         maximize_by_default=False, 
-        icon="/home/atharva/GUI/fig-dash/resources/icons/logo.png",        
+        icon="/home/atharva/GUI/fig-dash/resources/icons/logo.svg",        
         wallpaper="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         resources="/home/atharva/GUI/fig-dash/resources",
         windowFlags=["frameless"],

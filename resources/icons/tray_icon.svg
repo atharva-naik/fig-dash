@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg viewBox="0 0 500 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="250" y1="20" x2="250" y2="480" id="gradient-3" gradientTransform="matrix(0.7541, 0.65676, -0.976382, 1.121091, 178.334871, -39.962785)">
+      <stop offset="0" style="stop-color: rgb(235, 95, 52);"/>
+      <stop offset="1" style="stop-color: rgb(235, 204, 52);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="256.001" y1="0" x2="256.001" y2="512" id="gradient-0" gradientTransform="matrix(1, 0, 0, 1.001287, 0, 0)">
+      <stop offset="0" style=""/>
+      <stop offset="1" style="stop-color: rgb(41, 41, 41);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="83.176" y1="132.713" x2="83.176" y2="494.723" id="gradient-2">
+      <stop offset="0" style="stop-color: rgba(0, 0, 0, 1)"/>
+      <stop offset="1" style="stop-color: rgb(41, 41, 41);"/>
+    </linearGradient>
+    <linearGradient gradientUnits="userSpaceOnUse" x1="428.825" y1="132.635" x2="428.825" y2="494.722" id="gradient-1">
+      <stop offset="0" style=""/>
+      <stop offset="1" style="stop-color: rgb(41, 41, 41);"/>
+    </linearGradient>
+  </defs>
+  <ellipse style="stroke: rgb(0, 0, 0); stroke-width: 0px; fill: url(#gradient-3);" cx="250" cy="250" rx="230" ry="230"/>
+  <g transform="matrix(0.742187, 0, 0, 0.742187, 60.930971, 46.120973)">
+    <g>
+      <path d="M 316.834 91.732 L 314.914 87.26 L 314.925 87.096 C 314.909 87.087 314.894 87.074 314.878 87.064 L 299.996 0 C 299.996 -16.02 213.583 -11.813 213.583 7.9 L 197.163 86.816 L 197.166 86.852 L 197.153 86.886 L 197.123 87.063 C 197.1 87.078 197.079 87.094 197.056 87.109 L 195.205 91.383 C 194.693 92.579 143.4 218.511 143.4 359.94 C 143.4 399.062 154.304 436.213 174.105 464.548 C 195.174 494.705 225.027 512 256 512 C 286.973 512 316.826 494.705 337.896 464.55 C 357.697 436.215 368.601 399.064 368.601 359.942 C 368.601 218.646 317.352 92.939 316.834 91.732 Z" style="fill: url(#gradient-0);"/>
+    </g>
+  </g>
+  <g transform="matrix(0.742187, 0, 0, 0.742187, 60.930971, 46.120973)">
+    <g>
+      <path d="M140.97,487.703c-24.501-35.061-37.992-80.435-37.992-127.762c0-90.359,19.641-174.267,35.479-227.228 c-16.846,15.03-33.875,32.189-49.523,51.359c-45.602,55.869-68.724,115.041-68.724,175.869c0,42.315,25.849,81.474,72.786,110.261 c16.031,9.832,33.924,18.044,53.146,24.521C144.376,492.442,142.649,490.105,140.97,487.703z" style="fill: url(#gradient-2);"/>
+    </g>
+  </g>
+  <g transform="matrix(0.742187, 0, 0, 0.742187, 60.930971, 46.120973)">
+    <g>
+      <path d="M423.066,184.071c-15.675-19.204-32.734-36.387-49.607-51.436c15.845,52.886,35.564,136.878,35.564,227.305 c0,47.326-13.493,92.7-37.992,127.762c-1.679,2.402-3.406,4.739-5.172,7.02c19.223-6.477,37.115-14.689,53.146-24.521 c46.937-28.787,72.786-67.944,72.786-110.259C491.789,299.113,468.667,239.941,423.066,184.071z" style="fill: url(#gradient-1);"/>
+    </g>
+  </g>
+</svg>

@@ -36,18 +36,55 @@ class DashSearchBar(QLineEdit):
         self.siteInfoAction = QAction()
         self.siteInfoAction.setIcon(FigD.Icon("navbar/lock.svg"))
         self.addAction(self.siteInfoAction, self.LeadingPosition)
-        # share url accross devices (google account).
-        self.shareDeviceAction = QAction()
-        self.shareDeviceAction.setIcon(FigD.Icon("navbar/share_devices.svg"))
-        self.addAction(self.shareDeviceAction, self.TrailingPosition)
-        # get qr code for URL.
-        self.qrCodeAction = QAction()
-        self.qrCodeAction.setIcon(FigD.Icon("navbar/qrcode.svg"))
-        self.addAction(self.qrCodeAction, self.TrailingPosition)
         # bookmark page.
         self.bookmarkAction = QAction()
         self.bookmarkAction.setIcon(FigD.Icon("navbar/bookmark.svg"))
         self.addAction(self.bookmarkAction, self.TrailingPosition)
+        self.bookmarkAction.triggered.connect(self.toggleBookmark)
+        # app download.
+        self.appDownloadAction = QAction()
+        self.appDownloadAction.setIcon(FigD.Icon("navbar/download_app.svg"))
+        self.addAction(self.appDownloadAction, self.TrailingPosition)
+        self.appDownloadAction.setVisible(False)
+        # get qr code for URL.
+        self.qrCodeAction = QAction()
+        self.qrCodeAction.setIcon(FigD.Icon("navbar/qrcode.svg"))
+        self.addAction(self.qrCodeAction, self.TrailingPosition)
+        # share url accross devices (google account).
+        self.shareDeviceAction = QAction()
+        self.shareDeviceAction.setIcon(FigD.Icon("navbar/share_devices.svg"))
+        self.addAction(self.shareDeviceAction, self.TrailingPosition)
+        # clipboard permission.
+        self.clipboardAction = QAction()
+        self.clipboardAction.setIcon(FigD.Icon("navbar/clipboard.svg"))
+        self.addAction(self.clipboardAction, self.TrailingPosition)
+        self.clipboardAction.setVisible(False)
+        # location permission.
+        self.locationAction = QAction()
+        self.locationAction.setIcon(FigD.Icon("navbar/location.svg"))
+        self.addAction(self.locationAction, self.TrailingPosition)
+        self.locationAction.setVisible(False)
+        # notifications permission.
+        self.notificationsAction = QAction()
+        self.notificationsAction.setIcon(FigD.Icon("navbar/notifications.svg"))
+        self.addAction(self.notificationsAction, self.TrailingPosition)
+        self.notificationsAction.setVisible(False)
+        # camera permission.
+        self.cameraAction = QAction()
+        self.cameraAction.setIcon(FigD.Icon("navbar/camera.svg"))
+        self.addAction(self.cameraAction, self.TrailingPosition)
+        self.cameraAction.setVisible(False)
+        # mic permission.
+        self.micAction = QAction()
+        self.micAction.setIcon(FigD.Icon("navbar/mic.svg"))
+        self.addAction(self.micAction, self.TrailingPosition)
+        self.micAction.setVisible(False)
+        # terminal mode.
+        self.terminalAction = QAction()
+        self.terminalAction.setIcon(FigD.Icon("navbar/terminal.svg"))
+        self.addAction(self.terminalAction, self.TrailingPosition)
+        self.terminalAction.triggered.connect(self.toggleTerminal)
+
         self.setStyleSheet(dash_searchbar_style.render(
             BORDER_RADIUS=16,
         ))
@@ -60,7 +97,39 @@ class DashSearchBar(QLineEdit):
         self.completer = QCompleter()
         self.searchHistory = []
         self.setCompleter(self.completer)
-        # apply glow effect.
+
+    def toggleTerminal(self):
+        '''terminalize current tab.'''
+        try: tabWidget = self.tabWidget
+        except Exception as e: print(e); return
+        if tabWidget is None: return
+        browser = tabWidget.currentWidget().browser
+        try:
+            if browser.isTerminalized():
+                tabWidget.unterminal()
+                self.terminalAction.setIcon(FigD.Icon("navbar/terminal.svg"))
+            else:
+                tabWidget.terminal()
+                self.terminalAction.setIcon(FigD.Icon("navbar/terminal_active.svg"))
+        except Exception as e: print(e)
+
+    def toggleBookmark(self):
+        '''toggle bookmark status of the current browser page/tab.'''
+        try: tabWidget = self.tabWidget
+        except Exception as e: print(e); return
+        if tabWidget is None: return
+        browser = tabWidget.currentWidget().browser
+        try:
+            if browser.isBookmarked():
+                browser.setBookmark(False)
+                self.bookmarkAction.setIcon(FigD.Icon("navbar/bookmark.svg"))
+            else:
+                browser.setBookmark(True)
+                self.bookmarkAction.setIcon(FigD.Icon("navbar/bookmark_active.svg"))
+        except Exception as e: print(e)
+
+    def glow(self):
+        '''apply glow effect.'''
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(30)
         glow_effect.setOffset(0,0)
@@ -68,32 +137,58 @@ class DashSearchBar(QLineEdit):
         # glow_effect.setColor(QColor(235, 156, 52))
         self.setGraphicsEffect(glow_effect)
 
+    def unglow(self):
+        '''remove glow effect'''
+        self.setGraphicsEffect(None)
+
     def mousePressEvent(self, event):
         '''select text on click'''
         super(DashSearchBar, self).mousePressEvent(event)
         self.selectAll()
+        self.setCursorPosition(0)
+
+    def focusInEvent(self, event):
+        super(DashSearchBar, self).focusInEvent(event)
+        self.glow()
+
+    def focusOutEvent(self, event):
+        super(DashSearchBar, self).focusOutEvent(event)
+        self.unglow()
 
     def setUrl(self, url: Union[QUrl, str]):
         if isinstance(url, QUrl):
             url = url.toString(QUrl.FullyEncoded)
-        if url != "file:///tmp/fig_dash.rendered.content.html":    
-            self.setText(url)
-        else:
+        # print("is this a temporary url?", url.startswith(FigD.TempURLPath))
+        if url == "file:///tmp/fig_dash.rendered.content.html": 
             self.setText("")
             self.setPlaceholderText("Search Google or type a URL")
+        elif url.startswith(FigD.TempURLPath):
+            self.setText("")
+            self.setPlaceholderText("Type a terminal command")
+        else:
+            self.setText(url)
         self.setCursorPosition(0)
 
     def search(self):
-        url = UrlOrQuery(self.text())()
-        self.searchHistory.append(url)
-        # self.completer = QCompleter(self.searchHistory)
         dash_navbar = self.parent()
         central_widget = dash_navbar.parent()
         dash_window = central_widget.parent()
         tabs = dash_window.tabs
         i = tabs.currentIndex()
-        tabs.loadUrlForIndex(i, url)
-
+        try:
+            browser = tabs.currentWidget().browser
+        except Exception as e:
+            print(e); return
+        if browser.isTerminalized():
+            cmd = self.text()
+            self.setText("")
+            browser.execTerminalCommand(cmd)
+            self.setPlaceholderText("Type a terminal command")
+        else:
+            url = UrlOrQuery(self.text())()
+            self.searchHistory.append(url)
+            tabs.loadUrlForIndex(i, url)
+        # self.completer = QCompleter(self.searchHistory)
     def formatQueryOrUrl(self, query_or_url: str):
         pass
         # qou = UrlOrQuery(query_or_url)
@@ -148,12 +243,14 @@ class DashNavBar(QWidget):
         layout.setContentsMargins(2, 2, 2, 2)
         self.setLayout(layout)
         # go to previous page in history.
+        self.btns = []
         self.prevBtn = DashBarBtn(
             icon="navbar/prev.svg",
             tip="go to previous page in history",
             style=dash_bar_btn_style
         )
         layout.addWidget(self.prevBtn)
+        self.btns.append(self.prevBtn)
         # go to next page in history.
         self.nextBtn = DashBarBtn(
             icon="navbar/next.svg",
@@ -161,6 +258,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.nextBtn)
+        self.btns.append(self.nextBtn)
         # reload page.
         self.reloadBtn = DashBarBtn(
             icon="navbar/reload.svg",
@@ -168,6 +266,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.reloadBtn)
+        self.btns.append(self.reloadBtn)
         # open homepage.
         self.homeBtn = DashBarBtn(
             icon="navbar/home.svg",
@@ -175,6 +274,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.homeBtn)
+        self.btns.append(self.homeBtn)
         # add search bar.
         self.searchbar = DashSearchBar(self)
         self.searchbar.setFixedHeight(33)
@@ -187,6 +287,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.extensionsBtn)
+        self.btns.append(self.extensionsBtn)
         # account.
         self.accountBtn = DashBarBtn(
             icon="navbar/account.png",
@@ -195,6 +296,7 @@ class DashNavBar(QWidget):
             size=(24,24)
         )
         layout.addWidget(self.accountBtn)
+        self.btns.append(self.accountBtn)
         # history.
         self.historyBtn = DashBarBtn(
             icon="navbar/history.svg",
@@ -203,6 +305,7 @@ class DashNavBar(QWidget):
             size=(24,24)
         )
         layout.addWidget(self.historyBtn)
+        self.btns.append(self.historyBtn)
         # settings.
         self.settingsBtn = DashBarBtn(
             icon="navbar/more_settings.svg",
@@ -210,16 +313,24 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style
         )
         layout.addWidget(self.settingsBtn)
+        self.btns.append(self.settingsBtn)
         # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         # self.setFixedHeight(50)
-        glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(30)
-        glow_effect.setOffset(0,0)
-        glow_effect.setColor(QColor(235, 95, 52))
-        self.setGraphicsEffect(glow_effect)
+        # appy glow to all buttons
+        for btn in self.btns:
+            self.applyGlow(btn, color=(225,225,225))
         # layout.addStretch(1)
+    def applyGlow(self, widget, color=(235, 95, 52)):
+        '''for applying glow effect to buttons'''
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(10)
+        glow_effect.setOffset(0,0)
+        glow_effect.setColor(QColor(*color))
+        widget.setGraphicsEffect(glow_effect)
+
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget
+        self.searchbar.tabWidget = tabWidget
         self.reloadBtn.clicked.connect(tabWidget.reloadUrl)
         self.nextBtn.clicked.connect(tabWidget.nextUrl)
         self.prevBtn.clicked.connect(tabWidget.prevUrl)
