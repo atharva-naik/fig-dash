@@ -10,9 +10,9 @@ from fig_dash import FigD
 from fig_dash.api.system.battery import Battery
 from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QImage, QPixmap
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QSizePolicy, QHBoxLayout
+from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout
 
 
 # title_bar_style = '''
@@ -466,7 +466,7 @@ class TitleBar(QToolBar):
         self.hideInfo()
 
     def hideInfo(self):
-        print("\x1b[33;1mhiding info\x1b[0m")
+        # print("\x1b[33;1mhiding info\x1b[0m")
         self.wifi.hide()
         self.wifi.netName.hide()
         self.volume.hide()
@@ -476,7 +476,7 @@ class TitleBar(QToolBar):
         self.battery.hide()
 
     def showInfo(self):
-        print("\x1b[33;1mshowing info\x1b[0m")
+        # print("\x1b[33;1mshowing info\x1b[0m")
         self.wifi.show()
         self.wifi.netName.show()
         self.volume.show()
@@ -504,7 +504,9 @@ class TitleBar(QToolBar):
         self.findBtn.clicked.connect(self.tabs.triggerFind)
         self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
-        self.saveSourceBtn.clicked.connect(self.tabs.save)
+        self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
+        self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.CtrlS.activated.connect(self.tabs.saveAs)
         self.zoomSlider.connectTabWidget(self.tabs)
 
     def initBlank(self):

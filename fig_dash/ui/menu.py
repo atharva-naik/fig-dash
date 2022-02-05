@@ -86,11 +86,13 @@ class DashMenu(QTabWidget):
         self.viewmenu = self.initViewMenu(**args)
         self.codemenu = self.initCodeMenu(**args)
         self.formatmenu = self.initFormatMenu(**args)
+        self.browsermenu = self.initBrowserMenu(**args)
         self.addTab(self.filemenu, "File")        
         self.addTab(self.editmenu, "Edit")
         self.addTab(self.formatmenu, "Format")
         self.addTab(self.viewmenu, "View")
-        self.addTab(self.codemenu, "Code")        
+        self.addTab(self.codemenu, "Code")
+        self.addTab(self.browsermenu, "Browser")     
         self.collapse()
         # self.currentChanged.connect(self.onTabChange)
         self.tabBarClicked.connect(self.tabToggle)
@@ -103,6 +105,11 @@ class DashMenu(QTabWidget):
         if i == self.currentIndex(): 
             self.toggle()
         else: self.expand()
+        # index of "Code" menu.
+        if i == 5-1:
+            self.cm_editor.statusbar.show()
+        else:
+            self.cm_editor.statusbar.hide()
 
     def initToggleBtn(self):
         btn = QToolButton()
@@ -179,9 +186,12 @@ class DashMenu(QTabWidget):
         browsermenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(QLabel("File Menu"))
+        self.devToolsBtn = QToolButton()
+        layout.addWidget(self.devToolsBtn)
         browsermenu.setLayout(layout)
         browsermenu.setObjectName("DashMenuTab")
+
+        return browsermenu
 
     def initEditMenu(self, **args):
         editmenu = QWidget()
@@ -213,6 +223,7 @@ class DashMenu(QTabWidget):
         # create widgets.
         self.juputer_nb = JupyterNBWidget() # jupyter notebook.
         self.cm_editor = CodeMirrorEditor() # codemirror editor.
+        self.cm_editor.statusbar.hide()
         self.git_ui = DashGitUI()
        
         CMToolbar = QWidget()

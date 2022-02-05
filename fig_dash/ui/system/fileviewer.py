@@ -831,6 +831,7 @@ class FileViewerGroup(QWidget):
         name.setStyleSheet('''
         QLabel {
             border: 0px;
+            border-right: 1px;
             padding: 6px;
             color: #69bfee;
             font-size: 16px;
@@ -1065,10 +1066,10 @@ class FileViewerEditGroup(FileViewerGroup):
             {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash"},
         ], orient="vertical")
         # self.sortWidget = QWidget()
-        self.editLayout.addStretch(1)
+        # self.editLayout.addStretch(1)
         self.editLayout.addWidget(self.renameGroup)
         self.editLayout.addWidget(self.moveGroup)
-        self.editLayout.addStretch(1)
+        # self.editLayout.addStretch(1)
         self.editWidget.setLayout(self.editLayout)
         self.layout.addStretch(1)
         self.layout.addWidget(self.editWidget)
@@ -1877,6 +1878,7 @@ class FileViewerWidget(QMainWindow):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
         self.webview = FileViewerWebView()
+        self.browser = self.webview
         self.zoom_factor = zoom_factor
         self.menu = FileViewerMenu()
         self.menu.setMaximumHeight(130)

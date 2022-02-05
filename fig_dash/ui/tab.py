@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from ast import Attribute
 import time
 import jinja2
 import getpass
@@ -7,7 +8,7 @@ from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon, QColor, QKeySequence
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -109,7 +110,7 @@ class TabSplitVBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]):
         super(TabSplitVBtn, self).__init__(parent)
         self.setObjectName("TabSplitVBtn")
-        self.setIcon(FigD.Icon("tabbar/tab_split_h.svg"))
+        self.setIcon(FigD.Icon("tabbar/tab_split_v.svg"))
         self.setStyleSheet(tab_btn_style.render())    
 
 
@@ -117,7 +118,7 @@ class TabSplitHBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]):
         super(TabSplitHBtn, self).__init__(parent)
         self.setObjectName("TabSplitHtn")
-        self.setIcon(FigD.Icon("tabbar/tab_split_v.svg"))
+        self.setIcon(FigD.Icon("tabbar/tab_split_h.svg"))
         self.setStyleSheet(tab_btn_style.render())    
 
 
@@ -212,6 +213,8 @@ class DashTabWidget(QTabWidget):
         super(DashTabWidget, self).__init__(parent)
         # tab corner widget.
         tabCornerWidget = TabCornerWidget(self)
+        tabCornerWidget.splitHBtn.clicked.connect(self.HSplitCurrentTab)
+        tabCornerWidget.splitVBtn.clicked.connect(self.VSplitCurrentTab)
         self.dropdownBtn = tabCornerWidget.dropdownBtn
         self.dropdown = tabCornerWidget.dropdown
         self.plusBtn = tabCornerWidget.plusBtn
@@ -239,24 +242,32 @@ class DashTabWidget(QTabWidget):
         self.CtrlW = QShortcut(QKeySequence("Ctrl+W"), self)
         self.CtrlW.activated.connect(lambda: self.removeTab(self.currentIndex()))
         # print(dash_tab_widget_style.render())
-    def connectWindow(self, window):
+    def partialConnectWindow(self, window):
         self.dash_window = window
 
+    def connectWindow(self, window):
+        self.dash_window = window
+        # try:
+        #     browser = self.currentWidget().browser
+        #     window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
+        # except AttributeError as e: 
+        #     print(e)
     def onTabChange(self, i: int):
         try: 
             dash_window = self.dash_window
             browser = self.widget(i).browser
-            self.dash_window.navbar.searchbar.setUrl(browser.url())
+            print(browser.url())
+            dash_window.navbar.searchbar.setUrl(browser.url())
+            # dash_window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
         except AttributeError as e: 
-            print(e)
-            return
+            print("\x1b[31;1monTabChange:\x1b[0m", e)
 
     def triggerFind(self):
         '''trigger the default response of the browser to Ctrl+F'''
         try: 
             debug_web_view_splitter = self.currentWidget()
             debug_web_view_splitter.browser.reactToCtrlF()
-        except Exception as e: print(e)
+        except Exception as e: print("\x1b[31;1mtriggerFind\x1b[0m", e)
 
     def connectDropdown(self, splitter):
         splitter.addWidget(self.dropdown)
@@ -282,11 +293,30 @@ class DashTabWidget(QTabWidget):
         browser.setSelectionStyle()
         browser.setScrollbar(scrollbar_style)
 
+    def HSplitCurrentTab(self):
+        currentSplitter = self.currentWidget()
+        qurl = currentSplitter.browser.url()
+        url = qurl.toString()
+        browser = Browser(self)
+        browser.connectTabWidget(self)
+        browser.setUrl(qurl)
+        i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
+        self.setTabText(i, "  "+url.strip())
+        browser.loadFinished.connect(
+            lambda _, i = i, browser = browser:
+				self.setupTabForBrowser(i, browser)
+        )
+        currentSplitter.addWidget(browser)
+        # self.setCurrentIndex(i)
+    def VSplitCurrentTab(self):
+        pass
+
     def showLinkOnStatusBar(self, link):
         try:
+            self.dash_window.statusBar().show()
             self.dash_window.statusBar().showMessage(link)
         except Exception as e:
-            print(e)
+            print("\x1b[31;1mshowLinkOnStatusBar\x1b[0m", e)
 
     def renameCurrentTab(self, text):
         i = self.currentIndex()
@@ -312,7 +342,8 @@ class DashTabWidget(QTabWidget):
                     CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
                 )
             )
-        except AttributeError as e: print(e)
+        except AttributeError as e: 
+            print("\x1b[31;1mhome:\x1b[0m", e)
 
     def openHome(self):
         url=FigD.static(
@@ -381,6 +412,17 @@ class DashTabWidget(QTabWidget):
         if isinstance(currentWidget, Browser):
             print(currentWidget.page())
 
+    def saveAs(self):
+        browser = self.currentWidget().browser
+        if isinstance(browser, Browser):
+            placeholder_filename = browser.page().title()+".html"
+            name, _ = QFileDialog.getSaveFileName(
+                self, 'Save document.body.outerHTML as', 
+                placeholder_filename, filter="*.html"
+            )
+            if name != "":
+                browser.saveAs(name)
+            # print(currentWidget.page())
     def setTabZoom(self, zoom):
         zoom /= 100
         try:
@@ -389,7 +431,7 @@ class DashTabWidget(QTabWidget):
             browser.setZoomFactor(zoom)
             # print(f"setting tab zoom: {zoom}")
         except AttributeError as e:
-            print(e)
+            print("\x1b[31;1msetTabZoom\x1b[0m", e)
 
     def zoomInTab(self):
         try:
@@ -405,7 +447,7 @@ class DashTabWidget(QTabWidget):
             self.titlebar.zoomSlider.setValue(100*zoomFactor)
             self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
-            print(e)
+            print("\x1b[31;1mzoomInTab\x1b[0m", e)
 
     def zoomOutTab(self):
         try:
@@ -421,7 +463,7 @@ class DashTabWidget(QTabWidget):
             self.titlebar.zoomSlider.setValue(100*zoomFactor)
             self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
-            print(e)
+            print("\x1b[31;1mzoomOutTab\x1b[0m", e)
 
     def connectTitleBar(self, titlebar):
         '''connect the title bar with tab widget so that the zoom slider and zoom label may be modified when the zoom in and zoom out buttons are clicked.'''
@@ -548,7 +590,7 @@ class TabBar(QTabBar):
         if action == renameTab:
             # print(event.x(), event.y())
             try: self.tabs.renameDialog()
-            except Exception as e: print(e)
+            except Exception as e: print("\x1b[31;1mcontextMenuEvent\x1b[0m", e)
 
     def resizeEvent(self, event):
         """Resize the widget and make sure the plus button is in the correct location."""

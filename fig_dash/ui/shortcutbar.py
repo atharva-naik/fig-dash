@@ -13,6 +13,29 @@ from fig_dash.ui.system.app import AppLauncher
 from fig_dash.api.system.audio import PulseController
 
 
+toggle_btn_style = """ 
+QToolButton {
+    color: #fff;
+    border: 4px solid orange;
+    margin: 0px;
+    padding: 10px;
+    border-radius: 29px;
+    background: transparent;
+    /* background: transparent; */
+}
+QToolButton:hover {
+    border: 0px;
+    border-top-left-radius: 0px;
+    border-top-right-radius: 29px;
+    border-bottom-left-radius: 0px;
+    border-bottom-right-radius: 29px;
+    background: qradialgradient(cx: 0.75, cy: 0.75, radius: 0.7, stop : 0.3 rgba(235, 204, 52, 255), stop : 0.6 rgba(235, 95, 52, 225));
+}
+QToolTip {
+    color: #fff;
+    border: 0px;
+    background: transparent;
+}"""
 class SocialMediaBtn(QToolButton):
     def __init__(self, site, **args) -> None:
         super(SocialMediaBtn, self).__init__(None)
@@ -130,6 +153,12 @@ class PlayPauseBtn(SystemBtn):
         self.setIcon(FigD.Icon(self.active_icon_path))
 
 
+class MoreToolbar(QToolBar):
+    def focusOutEvent(self, event):
+        super(MoreToolbar, self).focusOutEvent(event)
+        self.hide()
+
+
 class MoreBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, 
                  buttons: List[SocialMediaBtn]=[]) -> None:
@@ -149,7 +178,7 @@ class MoreBtn(QToolButton):
             background: transparent;
         }""")
         self.buttons = buttons
-        self.more_toolbar = QToolBar()
+        self.more_toolbar = MoreToolbar()
         self.more_toolbar.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
         # set icon size.
         self.more_toolbar.setIconSize(QSize(35,35))
@@ -180,7 +209,9 @@ class MoreBtn(QToolButton):
         self.setPos()
         if self.more_toolbar.isVisible():
             self.more_toolbar.hide()
-        else: self.more_toolbar.show()
+        else: 
+            self.more_toolbar.show()
+            self.more_toolbar.setFocus()
 
 
 class GShortcutBtn(QToolButton):
@@ -388,7 +419,7 @@ class ShortcutBar(QToolBar):
         # self.addWidget(self.screenshotBtn)
         self.addWidget(self.brightBtn)
         self.addWidget(self.dimBtn)
-        self.addWidget(self.appsBtn)
+        # self.addWidget(self.appsBtn)
         self.addWidget(self.moreSystemBtn)
         self.addWidget(self.volumeMuteBtn)
         self.addWidget(self.volumeDownBtn)
@@ -405,38 +436,27 @@ class ShortcutBar(QToolBar):
             tip="toggle fig-dash shortcut panel"
         )
         self.toggleBtn.setParent(parent)
-        self.toggleBtn.setStyleSheet("""
-        QToolButton {
-            color: #fff;
-            border: 4px solid orange;
-            margin: 0px;
-            padding: 10px;
-            border-radius: 29px;
-            background: transparent;
-            /* background: transparent; */
-        }
-        QToolButton:hover {
-            border: 0px;
-            border-top-left-radius: 0px;
-            border-top-right-radius: 29px;
-            border-bottom-left-radius: 0px;
-            border-bottom-right-radius: 29px;
-            background: qradialgradient(cx: 0.75, cy: 0.75, radius: 0.7, stop : 0.3 rgba(235, 204, 52, 255), stop : 0.6 rgba(235, 95, 52, 225));
-        }
-        QToolTip {
-            color: #fff;
-            border: 0px;
-            background: transparentl
-        }""")
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setOffset(0,0)
-        shadow.setColor(QColor(255, 165, 0))
+        self.appsBtn.setParent(parent)
+        self.toggleBtn.setStyleSheet(toggle_btn_style)
+        self.appsBtn.setStyleSheet(toggle_btn_style)
+
+        shadow1 = QGraphicsDropShadowEffect()
+        shadow1.setBlurRadius(10)
+        shadow1.setOffset(0,0)
+        shadow1.setColor(QColor(255, 165, 0))
+        shadow2 = QGraphicsDropShadowEffect()
+        shadow2.setBlurRadius(10)
+        shadow2.setOffset(0,0)
+        shadow2.setColor(QColor(255, 165, 0))
         
         self.toggleBtn.setIconSize(QSize(55,55))
-        self.toggleBtn.setGraphicsEffect(shadow)
+        self.toggleBtn.setGraphicsEffect(shadow1)
         self.toggleBtn.setFixedHeight(60)
         self.toggleBtn.setFixedWidth(60)
+        self.appsBtn.setIconSize(QSize(55,55))
+        self.appsBtn.setGraphicsEffect(shadow2)
+        self.appsBtn.setFixedHeight(60)
+        self.appsBtn.setFixedWidth(60)
         
         self.hide()
         self.setPos(0)
@@ -448,7 +468,8 @@ class ShortcutBar(QToolBar):
         parent = self.parent()
         if parent is None: height = 400
         else: height = parent.height()//2 
-        self.toggleBtn.move(0, height)
+        self.toggleBtn.move(0, height-35)
+        self.appsBtn.move(0, height+35)
         self.h = height
 
     def focusInEvent(self, event):
@@ -460,15 +481,18 @@ class ShortcutBar(QToolBar):
         # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
         self.hide()
         self.toggleBtn.show()
+        self.appsBtn.show()
 
     def toggle(self):
         if self.isVisible():
             self.hide()
             self.toggleBtn.show()
+            self.appsBtn.show()
             # self.toggleBtn.move(0,self.h)
         else:
             # self.toggleBtn.move(55,self.h)
             self.toggleBtn.hide()
+            self.appsBtn.hide()
             self.show()
             self.setFocus()
 

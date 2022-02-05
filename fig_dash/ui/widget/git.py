@@ -185,7 +185,8 @@ class DashGitUI(QWidget):
         self.layout.addWidget(self.edit_toolbar)
         
         self.setObjectName("DashGitUI")
-        self.setStyleSheet(dash_git_ui_style)
+        # self.setStyleSheet(dash_git_ui_style)
+        self.branch_toolbar.branchDropdown.setStyleSheet("background: #292929; color: #eb5f34; font-size: 15px;")
         # print(self.toolbar.branchDropdown.styleSheet())
         self.setLayout(self.layout)
 

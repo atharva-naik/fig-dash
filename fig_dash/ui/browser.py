@@ -2,39 +2,60 @@
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
+import sys
+import copy
 import jinja2
 import socket
 import getpass
 import pathlib
-import platform
 import subprocess
 from tqdm import tqdm
 from pprint import pprint
+from queue import Queue, Empty
 from typing import Union, Tuple
+from threading import Thread
 from requests.exceptions import MissingSchema, InvalidSchema
+# Qt5 imports.
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 from PyQt5.QtGui import QColor, QKeySequence, QIcon
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut
 # fig_dash
-from ..utils import QFetchIcon
 from fig_dash.assets import FigD
+from fig_dash.utils import QFetchIcon, collapseuser
 from fig_dash.api.browser.extensions import ExtensionManager
     
 
+ON_POSIX = 'posix' in sys.builtin_module_names
 WEBPAGE_TERMINAL_JS = '''
 var FigWebPageTerminal = document.getElementById("term-output");
 class FigWebPageTerminalHandler {
 	constructor(name, age) {
-    	this.cwd=`'''+os.getcwd()+'''`;
+    	this.cwd=`'''+collapseuser(os.getcwd())+'''`;
         this.user=`'''+getpass.getuser()+'''`;
         this.hostname=`'''+socket.gethostname()+'''`;
+    }
+    chdir(cwd) {
+        this.cwd = cwd;
     }
     clear() {
         FigWebPageTerminal.innerHTML = `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> <br>`;
     }
     writeLine(cmd, line) {
         FigWebPageTerminal.innerHTML = FigWebPageTerminal.innerHTML + `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> ${cmd} <br> ${line} <br>`
+    }
+    /* writeLs(cmd, lsArray) {
+        var line = '';
+        for (int i=0; i<lsArray.length, i++) {
+            line += '';
+        }
+        FigWebPageTerminal.innerHTML = FigWebPageTerminal.innerHTML + `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> ${cmd} <br> ${line} <br>`
+    } */
+    write(cmd, line) {
+        FigWebPageTerminal.innerHTML = FigWebPageTerminal.innerHTML + `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> ${cmd} <br>`
+    }
+    writeErrorLine(cmd, line) {
+        FigWebPageTerminal.innerHTML = FigWebPageTerminal.innerHTML + `<span style="font-weight: bold; color: #8ae234;">${this.user}@${this.hostname}</span>:<span style="font-weight: bold; color: #729fcf;">${this.cwd}</span> ${cmd} <br> <span style="color: red;">${line}</span> <br>`
     }
 }
 var FigTerminal = new FigWebPageTerminalHandler()
@@ -213,6 +234,10 @@ TermViewerHtml = jinja2.Template(r"""
     </body>
 </html>""")
 
+
+class TerminalProcessWorker(QObject):
+    def run(self):
+        pass
 
 class DevToolsBtn(QToolButton): 
     def __init__(self, parent: Union[None, QWidget]=None, 
@@ -455,13 +480,11 @@ class BrowserSearchPanel(QWidget):
         self.searched.emit(self.entry.text(), flag)
 
     def show(self):
-        print(f"\x1b[31;1mshowing: currently {self.isVisible()}\x1b[0m")
         super(BrowserSearchPanel, self).show()
-
+        # print(f"\x1b[31;1mshowing: currently {self.isVisible()}\x1b[0m")
     def hide(self):
-        print(f"\x1b[31;1mhiding: currently {self.isVisible()}\x1b[0m")
         super(BrowserSearchPanel, self).hide()
-
+        # print(f"\x1b[31;1mhiding: currently {self.isVisible()}\x1b[0m")
     def closePanel(self):
         self.entry.clear()
         self.search("")
@@ -537,6 +560,21 @@ class DebugWebView(QWebEngineView):
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def saveAs(self, name: str):
+        self.saveAsName = name
+        self.page().runJavaScript(
+            "document.body.outerHTML", 
+            self._save_as_callback
+        )
+
+    def _save_as_callback(self, content: str):
+        try:
+            with open(self.saveAsName, "w") as f:
+                print(f"writing content to {self.saveAsName}")
+                f.write(content)
+        except Exception as e:
+            print(f"\x1b[31;1m_save_as_callback\x1b[0m:", e)
 
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
@@ -713,7 +751,26 @@ class PageInfo(QWidget):
 #         if os.path.exists(path):
 #         # use custom history file
 #         elif os.p
-#         else:        
+#         else:    
+# class WrappedAction(QAction):
+#     def __init__(self, action: QAction):
+#         super(WrappedAction, self).__init__()
+#         self._original_action_ref = action
+#         self.triggered.connect(self.callback)
+
+#     def original(self):
+#         return self._original_action_ref
+
+#     def callback(self):
+#         print(f"wrapped action for {self.original.text()} triggered")
+#         self._original_action_ref.trigger()
+#         print(f"after triggering of {self.original.text()} is done")
+def inspectTriggerd(browser, inspect_action):
+    if not browser.dev_view.isVisible():
+        browser.dev_view.show()
+    inspect_action.trigger()
+
+
 class Browser(DebugWebView):
     def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25):
         super(Browser, self).__init__(parent=parent)
@@ -782,32 +839,81 @@ class Browser(DebugWebView):
     #         pprint(icon_path)
     def execTerminalCommand(self, cmd: str=""):
         cmd = cmd.strip()
+        orig_cmd = copy.deepcopy(cmd)
         if cmd == "clear":
             self.page().runJavaScript(f"FigTerminal.clear();")            
             return
         argv = cmd.split()
+        for i in range(len(argv)):
+            if argv[i].startswith("$"):
+                argv[i] = os.environ.get(
+                    argv[i].replace("$","")
+                )
+        cmd = " ".join(argv)
         if argv[0] == "cd":
-            path = cmd.strip("cd ").strip()
+            path = cmd[2:].strip()
+            path = os.path.expanduser(path)
             if path == ".": pass
             elif path == "..":
-                parent = pathlib.Path(os.getcwd()).parent
-                os.chdir(parent)
-            else: os.chdir(path)
+                path = str(pathlib.Path(os.getcwd()).parent)
+                os.chdir(path)                
+            else: 
+                try: 
+                    os.chdir(path)   
+                except FileNotFoundError:
+                    msg = f"bash: cd: {path}: No such file or directory"
+                    self.page().runJavaScript(
+                        f"FigTerminal.writeLine(`{orig_cmd}`, `{msg}`);"
+                    )                    
             self.page().runJavaScript(
-                f"FigTerminal.writeLine(`{cmd}`, ``);"
+                f"FigTerminal.write(`{orig_cmd}`, ``);"
             )
+            path = collapseuser(path)
+            self.page().runJavaScript(f"FigTerminal.chdir(`{path}`);")
             return
-        result = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        op_str = result.communicate()[0].decode('utf-8')
-        ret_code = result.returncode
-        if ret_code == 0:
+        try:
+            result = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            op_str = result.communicate()[0].decode('utf-8')
+            err_str = result.communicate()[1].decode('utf-8')
+            ret_code = result.returncode
+            if ret_code == 0:
+                self.page().runJavaScript(
+                    f"FigTerminal.writeLine(`{orig_cmd}`, `{op_str}`);"
+                )
+            else:
+                self.page().runJavaScript(
+                    f"FigTerminal.writeErrorLine(`{orig_cmd}`, `{err_str}`);"
+                )
+        except FileNotFoundError:
+            # wow: command not found
             self.page().runJavaScript(
-                f"FigTerminal.writeLine(`{cmd}`, `{op_str}`);"
+                f"FigTerminal.writeLine(`{orig_cmd}`, `{argv[0].strip()}: command not found`);"
+            )
+        except Exception as e:
+            self.page().runJavaScript(
+                f"FigTerminal.writeLine(`{orig_cmd}`, `{e}`);"
             )
 
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
-        # print(dir(self.menu))
+        
+        # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
+
+        # get the inspect action
+        inspectAction = self.menu.actions()[-1]
+        # verify that it is in fact the Inspect action.
+        if inspectAction.text() == "Inspect":
+            # create a new action that trigger the Inspect action after opening dev tools if not opened.
+            wrappedInspectAction = self.menu.addAction("Inspect")
+            wrappedInspectAction.triggered.connect(
+                lambda: inspectTriggerd(
+                    browser=self,
+                    inspect_action=inspectAction,
+                )
+            )
+            # hide original inspect action.
+            inspectAction.setVisible(False)
+        
         self.menu.setStyleSheet("background: #292929; color: #fff;")
         self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
         highlightAction = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
@@ -900,11 +1006,13 @@ class Browser(DebugWebView):
         self.append(self.url())
         try:
             # change title of the tab that contains this browser only.
-            if self != self.tabWidget.currentWidget().browser: return
+            currentWidget =  self.tabWidget.currentWidget()
+            if currentWidget is None: return 
+            if self != currentWidget.browser: return
             i = self.tabWidget.currentIndex()
             if i < 0: return
             print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
-            self.page().mainFrame().loadFinished.connect(
+            self.page().loadFinished.connect(
                 lambda: self.tabWidget.setupTabForBrowser(
                     i=i, browser=self,
                 )

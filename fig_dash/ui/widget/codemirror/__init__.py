@@ -156,13 +156,17 @@ class CodeMirrorStatus(QWidget):
         self.setObjectName("CodeMirrorStatus")
         self.setStyleSheet('''
         QWidget#CodeMirrorStatus {
-            color: #fff;
+            color: #6e6e6e;
             border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
             background: transparent;
         }
         QLabel {
-            color: #fff;
+            color: #6e6e6e;
             border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
             background: transparent;
         }''')
     def initBtn(self, icon=None, text=None):
@@ -175,8 +179,10 @@ class CodeMirrorStatus(QWidget):
         btn.setStyleSheet("background: #292929; color: #fff;")
         btn.setStyleSheet('''
         QToolButton {
-            color: #fff;
+            color: #6e6e6e;
             border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
             background: transparent;
         }
         QToolButton:hover {
@@ -209,6 +215,7 @@ class CodeMirrorViewToolbar(QWidget):
         )
         self.diffBtn.clicked.connect(self.toggleDifferences)
         self.themeDropdown = CodeMirrorThemeDropdown(themes=themes, webview=webview)
+        self.themeDropdown.setStyleSheet("background: #292929; color: #eb5f34; font-size: 15px;")
         self.themeDropdown.setFixedWidth(150)
         self.layout.addStretch(1)
         self.layout.addWidget(self.themeDropdown)
@@ -235,6 +242,7 @@ class CodeMirrorCodeToolbar(QWidget):
             tip="debug code"
         )
         self.modeDropdown = CodeMirrorModeDropdown(modes=modes, webview=webview)
+        self.modeDropdown.setStyleSheet("background: #292929; color: #eb5f34; font-size: 15px;")
         self.modeDropdown.setFixedWidth(150)
         self.layout.addStretch(1)
         self.layout.addWidget(self.webview.devToolsBtn)

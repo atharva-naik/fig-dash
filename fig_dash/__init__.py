@@ -32,7 +32,7 @@ class DashUI(QApplication):
     def __init__(self, argv, **kwargs):
         FigD(kwargs.get("resources", "resources"))
         if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-            print("high resolution")
+            # print("high resolution")
             QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
         if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
             QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)

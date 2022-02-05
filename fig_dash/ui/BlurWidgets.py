@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from cProfile import label
 import os
 from typing import Union, Tuple
 from PyQt5.QtGui import QColor, QKeySequence
@@ -17,9 +16,7 @@ class BlurLabel(QWidget):
         self.widget = QWidget()
         effect = QGraphicsBlurEffect(blurRadius=10)
         self.widget.setGraphicsEffect(effect)
-
         self._label = QLabel(text)
-
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
         self.layout.addWidget(self.widget)

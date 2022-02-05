@@ -189,6 +189,8 @@ class CellTypeBox(QComboBox):
         #         background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
         #     }''').render(IMAGE_URL=FigD.icon("widget/jupyter_nb/down.svg")
         # ))
+        self.setStyleSheet("background: #292929; color: #eb5f34; font-size: 15px;")
+
     def changeCellType(self, i: int):
         self.browser.page().runJavaScript(
             cellTypeChangeJS(i)

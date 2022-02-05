@@ -116,14 +116,15 @@ class DashWindow(QMainWindow):
         self.setGeometry(x, y, w, h)
         self.statusBar().setStyleSheet("""
         QStatusBar {
-            color: #fff;
+            color: #eb5f34;
             font-size: 16px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
             background: #000;
         }""")
-        self.statusBar().setMaximumHeight(20)
+        self.statusBar().setMaximumHeight(30)
         # self.firstResizeOver = False
         self.centralWidget = self.initCentralWidget(**kwargs)
+        self.tabs.connectWindow(self)
         self.setCentralWidget(self.centralWidget)
         self.setWindowTitle("Dash Window")
         # print(kwargs.get('icon'))
@@ -153,6 +154,7 @@ class DashWindow(QMainWindow):
         self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
         self.FnF3.activated.connect(self.incVolSlider)
+        self.statusBar().addWidget(self.menu.cm_editor.statusbar)
 
     def initVolumeSlider(self):
         from fig_dash.ui.system.audio import VolumeSlider
@@ -198,7 +200,7 @@ class DashWindow(QMainWindow):
 
     def initTabWidget(self):
         tabs = DashTabWidget(self)
-        tabs.connectWindow(self)
+        tabs.partialConnectWindow(self)
         tabs.openHome()
         # tabs.openUrl("https://github.com/atharva-naik")
         dummyBtn = QToolButton(self)
@@ -210,7 +212,7 @@ class DashWindow(QMainWindow):
         tabs.tabBar().setTabButton(0, QTabBar.RightSide, dummyBtn)
         # for i in range(5):
         #     tabs.openUrl("https://google.com")
-        tabs.connectWindow(self)
+        # tabs.connectWindow(self)
         # tabs.openUrl("https://google.com")
         # tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         return tabs
