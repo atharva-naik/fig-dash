@@ -218,6 +218,26 @@ main .boxes.green div.selected {
        border: 2px solid rgba(235, 95, 52, 0.075); */
 }
 
+.slider {
+    -webkit-appearance: none;
+    width: 100%;
+    border-radius: 4px;
+    height: 5px;
+    /* border: 1px solid #bdc3c7; */
+    background-color: rgb(238,238,238);
+background: radial-gradient(circle, rgba(238,238,238,1) 21%, rgba(187,187,187,1) 50%, rgba(238,238,238,1) 81%);; 
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  background-color: #ecf0f1;
+  border: 1px solid #bdc3c7;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+
 /* main .boxes.green div.selected.item_name {
     background: hsl(100, 80%, 65%);
     border: 2px solid rgba(0, 0, 0, 0.075);
@@ -249,6 +269,24 @@ main section.demo .info p {
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
+}
+
+.style-panel {
+    text-align: center; 
+    font-size: 12px; 
+    color: white; 
+    font-weight: bold; 
+    display: flex; 
+    justify-content: center;
+    background-color: rgba(29, 29, 29, 0.5);
+    backdrop-filter: blur(20px);
+}
+
+.attribute-panel {
+    width: 140px; 
+    height: 50px;
+    float: left;  
+    margin: 10px;
 }
 
 .key {
@@ -598,44 +636,44 @@ FileViewerHtml = jinja2.Template(r'''
             <section class="demo">
                 <section id="orchard" class="boxes green"></section>
             </section>
-        </main>
-        <div id="background_style_panel_1" style="text-align: center; font-size: 12px; color: #000; font-weight: bold; display: flex; justify-content: center;">
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>gray scale</span><br>
-                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setGrayScale(this.value/100)">
+            <div class="style-panel" id="background_style_panel_1">
+                <div class="attribute-panel">
+                    <span>gray scale</span><br>
+                    <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setGrayScale(this.value/100)">
+                </div>
+                <div class="attribute-panel">
+                    <span>contrast</span><br>
+                    <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setContrast(this.value/100)">
+                </div>
+                <div class="attribute-panel">
+                    <span>invert</span><br>
+                    <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setInvert(this.value/100)">
+                </div>
+                <div class="attribute-panel">
+                    <span>opacity</span><br>
+                    <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
+                </div>
             </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>contrast</span><br>
-                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setContrast(this.value/100)">
-            </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>invert</span><br>
-                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setInvert(this.value/100)">
-            </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>opacity</span><br>
-                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
-            </div>
-        </div>
 
-        <div id="background_style_panel_2" style="text-align: center; font-size: 12px; color: #000; font-weight: bold; display: flex; justify-content: center;">
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>saturation</span><br>
-                <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
+            <div class="style-panel" id="background_style_panel_2">
+                <div class="attribute-panel">
+                    <span>saturation</span><br>
+                    <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
+                </div>
+                <div class="attribute-panel">
+                    <span>blur radius</span><br>
+                    <input type="range" min="1" max="30" value="2" class="slider" onchange="oa.setBlurRadius(this.value)">
+                </div>
+                <div class="attribute-panel">
+                    <span>brightness</span><br>
+                    <input type="range" min="1" max="100" value="50" class="slider" onchange="oa.setBrightness(this.value/100)">
+                </div>
+                <div class="attribute-panel">
+                    <span>sepia</span><br>
+                    <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
+                </div>
             </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>blur radius</span><br>
-                <input type="range" min="1" max="30" value="2" class="slider" onchange="oa.setBlurRadius(this.value)">
-            </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>brightness</span><br>
-                <input type="range" min="1" max="100" value="50" class="slider" onchange="oa.setBrightness(this.value/100)">
-            </div>
-            <div style="width: 140px; float: left; height: 50px; background: rgba(255, 255, 255, 0.5); margin: 10px">
-                <span>sepia</span><br>
-                <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
-            </div>
-        </div>
+        </main>
 
         <script>{{ WEBCHANNEL_JS }}</script>
         <script>{{ FIG_DESKTOP_NOTIF_JS }}</script>

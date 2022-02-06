@@ -7,7 +7,7 @@ from typing import Union, Tuple, List
 # Qt imports.
 # from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *
-from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
+from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize 
 from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QStatusBar, QShortcut
 # fig-dash imports.
