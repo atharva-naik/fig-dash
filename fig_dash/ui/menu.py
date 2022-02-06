@@ -106,6 +106,10 @@ class DashMenu(QTabWidget):
             self.toggle()
         else: self.expand()
         # index of "Code" menu.
+        if i == 1-1:
+            self.fileviewer.statusbar.show()
+        else:
+            self.fileviewer.statusbar.hide()
         if i == 5-1:
             self.cm_editor.statusbar.show()
         else:

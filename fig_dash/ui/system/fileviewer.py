@@ -3,6 +3,8 @@
 # the fig-dash fileviewer is known as the "orchard".
 import os
 import jinja2
+import socket
+import getpass
 from pathlib import Path
 from typing import Union, Tuple
 # fig-dash imports.
@@ -666,6 +668,76 @@ class EventHandler(QObject):
         new_name = new_name.strip()
         self.fileviewer.renameItem(id, new_name)
         
+
+class FileViewerStatus(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                 webview: Union[DebugWebView, None]=None):
+        super(FileViewerStatus, self).__init__(parent)    
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.webview = webview
+        self.layout.setSpacing(20)    
+        self.selected = self.initBtn(icon="file.svg", text="selected: None") 
+        self.num_items = self.initBtn(icon="item.png", text=" 0") 
+        self.file_size = self.initBtn(icon="storage.svg", text="None")
+        self.breakdown = QLabel("0 items: 0 files, 0 folders, 0 hidden")
+        self.user = self.initBtn(icon="user.svg", text=getpass.getuser())
+        self.hostname = self.initBtn(icon="server.svg", text=socket.gethostname())
+        # add widgets.
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.breakdown)
+        self.layout.addWidget(self.user)
+        self.layout.addWidget(self.hostname)
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.selected)
+        self.layout.addWidget(self.num_items)
+        self.layout.addWidget(self.file_size)
+        self.layout.addStretch(1)
+        # set layout and style
+        self.setLayout(self.layout)
+        self.setObjectName("CodeMirrorStatus")
+        self.setStyleSheet('''
+        QWidget#CodeMirrorStatus {
+            color: #6e6e6e;
+            border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
+            background: transparent;
+        }
+        QLabel {
+            color: #6e6e6e;
+            border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
+            background: transparent;
+        }''')
+
+    def updateSelected(self):
+        pass
+        
+    def initBtn(self, icon=None, text=None):
+        btn = QToolButton(self)
+        if icon: 
+            icon = os.path.join("system/fileviewer", icon)
+            btn.setIcon(FigD.Icon(icon))
+        if text: btn.setText(text)
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setStyleSheet("background: #292929; color: #fff;")
+        btn.setStyleSheet('''
+        QToolButton {
+            color: #6e6e6e;
+            border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            border: 0px;
+            background: rgba(0, 0, 0, 0.5);
+        }''')
+
+        return btn
+
 
 class FileViewerWebView(DebugWebView):
     '''fileviewer web view'''
@@ -1906,6 +1978,8 @@ class FileViewerWidget(QMainWindow):
         self.folderbar.setFixedHeight(34)
         self.sidebar = FileViewerSideBar()
         self.sidebar.hide()
+        # statusbar.
+        self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
         self.clipboard = args.get("clipboard")
         

@@ -9,7 +9,6 @@ from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize, QPoint
 from PyQt5.QtWidgets import QToolBar, QToolButton, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from fig_dash.assets import FigD
-from fig_dash.ui.system.app import AppLauncher
 from fig_dash.api.system.audio import PulseController
 
 
@@ -273,6 +272,43 @@ def windowSwitcher():
     print("exited")
 
 
+class AppLauncher(QToolBar):
+    def __init__(self, parent: Union[QWidget, None]=None) -> None:
+        super(AppLauncher, self).__init__(parent)
+        self.metaBtns = {}
+        self.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
+        # set icon size.
+        self.setIconSize(QSize(35,35))
+        self.setMovable(False)
+        self.hide()
+
+    def connectMetaBar(self, **btns): 
+        for key, value in btns.items():
+            self.metaBtns[key] = value
+
+    def focusInEvent(self, event):
+        # print(f"\x1b[33mShortcutSidebar: focus in\x1b[0m")
+        super(AppLauncher, self).focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        super(AppLauncher, self).focusOutEvent(event)
+        # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
+        self.hide()
+        for btn in self.metaBtns.values():
+            btn.show()
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+            for btn in self.metaBtns.values():
+                btn.show()
+        else:
+            for btn in self.metaBtns.values():
+                btn.hide()
+            self.show()
+            self.setFocus()
+
+
 class ShortcutBar(QToolBar):
     '''[summary]
     ## Purpose
@@ -284,7 +320,6 @@ class ShortcutBar(QToolBar):
     '''
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
         super(ShortcutBar, self).__init__("Shortcuts", parent)
-        self.app_launcher = AppLauncher()
         # desktop utilties.
         import pyautogui
         self.desktopBtn = SystemBtn(
@@ -298,10 +333,6 @@ class ShortcutBar(QToolBar):
         self.screenshotBtn = SystemBtn(
             "screenshot", tip="print screen (screenshot)", 
             callback=lambda : pyautogui.hotkey("prtscr")
-        )
-        self.appsBtn = SystemBtn(
-            "apps", tip="open app launcher",
-            callback=self.app_launcher.show,
         )
         self.dimBtn = SystemBtn(
             "dim", tip="decrease screen brightness", 
@@ -435,36 +466,54 @@ class ShortcutBar(QToolBar):
             "fig", callback=self.toggle,
             tip="toggle fig-dash shortcut panel"
         )
-        self.toggleBtn.setParent(parent)
-        self.appsBtn.setParent(parent)
-        self.toggleBtn.setStyleSheet(toggle_btn_style)
-        self.appsBtn.setStyleSheet(toggle_btn_style)
-
-        shadow1 = QGraphicsDropShadowEffect()
-        shadow1.setBlurRadius(10)
-        shadow1.setOffset(0,0)
-        shadow1.setColor(QColor(255, 165, 0))
-        shadow2 = QGraphicsDropShadowEffect()
-        shadow2.setBlurRadius(10)
-        shadow2.setOffset(0,0)
-        shadow2.setColor(QColor(255, 165, 0))
-        
-        self.toggleBtn.setIconSize(QSize(55,55))
-        self.toggleBtn.setGraphicsEffect(shadow1)
-        self.toggleBtn.setFixedHeight(60)
-        self.toggleBtn.setFixedWidth(60)
-        self.appsBtn.setIconSize(QSize(55,55))
-        self.appsBtn.setGraphicsEffect(shadow2)
-        self.appsBtn.setFixedHeight(60)
-        self.appsBtn.setFixedWidth(60)
-        
+        self.toggleBtn = self.initMetaBtn(
+            icon="fig", parent=parent, callback=self.toggle,
+            tip="toggle fig-dash shortcut panel",
+        )
+        self.app_launcher = AppLauncher(parent)
+        # intialization of appsBtn depends on initialization of app launcher
+        # as the appsBtn needs the app launcher show method as it's 
+        self.appsBtn = self.initMetaBtn(
+            icon="apps", tip="open app launcher",
+            callback=self.app_launcher.toggle,
+            parent=parent
+        )
+        self.app_launcher.connectMetaBar(
+            appsBtn=self.appsBtn,
+            toggleBtn=self.toggleBtn,
+        )
         self.hide()
-        self.setPos(0)
+        self.setMetaBarPos(0)
         self.volumeUpBtn.setCallback(self.volume_backend.increase)
         self.volumeDownBtn.setCallback(self.volume_backend.decrease)
         # self.toggleBtn.setFixedSize(QSize(50,50))
         # print("parent:", parent)
-    def setPos(self, w=55):
+    def initMetaBtn(self, **args):
+        '''meta buttons constitute the meta launcher'''
+        w = args.get("width", 60)
+        h = args.get("height", 60)
+        tip = args.get("tip", "a tip")
+        icon = args.get("icon")
+        parent = args.get("parent")
+        callback = args.get("callback")
+        icon_size = args.get("icon_size", (55,55))
+        # shadow effect.
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(10)
+        shadow.setOffset(0,0)
+        shadow.setColor(QColor(255, 165, 0))
+
+        metaBtn = SystemBtn(icon, callback=callback, tip=tip)
+        metaBtn.setParent(parent)
+        metaBtn.setStyleSheet(toggle_btn_style)
+        metaBtn.setIconSize(QSize(*icon_size))
+        metaBtn.setGraphicsEffect(shadow)
+        metaBtn.setFixedHeight(h)
+        metaBtn.setFixedWidth(w)
+        
+        return metaBtn
+    
+    def setMetaBarPos(self, w=55):
         parent = self.parent()
         if parent is None: height = 400
         else: height = parent.height()//2 

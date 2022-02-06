@@ -144,6 +144,7 @@ class DashWindow(QMainWindow):
         self.tabs.connectTitleBar(self.titlebar)
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar)
+        self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.app_launcher)
         # install event filter.
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
@@ -154,6 +155,7 @@ class DashWindow(QMainWindow):
         self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
         self.FnF3.activated.connect(self.incVolSlider)
+        self.statusBar().addWidget(self.menu.fileviewer.statusbar)
         self.statusBar().addWidget(self.menu.cm_editor.statusbar)
 
     def initVolumeSlider(self):
@@ -310,7 +312,7 @@ class DashWindow(QMainWindow):
     #         geo.moveTopLeft(geo.topLeft() + diff)
     #         dropdown.setGeometry(geo)
     def resizeEvent(self, event):
-        self.shortcutbar.setPos()
+        self.shortcutbar.setMetaBarPos()
         self.shortcutbar.morePagesBtn.setPos()
         self.shortcutbar.moreSocialBtn.setPos()
         self.shortcutbar.moreSystemBtn.setPos()

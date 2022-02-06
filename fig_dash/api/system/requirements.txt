@@ -1,3 +1,4 @@
 chime
 psutil
+pydpkg
 pulsectl
