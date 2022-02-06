@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # the fig-dash fileviewer is known as the "orchard".
+from genericpath import isfile
 import os
 import jinja2
 import socket
@@ -66,7 +67,6 @@ body {
     background-position: center;
     background-size: cover;
     background-attachment: fixed;
-    backdrop-filter: blur(2px) brightness(50%);
 }
 
 *::-webkit-scrollbar {
@@ -139,6 +139,7 @@ h2 {
 
 main {
     width: 100%;
+    backdrop-filter: blur(2px) brightness(50%);
     /* max-width: 50em; */
     /* margin: 1.5em auto; */
     /* padding-bottom: 10rem; */
@@ -384,17 +385,17 @@ function itemDrop(element, event) {
 
 class OrchardAppearance {
     constructor() {
-        var body = document.body
+        var body = document.getElementsByTagName("main")[0]; // document.getElementByTagName();
         this.style = window.getComputedStyle(body);
     }
     get(attr) {
-        var body = document.body
+        var body = document.getElementsByTagName("main")[0];
         this.style = window.getComputedStyle(body);
         
         return this.style.getPropertyValue(attr);
     }
     set(attr, value) {
-        document.body.style.setProperty(attr, value);
+        document.getElementsByTagName("main")[0].style.setProperty(attr, value);
     }
     setFilter(filter, val) {
         var filter_str = this.get('backdrop-filter');
@@ -650,12 +651,12 @@ class EventHandler(QObject):
 
     @pyqtSlot(str)
     def sendClickedItem(self, path: str):
-        print(f"selected path {path}")
+        # print(f"selected path {path}")
         self.fileviewer.updateSelection(path)
 
     @pyqtSlot(str)
     def sendOpenRequest(self, path: str):
-        print(f"opened path {path}")
+        # print(f"opened path {path}")
         self.fileviewer.open(path)
 
     @pyqtSlot(str)
@@ -677,12 +678,12 @@ class FileViewerStatus(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = webview
         self.layout.setSpacing(20)    
-        self.selected = self.initBtn(icon="file.svg", text="selected: None") 
-        self.num_items = self.initBtn(icon="item.png", text=" 0") 
-        self.file_size = self.initBtn(icon="storage.svg", text="None")
-        self.breakdown = QLabel("0 items: 0 files, 0 folders, 0 hidden")
-        self.user = self.initBtn(icon="user.svg", text=getpass.getuser())
-        self.hostname = self.initBtn(icon="server.svg", text=socket.gethostname())
+        self.selected = self.initBtn(icon="file.svg", text=" selected: None") # name of seelcted item.
+        self.num_items = self.initBtn(icon="item.png", text="(contains 0 items)") # number of items in selected item 
+        self.file_size = self.initBtn(icon="storage.svg", text=" 0kB") # size of selected item
+        self.breakdown = QLabel("0 items (0 files, 0 folders, 0 hidden)")
+        self.user = self.initBtn(icon="user.svg", text=" "+getpass.getuser())
+        self.hostname = self.initBtn(icon="server.svg", text=" "+socket.gethostname())
         # add widgets.
         self.layout.addStretch(1)
         self.layout.addWidget(self.breakdown)
@@ -712,9 +713,27 @@ class FileViewerStatus(QWidget):
             background: transparent;
         }''')
 
-    def updateSelected(self):
-        pass
-        
+    def updateSelected(self, **data):
+        size = data.get("size", 0)
+        icon = data.get("icon", "")
+        name = data.get("name", "")
+        items = data.get("items", 0)
+        self.selected.setText(f" selected: {name}")
+        self.file_size.setText(f" {size}")
+        if icon != "":
+            self.selected.setIcon(QIcon(icon))
+        if items != 0:
+            self.num_items.setText(f"(contains {items} items)")
+        else:
+            self.num_items.setText("")
+
+    def updateBreakdown(self, **data):
+        items = data.get("items", 0)
+        files = data.get("files", 0)
+        hidden = data.get("hidden", 0)
+        folders = data.get("folders", 0)
+        self.breakdown.setText(f"{items} items ({files} files, {folders} folders, {hidden} hidden)")
+
     def initBtn(self, icon=None, text=None):
         btn = QToolButton(self)
         if icon: 
@@ -1248,7 +1267,7 @@ class XdgOpenDropdown(QComboBox):
 
     def getAppsList(self, mimetype: str):
         '''get list of apps available for a given mimetype.'''
-        apps = self.mime_to_apps[mimetype]
+        apps = self.mime_to_apps(mimetype)
         # print(mimetype)
         self.desktop_files = []
         app_names = []
@@ -2198,6 +2217,24 @@ class FileViewerWidget(QMainWindow):
         self.listed_filenames = listed
         self.listed_full_paths = full_paths
         self.listed_hidden_files = hidden_flag_list
+        file_count = 0
+        folder_count = 0 
+        hidden_count = 0
+        for path in full_paths:
+            if os.path.isdir(path):
+                folder_count += 1
+            elif os.path.isfile(path):
+                file_count += 1
+        for value in hidden_flag_list:
+            if value == False: continue
+            hidden_count += 1
+        # get number of items, folder, files and hidden
+        self.statusbar.updateBreakdown(
+            files=file_count,
+            items=len(self.listed_filenames),
+            hidden=hidden_count,
+            folders=folder_count,
+        )
 
         for path in full_paths:
             self.loaded_file_items.append({
@@ -2263,13 +2300,12 @@ class FileViewerWidget(QMainWindow):
                     continue
                 path = "/usr/share/icons/breeze/mimetypes/32/text-plain.svg"
                 icon_paths.append(QUrl.fromLocalFile(path).toString())     
-        def chunk_string(string, k=12):
-            result = []
-            for i in range(0, len(string), k):
-                result.append(string[i:i+k])
+        # def chunk_string(string, k=12):
+        #     result = []
+        #     for i in range(0, len(string), k):
+        #         result.append(string[i:i+k])
 
-            return result
-
+        #     return result
         def format_listed(prelisted):
             listed = []
             for rec in prelisted:
@@ -2316,6 +2352,16 @@ class FileViewerWidget(QMainWindow):
         self.menu.opengroup.updateMimeBtn(
             mimetype=mimetype, 
             icon=icon, path=item
+        )
+        file_info = QFileInfo(item)
+        name = file_info.fileName()
+        if file_info.isDir():
+            items = len(os.listdir(item)) 
+        else: items = 0
+        size = file_info.size()
+        self.statusbar.updateSelected(
+            items=items, name=name,
+            icon=icon, size=size,
         )
 
     def keyPressEvent(self, event):

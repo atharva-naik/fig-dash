@@ -963,7 +963,9 @@ class Browser(DebugWebView):
         from pathlib import Path
         from pprint import pprint
 
-        filename = e.mimeData().text().strip()
+        mimeData = e.mimeData()
+        print(mimeData.formats())
+        filename = mimeData.text().strip()
         filename = filename.replace("file://", "")
         mimetype = self.mime_database.mimeTypeForFile(filename).name()
         print(f"dragEvent for {'folder' if os.path.isdir(filename) else 'file'}: {filename}, with mimetype: {mimetype}")
