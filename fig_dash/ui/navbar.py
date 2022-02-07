@@ -26,6 +26,27 @@ QLineEdit {
 QLabel {
     font-size: 16px;
 }''')
+def getGoogleAutoCompletion(query: str) -> list:
+    """[summary]
+    ## Google AutoCompletion querying function 
+    very rudimentary version of Google's autocompletion feature. (missing error handling/not tested for edge cases)
+    Args:
+        query (str): [The query for which autcompletion results need to be retrieved]
+
+    Returns:
+        list: [suggestions returned by the API]
+    """
+    import json
+    import requests
+    import urllib.parse
+
+    query_enc = urllib.parse.quote_plus(query)
+    url = f"http://suggestqueries.google.com/complete/search?client=firefox&q={query_enc}"
+    response = json.loads(requests.get(url).text)
+
+    return response[1]
+
+
 class DashSearchBar(QLineEdit):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(DashSearchBar, self).__init__(parent)
@@ -91,10 +112,14 @@ class DashSearchBar(QLineEdit):
         self.setFixedHeight(28)
         self.label.move(30, 0)
         self.label.hide()
-        self.textEdited.connect(self.formatQueryOrUrl)
+        self.textEdited.connect(self.updateCompleter)
         self.returnPressed.connect(self.search)
         # completion for search.
-        self.completer = QCompleter()
+        self.suggestions = ["Apple", "Alps", "Berry", "Cherry"]
+        self.completer = QCompleter(self.suggestions)
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        # self.completer.setCompletionMode(QCompleter.PopupCompletion)
+        # self.completer.setFilterMode(Qt.MatchContains)
         self.searchHistory = []
         self.setCompleter(self.completer)
 
@@ -144,8 +169,8 @@ class DashSearchBar(QLineEdit):
     def mousePressEvent(self, event):
         '''select text on click'''
         super(DashSearchBar, self).mousePressEvent(event)
-        self.selectAll()
         self.setCursorPosition(0)
+        self.selectAll()
 
     def focusInEvent(self, event):
         super(DashSearchBar, self).focusInEvent(event)
@@ -189,8 +214,11 @@ class DashSearchBar(QLineEdit):
             self.searchHistory.append(url)
             tabs.loadUrlForIndex(i, url)
         # self.completer = QCompleter(self.searchHistory)
-    def formatQueryOrUrl(self, query_or_url: str):
-        pass
+    def updateCompleter(self):
+        print("autocompleting")
+        # self.completer.setModel(QStringListModel())
+    # def formatQueryOrUrl(self, query_or_url: str):
+    #     pass
         # qou = UrlOrQuery(query_or_url)
         # if qou.isUrl: 
         #     if qou.protocol == "http": 

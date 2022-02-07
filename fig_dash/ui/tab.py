@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from ast import Attribute
 import time
 import jinja2
 import getpass
 from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon, QColor, QKeySequence
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog
 # fig-dash imports.
 from ..utils import collapseuser
@@ -290,8 +289,41 @@ class DashTabWidget(QTabWidget):
             browser.setWordCount()
             browser.setIcon(tabs=self, i=i)
             dash_window.navbar.searchbar.setUrl(browser.url())
+        self._tab_tooltip_setter_data = (browser, i)
         browser.setSelectionStyle()
         browser.setScrollbar(scrollbar_style)
+        browser.page().runJavaScript(
+            "document.body.outerHTML",
+            self._tab_tooltip_setter,
+        )
+
+    def _tab_tooltip_setter(self, rendered_html):
+        i = self._tab_tooltip_setter_data[1]
+        browser = self._tab_tooltip_setter_data[0]
+        # screenshot = self.screen().grabWindow(browser.winId())
+        screenshot = browser.getPageScreenshot()
+        screenshot = screenshot.scaled(
+            400, 400, 
+            aspectRatioMode=Qt.KeepAspectRatio,
+            transformMode=Qt.SmoothTransformation
+        )
+        # convert pixmap to base 64 in memory.
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        screenshot.save(buffer, "PNG")
+        encoded = buffer.data().toBase64()
+        # create the tooltip
+        tabToolTip = f"""
+        <div style='text-align: center'>
+            <h3 style='font-weight: bold;'>{browser.page().title()}</h3> 
+            <br>
+            <span style='color: #6e6e6e;'>{browser.url().host()}</span>
+        </div>
+        <br>
+        <img src="data:image/png;base64,{bytes(encoded).decode()}">
+        """
+        # print(tabToolTip)
+        self.setTabToolTip(i, tabToolTip)
 
     def HSplitCurrentTab(self):
         currentSplitter = self.currentWidget()

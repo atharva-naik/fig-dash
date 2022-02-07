@@ -462,10 +462,6 @@ class ShortcutBar(QToolBar):
         self.setIconSize(QSize(35,35))
         # make unmovable.
         self.setMovable(False)
-        self.toggleBtn = SystemBtn(
-            "fig", callback=self.toggle,
-            tip="toggle fig-dash shortcut panel"
-        )
         self.toggleBtn = self.initMetaBtn(
             icon="fig", parent=parent, callback=self.toggle,
             tip="toggle fig-dash shortcut panel",

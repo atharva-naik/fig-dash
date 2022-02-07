@@ -17,7 +17,7 @@ from threading import Thread
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
-from PyQt5.QtGui import QColor, QKeySequence, QIcon
+from PyQt5.QtGui import QColor, QKeySequence, QIcon, QPixmap
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut
 # fig_dash
@@ -560,6 +560,13 @@ class DebugWebView(QWebEngineView):
         self.dev_view.hide()
         # self.py_dev_view.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def getPageScreenshot(self):
+        size = self.contentsRect()
+        img = QPixmap(size.width(), size.height())
+        self.render(img)
+        # print(img)
+        return img
 
     def saveAs(self, name: str):
         self.saveAsName = name

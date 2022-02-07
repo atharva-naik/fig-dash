@@ -37,6 +37,15 @@ class DashUI(QApplication):
         if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
             QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         super(DashUI, self).__init__(argv)
+        self.setStyleSheet("""
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            padding: 5px;
+            font-size:  17px;
+            background: #000;
+            font-family: 'Be Vietnam Pro', sans-serif;
+        }""")
         QFontDatabase.addApplicationFont(
             FigD.font("datetime/digital-7.ttf")
         )
