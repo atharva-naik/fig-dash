@@ -137,6 +137,12 @@ h2 {
     color: var(--c-text);
 }
 
+footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%
+}
+
 main {
     width: 100%;
     backdrop-filter: blur(2px) brightness(50%);
@@ -279,7 +285,7 @@ main section.demo .info p {
     display: flex; 
     justify-content: center;
     background-color: rgba(29, 29, 29, 0.8);
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(3px);
 }
 
 .attribute-panel {
@@ -636,6 +642,18 @@ FileViewerHtml = jinja2.Template(r'''
             <section class="demo">
                 <section id="orchard" class="boxes green"></section>
             </section>
+            <br><br><br><br>
+            <br><br><br><br>
+            <br><br><br><br>
+            <br><br><br><br>
+            <br><br><br><br>
+        </main>
+        <script>{{ WEBCHANNEL_JS }}</script>
+        <script>{{ FIG_DESKTOP_NOTIF_JS }}</script>
+        <script>{{ FIG_FILE_MANAGER_JS }}</script>
+        <script>{{ FILEVIEWER_CJS }}</script>
+        <script type="module">{{ FILEVIEWER_MJS }}</script>
+        <footer>
             <div class="style-panel" id="background_style_panel_1">
                 <div class="attribute-panel">
                     <span>gray scale</span><br>
@@ -653,9 +671,7 @@ FileViewerHtml = jinja2.Template(r'''
                     <span>opacity</span><br>
                     <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setOpacity(this.value/100)">
                 </div>
-            </div>
-
-            <div class="style-panel" id="background_style_panel_2">
+                <br>
                 <div class="attribute-panel">
                     <span>saturation</span><br>
                     <input type="range" min="1" max="100" value="100" class="slider" onchange="oa.setSaturate(this.value/100)">
@@ -673,13 +689,7 @@ FileViewerHtml = jinja2.Template(r'''
                     <input type="range" min="1" max="100" value="0" class="slider" onchange="oa.setSepia(this.value/100)">
                 </div>
             </div>
-        </main>
-
-        <script>{{ WEBCHANNEL_JS }}</script>
-        <script>{{ FIG_DESKTOP_NOTIF_JS }}</script>
-        <script>{{ FIG_FILE_MANAGER_JS }}</script>
-        <script>{{ FILEVIEWER_CJS }}</script>
-        <script type="module">{{ FILEVIEWER_MJS }}</script>
+        </footer>
     </body>
 </html>''')
 class EventHandler(QObject):
@@ -724,11 +734,11 @@ QLabel {
     font-size: 16px;
 }''')
 class FileViewerSearchBar(QLineEdit):
-    def __init__(self, parent: Union[QWidget, None]):
+    def __init__(self, parent: Union[QWidget, None]=None):
         super(FileViewerSearchBar, self).__init__(parent)
         # search action.
         self.searchAction = QAction()
-        self.searchAction.setIcon(FigD.Icon("fileviewer/search.svg"))
+        self.searchAction.setIcon(FigD.Icon("system/fileviewer/search.svg"))
         self.addAction(self.searchAction, self.LeadingPosition)
 
         self.setStyleSheet(fileviewer_searchbar_style.render(
@@ -1019,7 +1029,8 @@ class FileViewerGroup(QWidget):
             layout = QHBoxLayout()
         elif orient == "vertical":
             layout = QVBoxLayout()
-        if spacing:
+        if spacing is not None:
+            # print("setting spacing")
             layout.setSpacing(spacing)
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
@@ -1261,31 +1272,31 @@ class FileViewerViewGroup(FileViewerGroup):
             {"icon": "gridview.svg", "size": (25,25), "tip": "tile view"},
             {"icon": "list_view.svg", "size": (20,20), "tip": "list view"},
             {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view"},
+            {"icon": "toggle_hidden_files.png", "size": (23,23), "tip": "toggle visibility of hidden files"},
         ])
         # hidden files, folder bar visibility, side bar visibility, search bar visibility.
         self.visibilityGroup = self.initBtnGroup([
-            {"icon": "toggle_hidden_files.png", "size": (23,23), "tip": "toggle visibility of hidden files"},
-            {"icon": "toggle_folderbar.svg", "size": (30,30), "tip": "toggle visibility of folder bar"},
-            {"icon": "toggle_searchbar.svg", "size": (23,23), "tip": "toggle visibility of search bar"},
-            {"icon": "toggle_sidebar.svg", "size": (23,23), "tip": "toggle visibility of sidebar"},
+            {"icon": "toggle_folderbar.svg", "size": (35,35), "tip": "toggle visibility of folder bar"},
+            {"icon": "toggle_searchbar.svg", "size": (27,27), "tip": "toggle visibility of search bar"},
+            {"icon": "toggle_sidebar.svg", "size": (27,27), "tip": "toggle visibility of sidebar"},
         ])
-        self.hiddenFilesBtn = self.visibilityGroup.btns[0]
-        self.folderbarBtn = self.visibilityGroup.btns[1]
-        self.searchbarBtn = self.visibilityGroup.btns[2]
-        self.sidebarBtn = self.visibilityGroup.btns[3]
+        self.hiddenFilesBtn = self.layoutGroup.btns[-1]
+        self.folderbarBtn = self.visibilityGroup.btns[0]
+        self.searchbarBtn = self.visibilityGroup.btns[1]
+        self.sidebarBtn = self.visibilityGroup.btns[2]
         self.arrangeGroup = self.initBtnGroup([
             {"icon": "sidebar_left.svg", "size": (25,25), "tip": "sidebar to the left"},
             {"icon": "sidebar_right.svg", "size": (25,25), "tip": "sidebar to the right"},
-        ])     
+        ], orient="vertical", spacing=0)     
+        self.viewLayout.addStretch(1)
         self.viewLayout.addWidget(self.layoutGroup)
         self.viewLayout.addWidget(self.visibilityGroup)
-        self.viewLayout.addWidget(self.arrangeGroup)
-        self.viewLayout.addStretch(1)
+        # self.viewLayout.addWidget(self.arrangeGroup)
         self.viewWidget.setLayout(self.viewLayout)
-        self.layout.addStretch(1)
+        # self.layout.addStretch(1)
         self.layout.addWidget(self.viewWidget)
-        self.layout.addStretch(1)    
-
+        self.layout.addWidget(self.arrangeGroup)
+        # self.layout.addStretch(1)    
     def connectWidget(self, widget):
         self.widget = widget
         self.folderbarBtn.clicked.connect(
@@ -1343,6 +1354,13 @@ class XdgOpenDropdown(QComboBox):
         self.currentIndexChanged.connect(self.selChanged)
         self.setStyleSheet("background: #292929; color: #69bfee; font-size: 15px;")
 
+    def connectWidget(self, widget: QWidget):
+        
+        self.widget = widget
+        self.clearBtn.clicked.connect(widget.clearSelection)
+        self.selectAllBtn.clicked.connect(widget.selectAll)
+        self.invertBtn.clicked.connect(widget.invertSelection)
+
     def getAppsList(self, mimetype: str):
         '''get list of apps available for a given mimetype.'''
         apps = self.mime_to_apps(mimetype)
@@ -1395,7 +1413,7 @@ class FileViewerOpenGroup(FileViewerGroup):
             'tip': "open in terminal"},
             {"icon": "browser.svg", "size":(40,40),
             'tip': "open in browser"},
-        ], orient="vertical",)
+        ], orient="vertical", spacing=0)
         self.terminalBtn = self.openerGroup.btns[0]
         self.browserBtn = self.openerGroup.btns[1]
 
@@ -1483,26 +1501,30 @@ class FileViewerShareGroup(FileViewerGroup):
             'tip': "share using bluetooth"},
             {"icon": "email.svg", "size":(20,20),
             'tip': "share file as email attachment"},
-            {"copy": "copy_content.svg", "size":(20,20),
+            {"icon": "copy.svg", "size":(20,20),
             'tip': "copy file contents to clipboard"}
         ])
         self.appsGroup1 = self.initBtnGroup([
-            {"icon": "youtube.png", "size":(30,30),
+            {"icon": "youtube.png", "size":(28,28),
             'tip': "share video on youtube"},
-            {"icon": "twitter.png", "size":(30,30),
+            {"icon": "twitter.png", "size":(35,35),
             'tip': "share on twitter"},
-            {"icon": "reddit.png", "size":(30,30),
+            {"icon": "reddit.png", "size":(32,32),
             'tip': "share on reddit"},
         ])
         self.appsGroup2 = self.initBtnGroup([
-            {"icon": "whatsapp.png", "size":(30,30),
+            {"icon": "facebook.png", "size":(32,32),
+            'tip': "share on facebook"},
+            {"icon": "instagram.png", "size":(32,32),
+            'tip': "share image on instagram"},
+            {"icon": "whatsapp.png", "size":(32,32),
             'tip': "share video on youtube"},
         ])
         self.shareWidget = QWidget()
         self.shareLayout = QVBoxLayout()
         # self.shareLayout.setSpacing(0)
         self.shareLayout.setContentsMargins(0,0,0,0)
-        self.shareLayout.addWidget(self.nativeGroup)
+        # self.shareLayout.addWidget(self.nativeGroup)
         self.shareLayout.addWidget(self.appsGroup1)
         self.shareLayout.addWidget(self.appsGroup2)
         self.shareWidget.setLayout(self.shareLayout)
@@ -2076,7 +2098,12 @@ class FileViewerWidget(QMainWindow):
         self.sidebar = FileViewerSideBar()
         self.sidebar.hide()
         # searchbar.
-        self.searchbar = FileViewerSearchBar(self)
+        self.searchbar = FileViewerSearchBar()
+        # self.searchbar.setParent(self.webview)
+        self.searchbar.setMinimumWidth(800)
+        self.searchbar.setFixedHeight(34)
+        # self.searchbar.setMaximumHeight(20)
+        self.searchbar.move(0,0)
         # statusbar.
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
@@ -2086,18 +2113,21 @@ class FileViewerWidget(QMainWindow):
         self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
         self.SelectAll.activated.connect(self.selectAll)
         # self.SelectAll.setEnabled(False)
-        
-        # add widgets to layout.
-        self.layout.addWidget(self.menu)
-        self.layout.addWidget(self.folderbar)
-        self.layout.addWidget(self.searchbar)
+    
         # add the dev tools button to the view group.
         self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
-        self.layout.addWidget(self.webview.splitter)
+        # add widgets to layout.
+        self.layout.insertWidget(0, self.webview.splitter, 0)
+        self.layout.insertWidget(0, self.searchbar, 0, Qt.AlignCenter)
+        self.layout.insertWidget(0, self.folderbar, 0)
+        self.layout.insertWidget(0, self.menu, 0)
+        # self.layout.addStretch(1)
+
         self.webview.splitter.insertWidget(0, self.sidebar)
         self.webview.splitter.setSizes([200, 600, 200])
+        self.webview.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.keypress_search = FileViewerKeyPressSearch()
         self.keypress_search.connectWidget(self)
         self.keypress_search.hide()
