@@ -12,10 +12,13 @@ An intelligent workspace, with a chromium browser instance at the centerstage an
 2. Create an automated pipeline that can share results of logged data and possibly recommend changes to increase productivity.
 
 ## Screenshots
+Screenshots/showcase 
+1. Homepage
+![Homepage](https://github.com/atharva-naik/fig-dash/blob/main/showcase/homepage.png?raw=true)
 
 ## Helpful links
-Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter)
-Qt5 Rich text editor: [Axel Erfurt's Github gist](https://gist.github.com/Axel-Erfurt/e33608124a4e47167ba76f4d62cba9ca)
-Weather data: [wttr.in](https://github.com/chubin/wttr.in)
-Javascript rich text editor: [quill.js](https://quilljs.com/)
-icons: [flaticon.com](https://www.flaticon.com/ )
+Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter) <br>
+Qt5 Rich text editor: [Axel Erfurt's Github gist](https://gist.github.com/Axel-Erfurt/e33608124a4e47167ba76f4d62cba9ca) <br>
+Weather data: [wttr.in](https://github.com/chubin/wttr.in) <br>
+Javascript rich text editor: [quill.js](https://quilljs.com/) <br>
+icons: [flaticon.com](https://www.flaticon.com/) <br>
