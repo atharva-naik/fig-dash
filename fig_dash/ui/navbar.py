@@ -211,12 +211,15 @@ class DashSearchBar(QLineEdit):
             browser.execTerminalCommand(cmd)
             self.setPlaceholderText("Type a terminal command")
         else:
-            url = UrlOrQuery(self.text())()
-            self.searchHistory.append(url)
-            tabs.loadUrlForIndex(i, url)
+            text = self.text()
+            qurl = UrlOrQuery(text)()
+            print(qurl.toString())
+            self.searchHistory.append(qurl.toString())
+            tabs.loadUrlForIndex(i, qurl)
         # self.completer = QCompleter(self.searchHistory)
     def updateCompleter(self):
-        print("autocompleting")
+        pass
+        # print("autocompleting")
         # self.completer.setModel(QStringListModel())
     # def formatQueryOrUrl(self, query_or_url: str):
     #     pass

@@ -3,7 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+        <!-- <meta name="google-signin-client_id" content="157627045755-4g187ssi4trr0p6plikamf5pguucm1di.apps.googleusercontent.com"> -->
         <link rel="icon" href="{{ HOME_ICON }}">
         <link rel="stylesheet" href="{{ HOME_CSS }}" />
         <link rel="stylesheet" href="{{ CAROUSEL_CSS }}">
@@ -11,10 +11,11 @@
         <title>Welcome {{ USERNAME }}</title>
     </head>
     <body>
+        <!-- <div class="g-signin2" data-onsuccess="onSignIn"></div> -->
         <div id="dashboard" class="container">
             <br>
             <div class="search-bar">
-                <input class="search-input" placeholder="search on device"></input>
+                <input class="search-input" placeholder="search on device" spellcheck="true"></input>
             </div>
             <br>
             <div style="margin-left: auto; margin-right: auto; text-align: center;">
@@ -72,6 +73,7 @@
             }
         </script>
         <script src="{{ CAROUSEL_JS }}"></script>
+        <!-- <script src="https://apis.google.com/js/platform.js" async defer></script> -->
         <!-- <script src="home.js"></script> -->
     </body>
 </html>

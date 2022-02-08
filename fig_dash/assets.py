@@ -22,6 +22,7 @@ class AssetManager:
         self.style_dir = os.path.join(resource_dir, "style")
         self.theme_dir = os.path.join(resource_dir, "theme")
         self.static_dir = os.path.join(resource_dir, "static")
+        self.locale_dir = os.path.join(resource_dir, "locales")
         # set constants.
         self.TempURLPath = QUrl.fromLocalFile(self.static_dir).toString()
 
@@ -44,6 +45,17 @@ class AssetManager:
     def theme(self, path: str) -> str:
         '''return absolute path of theme file'''
         return os.path.join(self.theme_dir, path)
+
+    def locale(self, path: str) -> str:
+        """[summary]
+        get full path of a locale based asset.
+        Args:
+            path (str): [description] relative path of local asset
+
+        Returns:
+            str: [description] full path of local asset
+        """
+        return os.path.join(self.locale_dir, path)
 
     def static(self, path: str, **params) -> str:
         '''give relative path and get absolute static path.'''

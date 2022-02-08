@@ -1382,13 +1382,17 @@ class XdgOpenDropdown(QComboBox):
         super(XdgOpenDropdown, self).__init__()
         self.setEditable(True)
         self.lineEdit().setAlignment(Qt.AlignCenter)
+        self.lineEdit().textChanged.connect(self.adjustCursor)
         self.mime_to_apps = MimeTypeDefaults()
         self.populate(mimetype)
         self.currentIndexChanged.connect(self.selChanged)
-        self.setStyleSheet("background: #292929; color: #69bfee; font-size: 15px;")
+        self.setStyleSheet("background: #292929; color: #69bfee; font-size: 15px; text-align: left;")
+
+    def adjustCursor(self):
+        '''adjust cursor to the starting position.'''
+        self.lineEdit().setCursorPosition(0)
 
     def connectWidget(self, widget: QWidget):
-        
         self.widget = widget
         self.clearBtn.clicked.connect(widget.clearSelection)
         self.selectAllBtn.clicked.connect(widget.selectAll)
@@ -1510,6 +1514,7 @@ class FileViewerOpenGroup(FileViewerGroup):
         # app selection dropdown.
         self.appDropdown = XdgOpenDropdown("text/plain")
         self.appDropdown.setFixedWidth(130)
+        self.appDropdown.setFixedHeight(22)
         # self.mimeBtn.clicked.connect(
         #     lambda: os.system(f"gtk-launch {} {self.selected_item}")
         # )
@@ -1783,9 +1788,9 @@ class FileViewerMenu(QWidget):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
-        sep.setStyleSheet('''background: transparent;''')
+        sep.setStyleSheet('''background: #292929;''')
         sep.setLineWidth(1)
-        sep.setMaximumHeight(90)
+        # sep.setMaximumHeight(90)
         if width: 
             sep.setFixedWidth(width)
         return sep

@@ -16,7 +16,7 @@ from typing import Union, Tuple
 from threading import Thread
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
 from PyQt5.QtGui import QColor, QKeySequence, QIcon, QPixmap
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut
@@ -208,6 +208,7 @@ contextMenuHtml = '''
 	</menu>
 </menu>'''
 os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-features=-webengine-proprietary-codecs"
+os.environ["QTWEBENGINE_DICTIONARIES_PATH"] = FigD.locale("qtwebengine_dictionaries")
 # "--blink-settings=darkMode=4,darkModeImagePolicy=2"
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
 
@@ -589,6 +590,16 @@ class DebugWebView(QWebEngineView):
         self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
 
+    def setSpellCheck(self, lang: str="en-US") -> None:
+        """[summary]
+        set the dictionary for spellchecking.
+        Args:
+            lang (str, optional): [description]. Defaults to "en-US".
+        """
+        print(f"setting spell check for {lang}")
+        self.page().profile().setSpellCheckEnabled(True)
+        self.page().profile().setSpellCheckLanguages((lang,))
+
     def initDevTools(self) -> QWidget:
         """[summary]
         create the dev tools widget.
@@ -853,6 +864,13 @@ class Browser(DebugWebView):
         # self.currentZoomFactor = zoomFactor
         # self.setZoomFactor(self.currentZoomFactor)
         # self.extension_manager = ExtensionManager()
+        # modify settings.
+        self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.settings().setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        # other flags.
         self.progress = 0
         self._is_bookmarked = False
         self._is_terminalized = False
@@ -968,7 +986,7 @@ class Browser(DebugWebView):
 
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
-        
+        data = self.page().contextMenuData()
         # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
 
         # get the inspect action
@@ -991,11 +1009,37 @@ class Browser(DebugWebView):
         highlightAction = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
         self.menu.addSeparator()
         self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
+
+        # profile = self.page().profile()
+        # languages = profile.spellCheckLanguages()
+        # menu = self.page().createStandardContextMenu()
+        # menu.setParent(self)
+        # menu.addSeparator()
+
+        # spellcheckAction = QAction(self.tr("Check Spelling"), None)
+        # spellcheckAction.setCheckable(True)
+        # spellcheckAction.setChecked(profile.isSpellCheckEnabled())
+        # spellcheckAction.toggled.connect(profile.setSpellCheckEnabled)
+        # menu.addAction(spellcheckAction)
+        # if profile.isSpellCheckEnabled():
+        #     subMenu = menu.addMenu(self.tr("Select Language"))
+        #     for key, lang in self.m_spellCheckLanguages.items():
+        #         action = subMenu.addAction(key)
+        #         action.setCheckable(True)
+        #         action.setChecked(lang in languages)
+        #         action.triggered.connect(partial(self.on_spell_check, lang))
+        # menu.aboutToHide.connect(menu.deleteLater)
+        # menu.popup(event.globalPos())
+
         # print(f"context menu has {len(self.menu.actions())} actions")
         # self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
         # highlight action.
         highlightAction.triggered.connect(self.highlightSelectedText)
         self.menu.popup(event.globalPos())
+
+    # def on_spell_check(self, lang):
+    #     profile = self.page().profile()
+    #     profile.setSpellCheckLanguages((lang,))
 
     def append(self, url: Union[str, QUrl]):
         '''append url to browsing history.'''

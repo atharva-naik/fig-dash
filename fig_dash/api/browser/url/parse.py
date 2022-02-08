@@ -1487,6 +1487,8 @@ ZONE
 ZUERICH
 ZW'''.split()
 VALID_TLDS = [tld.lower() for tld in VALID_TLDS]
+import os
+from PyQt5.QtCore import QUrl
 
 class UrlOrQuery:
     def __init__(self, url_or_query: str):
@@ -1501,14 +1503,25 @@ class UrlOrQuery:
             self.other = parse_result[1].split("/")[1:]
             self.url_or_query = parse_result.geturl()
         self.colors = ["green", "black", "gray"]
+        self.isFile = False
 
     def __call__(self):
         if self.isUrl:
-            return self.url_or_query
+            return QUrl(self.url_or_query)
         else:
-            from urllib.parse import quote
-            enc_query = quote(self.url_or_query)
-            return f"https://www.google.com/search?q={enc_query}&sourceid=chrome&ie=UTF-8"
+            if self.url_or_query.startswith("file:"):
+                self.isUrl = True
+                self.isFile = True
+                self.url_or_query = "/" + self.url_or_query[5:].strip("/")
+                return QUrl.fromLocalFile(self.url_or_query)
+            elif os.path.exists(self.url_or_query):
+                self.isUrl = True
+                self.isFile = True
+                return QUrl.fromLocalFile(self.url_or_query)
+            else:
+                from urllib.parse import quote
+                enc_query = quote(self.url_or_query)
+                return QUrl(f"https://www.google.com/search?q={enc_query}&sourceid=chrome&ie=UTF-8")
 
     def add_protocol(self,  url):
         from urllib.parse import urlparse, ParseResult

@@ -273,10 +273,12 @@ class DashTabWidget(QTabWidget):
         self.splitter = splitter
         self.dropdown.hide()
 
-    def setupTabForBrowser(self, i: int, browser):
+    def setupTabForBrowser(self, i: int, browser, 
+                           lang: str="en-US"):
         try: dash_window = self.dash_window
         except AttributeError as e: return
         browser.loadDevTools()
+        browser.setSpellCheck(lang)
         self.setTabText(i, "  "+browser.page().title())
         print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)
@@ -290,8 +292,8 @@ class DashTabWidget(QTabWidget):
             browser.setIcon(tabs=self, i=i)
             dash_window.navbar.searchbar.setUrl(browser.url())
         self._tab_tooltip_setter_data = (browser, i)
-        browser.setSelectionStyle()
-        browser.setScrollbar(scrollbar_style)
+        # browser.setSelectionStyle()
+        # browser.setScrollbar(scrollbar_style)
         browser.page().runJavaScript(
             "document.body.outerHTML",
             self._tab_tooltip_setter,
@@ -418,7 +420,7 @@ class DashTabWidget(QTabWidget):
         i = self.addTab(widget, QIcon(icon), "  "+title)
         self.setCurrentIndex(i)
 
-    def openUrl(self, url: str="https://google.com"):
+    def openUrl(self, url: str="file:///tmp/fig_dash.rendered.content.html"):
         qurl = QUrl(url)
         browser = Browser(self)
         browser.connectTabWidget(self)
@@ -517,13 +519,15 @@ class DashTabWidget(QTabWidget):
             i = self.currentIndex()
             print(f"tab-{i} is not a browser instance") 
 
-    def loadUrlForIndex(self, i: int, url: str):
-        qurl = QUrl(url)
+    def loadUrlForIndex(self, i: int, url: Union[str, QUrl]):
+        if isinstance(url, str):
+            qurl = QUrl(url)
+        else: qurl = url
         self.setCurrentIndex(i)
         # use back reference from the splitter object.
         browser = self.currentWidget().browser
         browser.setUrl(qurl)
-        self.setTabText(i, "  "+url.strip())
+        self.setTabText(i, "  "+qurl.toString().strip())
         browser.loadFinished.connect(
             lambda _, i = i, browser = browser:
 				self.setupTabForBrowser(i, browser)
