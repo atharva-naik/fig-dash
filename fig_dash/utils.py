@@ -16,6 +16,18 @@ def pyqtSleep(time: int=1000):
     QTimer.singleShot(time, loop.quit)
     loop.exec_()
 
+def h_format_mem(size):
+    if size < 1024:
+        return f"{size} bytes"
+    elif size < 1024*1024:
+        return f"{round(size/1024, 2)} kB"
+    elif size < 1024*1024*1024:
+        return f"{round(size/(1024*1024), 2)} MB"
+    elif size < 1024*1024*1024*1024:
+        return f"{round(size/(1024*1024*1024), 2)} GB"
+    else: 
+        return f"{round(size/(1024*1024*1024*1024), 2)} TB"
+
 def truncStr(string):
     if len(string) > 20:
         return string[:10]+"..."+string[-6:]

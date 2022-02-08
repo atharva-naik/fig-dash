@@ -9,14 +9,15 @@ import getpass
 from pathlib import Path
 from typing import Union, Tuple
 # fig-dash imports.
-from fig_dash import FigD
+from fig_dash.assets import FigD
+from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject
 from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel
 # filweviewer widget.
@@ -28,6 +29,7 @@ FileViewerStyle = r'''
 /* @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@500&display=swap'); */
 /* @import url('https://fonts.googleapis.com/css2?family=Moon+Dance&display=swap'); */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro&display=swap');
 
 ::-webkit-scrollbar {
     width: 0.5em;
@@ -279,9 +281,8 @@ main section.demo .info p {
 
 .style-panel {
     text-align: center; 
-    font-size: 12px; 
+    font-size: 13px; 
     color: white; 
-    font-weight: bold; 
     display: flex; 
     justify-content: center;
     background-color: rgba(29, 29, 29, 0.8);
@@ -293,6 +294,7 @@ main section.demo .info p {
     height: 50px;
     float: left;  
     margin: 10px;
+    font-family: 'Be Vietnam Pro', sans-serif;
 }
 
 .key {
@@ -332,11 +334,13 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.setAttributeNode(hiddenFileFlag)
         divElement.className = "file_item";
         divElement.style.textAlign = 'center';
+        // divElement.style.cursor = 'move';
         
         // drag and drop events.
         divElement.draggable = true;
         divElement.addEventListener('dragstart', function(event){
             // console.log(this.id);
+            this.style.cursor = "move";
             event.dataTransfer.setData("text", this.id);
         })
         divElement.addEventListener('drop', function(event){
@@ -347,6 +351,7 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.addEventListener('dragover', function(event){
             event.preventDefault();
             console.log("drag over");
+            this.style.cursor = "pointer";
         })
         
         divElement.innerHTML = `
@@ -722,7 +727,7 @@ fileviewer_searchbar_style = jinja2.Template('''
 QLineEdit {
     border: 0px;
     font-size: 17px;
-    font-family: Ubuntu;
+    font-family: 'Be Vietnam Pro', sans-serif;
     padding-top: 3px;
     padding-bottom: 3px;
     color: #fff; /* #ad3700; */
@@ -740,23 +745,51 @@ class FileViewerSearchBar(QLineEdit):
         self.searchAction = QAction()
         self.searchAction.setIcon(FigD.Icon("system/fileviewer/search.svg"))
         self.addAction(self.searchAction, self.LeadingPosition)
-
+        # match case.
+        self.caseAction = QAction()
+        self.caseAction.setIcon(
+            FigD.Icon("system/fileviewer/case.svg")
+        )
+        self.addAction(self.caseAction, self.TrailingPosition)
+        # self.matchWholeAction.setIcon(
+        #     FigD.Icon("system/fileviewer/match_whole.svg")
+        # )
+        # match prefix.
+        self.prefixAction = QAction()
+        self.prefixAction.setIcon(
+            FigD.Icon("system/fileviewer/prefix.svg")
+        )
+        self.addAction(self.prefixAction, self.TrailingPosition)
+        # match suffix.
+        self.suffixAction = QAction()
+        self.suffixAction.setIcon(
+            FigD.Icon("system/fileviewer/suffix.svg")
+        )
+        self.addAction(self.suffixAction, self.TrailingPosition)
+        # match contains.
+        self.containsAction = QAction()
+        self.containsAction.setIcon(
+            FigD.Icon("system/fileviewer/match_contains.svg")
+        )
+        self.addAction(self.containsAction, self.TrailingPosition)
         self.setStyleSheet(fileviewer_searchbar_style.render(
             BORDER_RADIUS=16,
         ))
         self.setFixedHeight(28)
+        self.setClearButtonEnabled(True)
         self.returnPressed.connect(self.search)
         # completion for search.
         self.completer = QCompleter()
         self.completer.setModel(QDirModel(self.completer))
+        self.completer.popup().setStyleSheet("""font-family: 'Be Vietnam Pro', sans-serif; color: #fff; background: #000; border: 0px;""")
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         # self.completer.setCompletionMode(QCompleter.PopupCompletion)
         # self.completer.setFilterMode(Qt.MatchContains)
         self.setCompleter(self.completer)
 
     def search(self):
-        print("searched")
-
+        pass
+        # print("searched")
 
 class FileViewerStatus(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None, 
@@ -877,7 +910,7 @@ class FileViewerWebView(DebugWebView):
     #     self.itemMenu.popup(event.globalPos())
     def contextMenuEvent(self, event):
         '''show the orchared context menu (not specific to a selected item)'''
-        print(dir(event))
+        # print(dir(event))
         self.orchardMenu.popup(event.globalPos())
 
     def connectWidget(self, widget):
@@ -1492,18 +1525,20 @@ class FileViewerShareGroup(FileViewerGroup):
         super(FileViewerShareGroup, self).__init__(parent, "Share")
         # QR, devices, bluetooth, email, copy to clipboard (contents)
         # twitter, reddit, facebook, youtube, instagram
-        self.nativeGroup = self.initBtnGroup([
-            {"icon": "qr.svg", "size":(20,20),
-            'tip': "create qr code for file"},
-            {"icon": "devices.svg", "size":(20,20),
+        self.nativeGroup1 = self.initBtnGroup([
+            {"icon": "devices.svg", "size":(18,18),
             'tip': "share to linked devices"},
-            {"icon": "bluetooth.svg", "size":(20,20),
+            {"icon": "bluetooth.svg", "size":(18,18),
             'tip': "share using bluetooth"},
-            {"icon": "email.svg", "size":(20,20),
+            {"icon": "qr.svg", "size":(18,18),
+            'tip': "create qr code for file"},
+        ], orient="vertical", spacing=5)
+        self.nativeGroup2 = self.initBtnGroup([
+            {"icon": "email.svg", "size":(25,25),
             'tip': "share file as email attachment"},
-            {"icon": "copy.svg", "size":(20,20),
+            {"icon": "copy_content.svg", "size":(25,25),
             'tip': "copy file contents to clipboard"}
-        ])
+        ], orient="vertical", spacing=15)
         self.appsGroup1 = self.initBtnGroup([
             {"icon": "youtube.png", "size":(28,28),
             'tip': "share video on youtube"},
@@ -1524,12 +1559,13 @@ class FileViewerShareGroup(FileViewerGroup):
         self.shareLayout = QVBoxLayout()
         # self.shareLayout.setSpacing(0)
         self.shareLayout.setContentsMargins(0,0,0,0)
-        # self.shareLayout.addWidget(self.nativeGroup)
         self.shareLayout.addWidget(self.appsGroup1)
         self.shareLayout.addWidget(self.appsGroup2)
         self.shareWidget.setLayout(self.shareLayout)
 
         self.layout.addStretch(1)
+        self.layout.addWidget(self.nativeGroup1)
+        self.layout.addWidget(self.nativeGroup2)
         self.layout.addWidget(self.shareWidget)
         self.layout.addStretch(1)   
 # class FileViewerPropGroup(QWidget):
@@ -1732,11 +1768,11 @@ class FileViewerMenu(QWidget):
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.editgroup)
         self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.selectgroup)
+        self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.viewgroup)
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.opengroup)
-        self.layout.addWidget(self.addSeparator(10))
-        self.layout.addWidget(self.selectgroup)
         self.layout.addWidget(self.addSeparator(10))
         self.layout.addWidget(self.sharegroup)
 
@@ -1780,6 +1816,7 @@ class FileViewerFolderBar(QWidget):
             border: 0px;
             font-size: 17px;
             font-weight: bold;
+            font-family: 'Be Vietnam Pro', sans-serif;
             padding-top: 4px;
             padding-bottom: 4px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
@@ -1800,6 +1837,7 @@ class FileViewerFolderBar(QWidget):
             color: #292929;
             font-size: 17px;
             font-weight: bold;
+            font-family: 'Be Vietnam Pro', sans-serif;
             padding-top: 4px;
             padding-bottom: 4px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
@@ -2226,7 +2264,7 @@ class FileViewerWidget(QMainWindow):
 
     def getIcon(self, path):
         name = self.icon_provider.icon(QFileInfo(path)).name()
-        print(name)
+        # print(name)
         # paths where mimetype icons may be found.
         icon_theme_devices_path = "/usr/share/icons/breeze/devices/48"
         icon_theme_places_path = "/usr/share/icons/breeze/places/64"
@@ -2469,7 +2507,7 @@ class FileViewerWidget(QMainWindow):
         if file_info.isDir():
             items = len(os.listdir(item)) 
         else: items = 0
-        size = file_info.size()
+        size = h_format_mem(file_info.size())
         self.statusbar.updateSelected(
             items=items, name=name,
             icon=icon, size=size,
@@ -2556,6 +2594,7 @@ class FileViewerWidget(QMainWindow):
 
 def test_fileviewer():
     import sys
+    import platform
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = QApplication(sys.argv)
     fileviewer = FileViewerWidget(
@@ -2564,9 +2603,15 @@ def test_fileviewer():
         font_color="#fff",
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
+    QFontDatabase.addApplicationFont(
+        FigD.font("BeVietnamPro-Regular.ttf")
+    )
     fileviewer.open("~")
     fileviewer.setGeometry(200, 200, 800, 600)
     fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
+    if platform.system() == "Linux":
+        fileviewer.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
+        app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
     # fileviewer.saveScreenshot("fileviewer.html")
     fileviewer.show()
     app.exec()
@@ -2574,7 +2619,6 @@ def test_fileviewer():
 
 if __name__ == '__main__':
     test_fileviewer()
-
 #a33817 (dark) #323150
 #eb5f34 (deep) #4d4c78
 #bd5f42 (medium) #64639c

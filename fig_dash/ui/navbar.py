@@ -117,6 +117,7 @@ class DashSearchBar(QLineEdit):
         # completion for search.
         self.suggestions = ["Apple", "Alps", "Berry", "Cherry"]
         self.completer = QCompleter(self.suggestions)
+        # self.completer.setStyleSheet("""font-family: 'Be Vietnam Pro', sans-serif; color: #fff; background: #000;""")
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         # self.completer.setCompletionMode(QCompleter.PopupCompletion)
         # self.completer.setFilterMode(Qt.MatchContains)

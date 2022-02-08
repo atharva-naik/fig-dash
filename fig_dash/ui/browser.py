@@ -335,11 +335,11 @@ class BrowserSearchPanelBtn(QToolButton):
         icon = args.get('icon')
         if icon:
             self.inactive_icon = os.path.join(
-                "system/fileviewer", icon
+                "browser", icon
             )
             stem, ext = os.path.splitext(icon)
             self.active_icon = os.path.join(
-                "system/fileviewer", 
+                "browser", 
                 stem+"_active"+ext
             )
             self.setIcon(
@@ -374,7 +374,7 @@ class BrowserSearchPanel(QWidget):
         self.entry = QLineEdit()
         self.label = QLabel("0/0")
         self.entry.setStyleSheet("background: #fff; color: #000;")
-        self.entry.setMinimumWidth(350)
+        self.entry.setMinimumWidth(320)
         self.closeBtn = BrowserSearchPanelBtn(
             icon="close.svg", size=(20,20),
             tip="close page search",
@@ -387,12 +387,17 @@ class BrowserSearchPanel(QWidget):
             icon="next.svg", size=(20,20),
             tip="go to next match (Enter)",
         )
+        self.findInSelectionBtn = BrowserSearchPanelBtn(
+            icon="find_in_selection.png", size=(20,20),
+            tip="find matches in selection",
+        )
         self.entry.setClearButtonEnabled(True)
         self.layout.addWidget(self.entry)
         self.layout.addWidget(self.label)
         self.layout.addStretch()
         self.layout.addWidget(self.prevBtn)
         self.layout.addWidget(self.nextBtn)
+        self.layout.addWidget(self.findInSelectionBtn)
         self.layout.addWidget(self.closeBtn)
         self.nextBtn.clicked.connect(self.update_searching)
         self.prevBtn.clicked.connect(lambda: self.update_searching(QWebEnginePage.FindBackward))
@@ -426,13 +431,13 @@ class BrowserSearchPanel(QWidget):
         self.regexAction = QAction()
 
         self.caseAction.setIcon(
-            FigD.Icon("system/fileviewer/case.svg")
+            FigD.Icon("browser/case.svg")
         )
         self.matchWholeAction.setIcon(
-            FigD.Icon("system/fileviewer/match_whole.svg")
+            FigD.Icon("browser/match_whole.svg")
         )
         self.regexAction.setIcon(
-            FigD.Icon("system/fileviewer/regex.svg")
+            FigD.Icon("browser/regex.svg")
         )
         
         self.entry.addAction(
@@ -522,25 +527,49 @@ class SilentWebPage(QWebEnginePage):
         pass
 
 
+class DevToolbarBtn(QToolButton):
+    def __init__(self, icon, type="svg", 
+                 size=(30,30), tip="a tip") -> None:
+        super(DevToolbarBtn, self).__init__()
+        self.inactive_icon = FigD.Icon(f"browser/{icon}.{type}") 
+        self.active_icon = FigD.Icon(f"browser/{icon}_active.{type}")
+        self.setIcon(self.inactive_icon)
+        self.setIconSize(QSize(*size))
+        self.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            background: transparent;
+        }""")
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+
+    def enterEvent(self, event):
+        self.setIcon(self.active_icon)
+        super(DevToolbarBtn, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIcon(self.inactive_icon)
+        super(DevToolbarBtn, self).leaveEvent(event)
+
+
 class DebugWebView(QWebEngineView):
     def __init__(self, parent=None,
                  zoomFactor=1.25, dev_tools_zoom=1.35):
         super(DebugWebView, self).__init__(parent)
-        self.dev_view = QWebEngineView()
         # self.py_dev_view = PyDevToolsView()
-        self.devToolsBtn = DevToolsBtn(self)
-        # self.pyDevToolsBtn = PyDevToolsBtn(self)
-        
+        self.devTools = self.initDevTools()
+        self.devCloseBtn.clicked.connect(
+            self.devTools.hide
+        )
+        self.devToolsBtn = DevToolsBtn(self)    
         self.dev_tools_zoom = dev_tools_zoom
         self.devToolsBtn.clicked.connect(self.toggleDevTools)
-        # self.pyDevToolsBtn.clicked.connect(self.togglePyDevTools)
-
         # current zoom factor of the main web view.
         self.currentZoomFactor = zoomFactor
 
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self)
-        self.splitter.addWidget(self.dev_view)
+        self.splitter.addWidget(self.devTools)
         # self.splitter.addWidget(self.py_dev_view)
         self.splitter.setSizes([500, 300])
         # back reference to browser.
@@ -557,9 +586,51 @@ class DebugWebView(QWebEngineView):
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
 
-        self.dev_view.hide()
-        # self.py_dev_view.hide()
+        self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def initDevTools(self) -> QWidget:
+        """[summary]
+        create the dev tools widget.
+        (dev toolbar and dev tools webpage view.)
+        Returns:
+            QWidget: [description]
+        """
+        self.dev_view = QWebEngineView()
+        sizePolicy = self.dev_view.sizePolicy()
+        sizePolicy.setVerticalPolicy(QSizePolicy.Expanding)
+        self.dev_view.setSizePolicy(sizePolicy)
+        devTools = QSplitter(Qt.Vertical)
+        devTools.setStyleSheet("""QWidget {
+            background: transparent;
+        }""")
+        self.devToolbar = self.initDevToolbar()
+        self.devToolbar.setFixedHeight(30)
+        devTools.addWidget(self.devToolbar)
+        devTools.addWidget(self.dev_view)
+        # devToolsLayout.addStretch(1)
+        return devTools
+
+    def initDevToolbar(self) -> QWidget:
+        devToolbar = QWidget()
+        # devToolbar.setMaximumWidth(200)
+        devToolbarLayout = QHBoxLayout()
+        devToolbarLayout.setSpacing(10)
+        devToolbarLayout.setContentsMargins(0, 0, 0, 0)
+        self.devCloseBtn = DevToolbarBtn("close", type="png", tip="close dev tools")
+        devToolbar.setFixedHeight(20)
+        devToolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        devToolbar.setStyleSheet("""
+        QWidget {
+            background: transparent;
+        }""")
+        devToolbarLayout.addStretch(1)
+        devToolbarLayout.addWidget(self.devCloseBtn, 0)
+        # devToolbarLayout.addWidget(self.devMinBtn, 0)
+        devToolbarLayout.addStretch(1)
+        devToolbar.setLayout(devToolbarLayout)
+
+        return devToolbar
 
     def getPageScreenshot(self):
         size = self.contentsRect()
@@ -617,15 +688,9 @@ class DebugWebView(QWebEngineView):
 
     def toggleDevTools(self):
         if self.dev_view.isVisible():
-            self.dev_view.hide()
+            self.devTools.hide()
         else:
-            self.dev_view.show()
-        
-    def togglePyDevTools(self):
-        if self.py_dev_view.isVisible():
-            self.py_dev_view.hide()
-        else:
-            self.py_dev_view.show()
+            self.devTools.show()
 
     def loadDevTools(self):
         self.dev_view.load(QUrl("http://0.0.0.0:5000/"))
@@ -1127,22 +1192,6 @@ document.head.appendChild(newSelectStyle);
     def unterminalize(self):
         self.setTerminalized(False)
         self.back()
-        # try: 
-        #     print(self.browsingHistory)
-        #     item = self.browsingHistory[-1]
-        # except IndexError as e:
-        #     print(e) 
-        #     item = "file:///tmp/fig_dash.rendered.content.html"
-        # if item.startswith("file://"):
-        #     item = item[7:]
-        #     print(item)
-        #     url = QUrl.fromLocalFile(item)
-        #     print(url.toString())
-        # else:
-        #     url = QUrl(item)
-        # self.load(url)
-    # def fetchIcon(self):
-    #     self.page().toHtml(self.pageIconCallback)
 # class MainWindow(QWidget):
 #     def __init__(self, parent=None):
 #         super(QWidget, self).__init__(parent)
