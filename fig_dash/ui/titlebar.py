@@ -410,7 +410,7 @@ class TitleBar(QToolBar):
         # window title
         self.title = QLabel()
         self.title.setText("fig-dash: a dashboard for Python developers")
-        self.title.setStyleSheet("color: #fff; font-size: 16px;")
+        self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
         # self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         # lang settings.
