@@ -79,7 +79,7 @@ class VolumeSlider(QWidget):
             print(f"using chime theme: {chime.theme()}")
             self._chime = chime
         except ImportError as e:
-            print(e)
+            print("\x1b[31;1maudio.__init__\x1b[0m", e)
 
     def setStep(self, step):
         self._step = step

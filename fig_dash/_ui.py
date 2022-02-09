@@ -9,7 +9,7 @@ from typing import Union, Tuple, List
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize 
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QStatusBar, QShortcut
+from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.menu import DashMenu
@@ -17,13 +17,13 @@ from fig_dash.ui.browser import PageInfo
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
+from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.weather import WeatherWidget
 from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.datetime import DashClock, DashCalendar
-from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.richtexteditor import richtexteditor_style
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
@@ -155,8 +155,16 @@ class DashWindow(QMainWindow):
         self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
         self.FnF3.activated.connect(self.incVolSlider)
+        # add spacers.
+        spacer1 = QWidget()
+        spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        spacer2 = QWidget()
+        spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.statusBar().addWidget(spacer1)
         self.statusBar().addWidget(self.menu.fileviewer.statusbar)
         self.statusBar().addWidget(self.menu.cm_editor.statusbar)
+        self.statusBar().addWidget(self.menu.browser_statusbar)
+        self.statusBar().addWidget(spacer2)
 
     def initVolumeSlider(self):
         from fig_dash.ui.system.audio import VolumeSlider
@@ -173,19 +181,13 @@ class DashWindow(QMainWindow):
                 self.volume_slider.show()
             self.volume_slider.decrease()
         except AttributeError as e:
-            print(e)
+            print(f"\x1b[31;1m_ui.invVolSlider:\x1b[0m {e}")
             self.initVolumeSlider()
 
     def toggleMuteVolSlider(self):
         '''pop out the volume slider'''
         print("toggling mute.")
-        # try:
-        #     if not self.volume_slider.isVisible():
-        #         self.volume_slider.show()
-        #     self.volume_slider.decrease()
-        # except AttributeError as e:
-        #     print(e)
-        #     self.initVolumeSlider()
+
     def decVolSlider(self):
         '''pop out the volume slider'''
         try:
@@ -193,7 +195,7 @@ class DashWindow(QMainWindow):
                 self.volume_slider.show()
             self.volume_slider.increase()
         except AttributeError as e:
-            print(e)
+            print(f"\x1b[31;1m_ui.decVolSlider:\x1b[0m {e}")
             self.initVolumeSlider()
             
     def keyPressEvent(self, event):
@@ -318,7 +320,8 @@ class DashWindow(QMainWindow):
         self.shortcutbar.moreSystemBtn.setPos()
         try: 
             self.tabs.currentWidget().browser.searchPanel.setPos()
-        except Exception as e: print(e)
+        except Exception as e: 
+            print(f"\x1b[31;1m_ui.resizeEvent:\x1b[0m {e}")
         super(DashWindow, self).resizeEvent(event)
 
     def initDatetimeNotif(self):

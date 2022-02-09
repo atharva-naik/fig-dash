@@ -3,6 +3,7 @@
 # the fig-dash fileviewer is known as the "orchard".
 from genericpath import isfile
 import os
+from sys import meta_path
 import jinja2
 import socket
 import getpass
@@ -357,7 +358,7 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         divElement.innerHTML = `
     <img id="thumbnail_${fileViewerPaths[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
     <br>
-    <span class="item_name" style="text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
+    <span class="item_name" style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
         divElement.onclick = function() {
             // console.error(this.id);
             var file_item_id = this.id;
@@ -798,23 +799,31 @@ class FileViewerStatus(QWidget):
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.webview = webview
-        self.layout.setSpacing(20)    
+        self.layout.setSpacing(5)    
         self.selected = self.initBtn(icon="file.svg", text=" selected: None") # name of seelcted item.
         self.num_items = self.initBtn(icon="item.png", text="(contains 0 items)") # number of items in selected item 
         self.file_size = self.initBtn(icon="storage.svg", text=" 0kB") # size of selected item
         self.breakdown = QLabel("0 items (0 files, 0 folders, 0 hidden)")
-        self.user = self.initBtn(icon="user.svg", text=" "+getpass.getuser())
-        self.hostname = self.initBtn(icon="server.svg", text=" "+socket.gethostname())
+        # self.user = self.initBtn(icon="user.svg", text=" "+getpass.getuser())
+        self.hostname = self.initBtn(icon="server.svg", text=f" {socket.gethostname()}@{getpass.getuser()}")
+        self.owner = self.initBtn(icon="owner.svg", text=" <user>")
+        self.group = self.initBtn(icon="group.svg", text=" <group>")
+        self.permissions = self.initBtn(icon="permissions.svg", text="[RWX]")
+        self.symlink = self.initBtn(icon=None, text=None)
+        self.shortcut = self.initBtn(icon=None, text=None)
         # add widgets.
-        self.layout.addStretch(1)
         self.layout.addWidget(self.breakdown)
-        self.layout.addWidget(self.user)
+        # self.layout.addWidget(self.user)
         self.layout.addWidget(self.hostname)
         self.layout.addStretch(1)
         self.layout.addWidget(self.selected)
         self.layout.addWidget(self.num_items)
         self.layout.addWidget(self.file_size)
-        self.layout.addStretch(1)
+        self.layout.addWidget(self.owner)
+        self.layout.addWidget(self.group)
+        self.layout.addWidget(self.permissions)
+        self.layout.addWidget(self.symlink)
+        self.layout.addWidget(self.shortcut)
         # set layout and style
         self.setLayout(self.layout)
         self.setObjectName("CodeMirrorStatus")
@@ -833,14 +842,39 @@ class FileViewerStatus(QWidget):
             font-size: 16px;
             background: transparent;
         }''')
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
     def updateSelected(self, **data):
         size = data.get("size", 0)
         icon = data.get("icon", "")
         name = data.get("name", "")
         items = data.get("items", 0)
+        
+        owner = data.get("owner")
+        group = data.get("group")
+        last_read = data.get("last_read")
+        permissions = data.get("permissions")
+        last_modified = data.get("last_modified")
+        meta_change_time = data.get("meta_change_time")
+        
+        shortcut = data.get("shortcut", False)
+        symbolic = data.get("symbolic", False)
+        if symbolic:
+            print("is a symlink")
+            self.symlink.setIcon(FigD.Icon("system/fileviewer/symlink.svg"))
+        if shortcut:
+            print("is a shortcut")
+            self.shortcut.setIcon(FigD.Icon("system/fileviewer/shortcut.png"))
+
         self.selected.setText(f" selected: {name}")
         self.file_size.setText(f" {size}")
+        self.permissions.setText(f" {permissions}")
+        self.owner.setText(f" {owner}")
+        self.group.setText(f" {group}")
+        # self.last_read.setText()
+        # self.last_modified.setText()
+        # self.
+
         if icon != "":
             self.selected.setIcon(QIcon(icon))
         if items != 0:
@@ -2361,6 +2395,7 @@ class FileViewerWidget(QMainWindow):
         try:
             os.scandir(folder)
         except PermissionError as e:
+            print("\x1b[31;1mfileviewer.open\x1b[0m", e)
             self.errorDialog(str(e))
             return
         self.folder = Path(folder)
@@ -2513,9 +2548,36 @@ class FileViewerWidget(QMainWindow):
             items = len(os.listdir(item)) 
         else: items = 0
         size = h_format_mem(file_info.size())
+        # .strftime("%b, %m %d %Y %H:%M:%S")
+        group = file_info.group()
+        owner = file_info.owner()
+        shortcut = file_info.isShortcut()
+        symbolic = file_info.isSymbolicLink()
+        r_permission = file_info.isReadable()
+        w_permission = file_info.isWritable()
+        x_permission = file_info.isExecutable()
+        permissions = "["
+        if r_permission:
+            permissions += "R"
+        if w_permission:
+            permissions += "W"
+        if x_permission:
+            permissions += "X"
+        permissions += "]"
+
+        last_read = file_info.lastRead().toPyDateTime()
+        last_modified = file_info.lastModified().toPyDateTime()
+        meta_change_time = file_info.metadataChangeTime().toPyDateTime()
+        # print(last_read, last_modified, group, owner, 
+        #       meta_change_time, permissions)
         self.statusbar.updateSelected(
-            items=items, name=name,
-            icon=icon, size=size,
+            shortcut=shortcut, symbolic=symbolic,
+            items=items, name=name, icon=icon, 
+            size=size, permissions=permissions,
+            meta_change_time=meta_change_time,
+            last_read=last_read, owner=owner,
+            last_modified=last_modified,
+            group=group,
         )
 
     def keyPressEvent(self, event):
@@ -2530,7 +2592,7 @@ class FileViewerWidget(QMainWindow):
             self.keypress_search.setText(letter.lower())
             # print("changed focus")
         except (TypeError, ValueError) as e:
-            pass# print(e)
+            print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
             # fail silently.
         super(FileViewerWidget, self).keyPressEvent(event)
 

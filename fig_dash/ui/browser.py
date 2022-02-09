@@ -317,7 +317,7 @@ class PyDevToolsView(QWidget):
     #     try:
     #         exec(code, globals(), Vars)
     #         Result = Vars.get('Result')
-    #     except Exception as E:
+    #     except Exception:
     #         Result = E
     #     return Result
     def exec(self):
@@ -327,6 +327,7 @@ class PyDevToolsView(QWidget):
         try:
             exec(code)
         except Exception as e:
+            print("\x1b[31;1mbrowser.exec\x1b[0m", e)
             self.output.setText(str(e))
 
 
@@ -596,7 +597,7 @@ class DebugWebView(QWebEngineView):
         Args:
             lang (str, optional): [description]. Defaults to "en-US".
         """
-        print(f"setting spell check for {lang}")
+        # print(f"setting spell check for {lang}")
         self.page().profile().setSpellCheckEnabled(True)
         self.page().profile().setSpellCheckLanguages((lang,))
 
@@ -663,7 +664,7 @@ class DebugWebView(QWebEngineView):
                 print(f"writing content to {self.saveAsName}")
                 f.write(content)
         except Exception as e:
-            print(f"\x1b[31;1m_save_as_callback\x1b[0m:", e)
+            print(f"\x1b[31;1mbrowser._save_as_callback\x1b[0m:", e)
 
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
@@ -875,11 +876,20 @@ class Browser(DebugWebView):
         self._is_bookmarked = False
         self._is_terminalized = False
         self.loadProgress.connect(self.setProgress)
+        self.selectionChanged.connect(self.onSelectionChange)
         # # shortcuts.
         # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
         # self.SelectAll.activated.connect(self.selectAll)
         # self.Deselect = QShortcut(QKeySequence.Deselect, self)
         # self.Deselect.activated.connect(self.deselect)
+    def onSelectionChange(self):
+        selText = self.selectedText()
+        try:
+            menu = self.dash_window.menu
+            menu.browser_statusbar.updateSelection(selText)
+        except Exception as e:
+            print("\x1b[31;1mbrowser.onSelectionChange\x1b[0m", e)
+        # print(f"selection changed {self.selectedText()}")
     def setBookmark(self, status: bool):
         self._is_bookmarked = status
 
@@ -903,7 +913,7 @@ class Browser(DebugWebView):
             # print(f"Loaded {self.url().toString()} {self.progress}%")
             # self.pbar.update(progress-self.pbar.n)
         except Exception as e:
-            print(e)
+            print("\x1b[31;1mbrowser.setProgress\x1b[0m", e)
 
     def deselect(self):
         pass
@@ -983,6 +993,7 @@ class Browser(DebugWebView):
             self.page().runJavaScript(
                 f"FigTerminal.writeLine(`{orig_cmd}`, `{e}`);"
             )
+            print("\x1b[31;1mbrowser.execTerminalCommand\x1b[0m", e)
 
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
@@ -1044,7 +1055,9 @@ class Browser(DebugWebView):
     def append(self, url: Union[str, QUrl]):
         '''append url to browsing history.'''
         try: url = url.toString()
-        except AttributeError as e: pass
+        except AttributeError as e: 
+            print(f"\x1b[31;1mbrowser.append:\x1b[0m {e}")
+            pass
         # store in local tab browsing history.
         if len(self.browsingHistory) > 0 and self.browsingHistory[-1] == url:
             self.browsingHistory.append(url)
@@ -1056,6 +1069,7 @@ class Browser(DebugWebView):
                 self.dash_window.browsingHistory.append(url)
                 print(f"\x1b[44;1m{self.dash_window.browsingHistory}\x1b[0m")
         except AttributeError as e:
+            print(f"\x1b[31;1mbrowser.append:\x1b[0m {e}")
             print("not connected to a DashWindow")
             return    
 
@@ -1110,7 +1124,7 @@ class Browser(DebugWebView):
             self.page().profile().setHttpUserAgent(userAgentStr)
             # print("changed user agent.")
         except Exception as e:
-            print(e) 
+            print("\x1b[31;1mbrowser.changeUserAgent\x1b[0m", e)
 
     def updateTabTitle(self):
         try:
@@ -1120,7 +1134,7 @@ class Browser(DebugWebView):
             self.dash_window.statusBar().clearMessage()
             print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
         except AttributeError as e:
-            print(f"\x1b[31;1mupdateTabTitle:\x1b[0m \x1b[31m{e}\x1b[0m") 
+            print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
         self.append(self.url())
         try:
             # change title of the tab that contains this browser only.
@@ -1136,7 +1150,7 @@ class Browser(DebugWebView):
                 )
             )
         except AttributeError as e:
-            print(f"\x1b[31;1mupdateTabTitle:\x1b[0m \x1b[31m{e}\x1b[0m") 
+            print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
             # print("not connected to a TabWidget")
     def setUrl(self, url):
         self.append(url)
@@ -1157,8 +1171,8 @@ class Browser(DebugWebView):
         try:
             self.dash_window.page_info.update(word_count)
         except AttributeError as e:
-            print("TabWidget not connected to DashWindow") 
-
+            print(f"\x1b[31;1mbrowser._word_count_callback:\x1b[0m {e}")
+            # print("TabWidget not connected to DashWindow") 
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget 
         self.CtrlPlus = QShortcut(QKeySequence.ZoomIn, self)
@@ -1166,14 +1180,17 @@ class Browser(DebugWebView):
         self.CtrlMinus = QShortcut(QKeySequence.ZoomOut, self)
         self.CtrlMinus.activated.connect(tabWidget.zoomOutTab)
         self.urlChanged.connect(self.updateTabTitle)
-        try: self.dash_window = tabWidget.dash_window
+        try: 
+            self.dash_window = tabWidget.dash_window
+            self.dash_window.statusBar().addWidget(self.statusbar)
         except AttributeError as e:
-            print("TabWidget not connected to DashWindow") 
-
+            print(f"\x1b[31;1mbrowser.connectTabWidget:\x1b[0m {e}")
+            # print("TabWidget not connected to DashWindow") 
     def highlightSelectedText(self):
         '''highlight selected text by using the highlightSelection() function.'''
         print("\x1b[33;1mhighlighting selected text\x1b[0m")
         self.page().runJavaScript("highlightSelection()")
+        print("selected text:", self.selectedText())
 
     def execAnnotationJS(self):
         '''execute javascript needed for annotation shit'''

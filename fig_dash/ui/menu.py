@@ -77,6 +77,54 @@ QTabBar::tab:selected {
     /* border-bottom: 4px solid #bf3636; */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
+class BrowserStatusBar(QWidget):
+    def __init__(self) -> None:
+        super(BrowserStatusBar, self).__init__()
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.selectedTextIndicator = self.initBtn(
+            icon="select_text.png",
+            text=" None"
+        )
+        self.layout.addWidget(self.selectedTextIndicator)
+        self.setLayout(self.layout)
+
+    def initBtn(self, icon: str=None, text: str=None) -> QToolButton:
+        """[summary]
+
+        Args:
+            icon (str, optional): [description]. Defaults to None.
+            text (str, optional): [description]. Defaults to None.
+
+        Returns:
+            QToolButton: [description]
+        """
+        btn = QToolButton(self)
+        if icon: 
+            icon = os.path.join("browser", icon)
+            btn.setIcon(FigD.Icon(icon))
+        if text: btn.setText(text)
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setStyleSheet("background: #292929; color: #fff;")
+        btn.setStyleSheet('''
+        QToolButton {
+            color: #6e6e6e;
+            border: 0px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            font-size: 16px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            border: 0px;
+            background: rgba(0, 0, 0, 0.5);
+        }''')
+
+        return btn
+
+    def updateSelection(self, text: str):
+        self.selectedTextIndicator.setText(" "+text)
+
+
 class DashMenu(QTabWidget):
     def __init__(self, parent: Union[None, QWidget]=None, **args):
         super(DashMenu, self).__init__(parent)
@@ -95,6 +143,8 @@ class DashMenu(QTabWidget):
         self.addTab(self.browsermenu, "Browser")     
         self.collapse()
         # self.currentChanged.connect(self.onTabChange)
+        self.browser_statusbar = BrowserStatusBar()
+        self.browser_statusbar.hide()
         self.tabBarClicked.connect(self.tabToggle)
         self.setStyleSheet(menu_style)
         self.setCornerWidget(self.toggleBtn)
@@ -114,6 +164,10 @@ class DashMenu(QTabWidget):
             self.cm_editor.statusbar.show()
         else:
             self.cm_editor.statusbar.hide()
+        if i == 6-1:
+            self.browser_statusbar.show()
+        else:
+            self.browser_statusbar.hide()
 
     def initToggleBtn(self):
         btn = QToolButton()

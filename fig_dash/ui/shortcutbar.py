@@ -78,8 +78,8 @@ class SocialMediaBtn(QToolButton):
             browser = self.tabs.currentWidget().browser
             try: browser.setUrl(url)
             except AttributeError as e:
-                print(e)
-
+                print(f"\x1b[31;1mshortcutbar.trigger:\x1b[0m {e}")
+        
     def connectTabs(self, tabs):
         self.tabs = tabs
 
@@ -260,7 +260,7 @@ class GShortcutBtn(QToolButton):
             browser = self.tabs.currentWidget().browser
             try: browser.setUrl(url)
             except AttributeError as e:
-                print(e)
+                print(f"\x1b[31;1mshortcutbar.trigger:\x1b[0m {e}")
 
     def connectTabs(self, tabs):
         self.tabs = tabs

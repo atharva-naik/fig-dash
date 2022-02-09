@@ -175,11 +175,10 @@ class WifiBtn(QToolButton):
         self.netName.setStyleSheet('''
         QLabel {
             color: #6e6e6e;
-            font-size: 15px;
+            font-size: 16px;
             background: transparent;
-            padding-left: 3px;
+            padding-left: 0px;
             padding-right: 3px;
-            font-family: 'Be Vietnam Pro', sans-serif;
         }''')
 
 
@@ -224,12 +223,11 @@ class VolumeLabel(QWidget):
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.label.setStyleSheet("""
         QLabel {
-            color: #fff;
+            color: #6e6e6e;
             margin: 0px;
             padding: 0px;
-            font-size: 15px;
+            font-size: 16px;
             background: transparent;
-            font-family: 'Be Vietnam Pro', sans-serif;
         }""")
 
     def set(self, value):
@@ -361,6 +359,11 @@ class TitleBar(QToolBar):
             tip="open system utilites menu.",
             callback=self.callback if parent is None else parent.sysutilsbar.toggle, 
         )
+        self.tabToggleBtn = self.initTitleBtn(
+            "titlebar/tabs.png", 
+            tip="toggle visibility of tab bar.",
+            callback=self.callback if parent is None else parent.tabs.toggleTabBar, 
+        )
         self.bluetoothBtn.setFixedSize(QSize(17,17))
         self.fullscreenBtn.connectTitleBar(self)
         # self.onScreenKeyboard = self.initTitleBtn(
@@ -395,7 +398,7 @@ class TitleBar(QToolBar):
 
         self.infoDisplay = QWidget()
         self.infoLayout = QHBoxLayout()
-        self.infoLayout.setSpacing(0)
+        self.infoLayout.setSpacing(2)
         self.infoLayout.setContentsMargins(0,0,0,0)
         self.infoDisplay.setLayout(self.infoLayout)
 
@@ -406,9 +409,9 @@ class TitleBar(QToolBar):
         self.battery.pluggedIcon.setFixedSize(QSize(17,17))
         # window title
         self.title = QLabel()
-        self.title.setText("FigD")
-        self.title.setStyleSheet("color: #fff; font-size: 16px; font-weight: bold;")
-        self.title.setAlignment(Qt.AlignCenter)
+        self.title.setText("fig-dash: a dashboard for Python developers")
+        self.title.setStyleSheet("color: #fff; font-size: 16px;")
+        # self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         # lang settings.
         self.langBtn = QToolButton(self)
@@ -417,7 +420,7 @@ class TitleBar(QToolBar):
         QToolButton {
             color: #fff;
             border: 0px;
-            font-size: 16px;
+            font-size: 15px;
             font-family: 'Be Vietnam Pro', sans-serif;
         }
         QToolButton:hover {
@@ -430,22 +433,23 @@ class TitleBar(QToolBar):
         self.addWidget(self.initBlank())
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
+        self.addWidget(self.findBtn)
         self.addWidget(self.zoomInBtn)
         self.addWidget(self.zoomLabel)
         self.addWidget(self.zoomSlider)
         self.addWidget(self.zoomOutBtn)
-        self.addWidget(self.findBtn)
         self.addWidget(self.widgetsToggleBtn)
         self.addWidget(self.sysUtilsBtn)
         self.addWidget(self.wordCountBtn)
-        self.addWidget(self.initSpacer())
+        self.addWidget(self.tabToggleBtn)
+        self.addWidget(self.initSpacer(30))
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
-        self.infoLayout.addWidget(self.wifi)
-        self.infoLayout.addWidget(self.wifi.netName)
-        self.infoLayout.addWidget(self.volume)
-        self.infoLayout.addWidget(self.langBtn)
-        self.infoLayout.addWidget(self.bluetoothBtn)
+        self.infoLayout.addWidget(self.wifi, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.infoLayout.addWidget(self.wifi.netName, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.infoLayout.addWidget(self.volume, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.infoLayout.addWidget(self.langBtn, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.infoLayout.addWidget(self.bluetoothBtn, 0, Qt.AlignCenter | Qt.AlignVCenter)
         self.infoLayout.addWidget(self.battery.pluggedIcon, 0, Qt.AlignCenter | Qt.AlignVCenter)
         self.infoLayout.addWidget(self.battery)
         self.addWidget(self.infoDisplay)
@@ -493,9 +497,13 @@ class TitleBar(QToolBar):
             else:
                 parent.showMaximized()
 
-    def initSpacer(self):
+    def initSpacer(self, width=None):
         spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        if width:
+            spacer.setMinimumWidth(width)
+            spacer.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        else:
+            spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         return spacer
 
@@ -542,7 +550,7 @@ class TitleBar(QToolBar):
             parent.move(parent.x() + delta.x(), parent.y() + delta.y())
             parent.oldPos = event.globalPos()
         except Exception as e:
-            print(e)
+            print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
 
 
 def titlebar_test():

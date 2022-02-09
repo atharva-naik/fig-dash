@@ -244,13 +244,22 @@ class DashTabWidget(QTabWidget):
     def partialConnectWindow(self, window):
         self.dash_window = window
 
+    def toggleTabBar(self) -> None:
+        """[summary]
+        actually topbar is toggled. 
+        This function is called toggleTabBar because the topbar is what a normal browser would have as a tabbar.
+        """
+        try:
+            topbar = self.dash_window.topbar
+            if topbar.isVisible(): 
+                topbar.hide()
+            else: topbar.show()
+        except Exception as e:
+            print(f"\x1b[31;1mtab.toggleTabBar:\x1b[0m {e}")
+
     def connectWindow(self, window):
         self.dash_window = window
-        # try:
-        #     browser = self.currentWidget().browser
-        #     window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
-        # except AttributeError as e: 
-        #     print(e)
+
     def onTabChange(self, i: int):
         try: 
             dash_window = self.dash_window
@@ -259,14 +268,15 @@ class DashTabWidget(QTabWidget):
             dash_window.navbar.searchbar.setUrl(browser.url())
             # dash_window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
         except AttributeError as e: 
-            print("\x1b[31;1monTabChange:\x1b[0m", e)
+            print("\x1b[31;1mtab.onTabChange:\x1b[0m", e)
 
     def triggerFind(self):
         '''trigger the default response of the browser to Ctrl+F'''
         try: 
             debug_web_view_splitter = self.currentWidget()
             debug_web_view_splitter.browser.reactToCtrlF()
-        except Exception as e: print("\x1b[31;1mtriggerFind\x1b[0m", e)
+        except Exception as e: 
+            print(f"\x1b[31;1mtab.triggerFind:\x1b[0m {e}")
 
     def connectDropdown(self, splitter):
         splitter.addWidget(self.dropdown)
@@ -276,7 +286,9 @@ class DashTabWidget(QTabWidget):
     def setupTabForBrowser(self, i: int, browser, 
                            lang: str="en-US"):
         try: dash_window = self.dash_window
-        except AttributeError as e: return
+        except AttributeError as e: 
+            print(f"\x1b[31;1mtab.setupTabForBrowser:\x1b[0m {e}")
+            return
         browser.loadDevTools()
         browser.setSpellCheck(lang)
         self.setTabText(i, "  "+browser.page().title())
@@ -350,7 +362,7 @@ class DashTabWidget(QTabWidget):
             self.dash_window.statusBar().show()
             self.dash_window.statusBar().showMessage(link)
         except Exception as e:
-            print("\x1b[31;1mshowLinkOnStatusBar\x1b[0m", e)
+            print(f"\x1b[31;1mtab.showLinkOnStatusBar:\x1b[0m {e}")
 
     def renameCurrentTab(self, text):
         i = self.currentIndex()
@@ -377,7 +389,7 @@ class DashTabWidget(QTabWidget):
                 )
             )
         except AttributeError as e: 
-            print("\x1b[31;1mhome:\x1b[0m", e)
+            print(f"\x1b[31;1mtab.home:\x1b[0m {e}")
 
     def openHome(self):
         url=FigD.static(
@@ -419,6 +431,18 @@ class DashTabWidget(QTabWidget):
                    title: str="", icon: str=""):
         i = self.addTab(widget, QIcon(icon), "  "+title)
         self.setCurrentIndex(i)
+        try:
+            browser = widget.browser
+            page = browser.page()
+            self._tab_tooltip_setter_data = (browser, i)
+            browser.loadFinished.connect(
+                lambda: page.runJavaScript(
+                    "document.body.outerHTML",
+                    self._tab_tooltip_setter,
+                )
+            )
+        except Exception as e: 
+            print(f"\x1b[31;1mtab.openWidget:\x1b[0m {e}")
 
     def openUrl(self, url: str="file:///tmp/fig_dash.rendered.content.html"):
         qurl = QUrl(url)
@@ -439,6 +463,7 @@ class DashTabWidget(QTabWidget):
             currentWidget.nextInHistory()
         except AttributeError as e: 
             i = self.currentIndex()
+            print(f"\x1b[31;1mtab.nextUrl:\x1b[0m {e}")
             print(f"tab-{i} is not a browser instance") 
 
     def save(self):
@@ -465,7 +490,7 @@ class DashTabWidget(QTabWidget):
             browser.setZoomFactor(zoom)
             # print(f"setting tab zoom: {zoom}")
         except AttributeError as e:
-            print("\x1b[31;1msetTabZoom\x1b[0m", e)
+            print(f"\x1b[31;1mtab.setTabZoom\x1b[0m {e}")
 
     def zoomInTab(self):
         try:
@@ -481,7 +506,7 @@ class DashTabWidget(QTabWidget):
             self.titlebar.zoomSlider.setValue(100*zoomFactor)
             self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
-            print("\x1b[31;1mzoomInTab\x1b[0m", e)
+            print(f"\x1b[31;1mtab.zoomInTab\x1b[0m {e}")
 
     def zoomOutTab(self):
         try:
@@ -497,7 +522,7 @@ class DashTabWidget(QTabWidget):
             self.titlebar.zoomSlider.setValue(100*zoomFactor)
             self.titlebar.zoomLabel.setText(f'{int(100*zoomFactor)}')
         except AttributeError as e:
-            print("\x1b[31;1mzoomOutTab\x1b[0m", e)
+            print("\x1b[31;1mtab.zoomOutTab\x1b[0m", e)
 
     def connectTitleBar(self, titlebar):
         '''connect the title bar with tab widget so that the zoom slider and zoom label may be modified when the zoom in and zoom out buttons are clicked.'''
@@ -509,6 +534,7 @@ class DashTabWidget(QTabWidget):
             currentWidget.prevInHistory()
         except AttributeError as e: 
             i = self.currentIndex()
+            print(f"\x1b[31;1mtab.prevUrl:\x1b[0m {e}")
             print(f"tab-{i} is not a browser instance") 
 
     def reloadUrl(self, i: int):
@@ -517,6 +543,7 @@ class DashTabWidget(QTabWidget):
             currentWidget.reload()
         except AttributeError as e: 
             i = self.currentIndex()
+            print(f"\x1b[31;1mtab.reloadUrl:\x1b[0m {e}")
             print(f"tab-{i} is not a browser instance") 
 
     def loadUrlForIndex(self, i: int, url: Union[str, QUrl]):
@@ -626,7 +653,8 @@ class TabBar(QTabBar):
         if action == renameTab:
             # print(event.x(), event.y())
             try: self.tabs.renameDialog()
-            except Exception as e: print("\x1b[31;1mcontextMenuEvent\x1b[0m", e)
+            except Exception as e: 
+                print("\x1b[31;1mtab.contextMenuEvent\x1b[0m", e)
 
     def resizeEvent(self, event):
         """Resize the widget and make sure the plus button is in the correct location."""

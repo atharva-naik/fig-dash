@@ -127,7 +127,8 @@ class DashSearchBar(QLineEdit):
     def toggleTerminal(self):
         '''terminalize current tab.'''
         try: tabWidget = self.tabWidget
-        except Exception as e: print(e); return
+        except Exception as e:          
+            print(f"\x1b[31;1mnavbar.toggleTerminal:\x1b[0m {e}"); return
         if tabWidget is None: return
         browser = tabWidget.currentWidget().browser
         try:
@@ -137,12 +138,15 @@ class DashSearchBar(QLineEdit):
             else:
                 tabWidget.terminal()
                 self.terminalAction.setIcon(FigD.Icon("navbar/terminal_active.svg"))
-        except Exception as e: print(e)
+        except Exception as e: 
+            print(f"\x1b[31;1mnavbar.toggleTerminal:\x1b[0m {e}")
 
     def toggleBookmark(self):
         '''toggle bookmark status of the current browser page/tab.'''
         try: tabWidget = self.tabWidget
-        except Exception as e: print(e); return
+        except Exception as e: 
+            print(f"\x1b[31;1mnavbar.toggleBookmark:\x1b[0m {e}")
+            return
         if tabWidget is None: return
         browser = tabWidget.currentWidget().browser
         try:
@@ -152,7 +156,8 @@ class DashSearchBar(QLineEdit):
             else:
                 browser.setBookmark(True)
                 self.bookmarkAction.setIcon(FigD.Icon("navbar/bookmark_active.svg"))
-        except Exception as e: print(e)
+        except Exception as e: 
+            print(f"\x1b[31;1mnavbar.toggleBookmark:\x1b[0m {e}")
 
     def glow(self):
         '''apply glow effect.'''
@@ -204,7 +209,8 @@ class DashSearchBar(QLineEdit):
         try:
             browser = tabs.currentWidget().browser
         except Exception as e:
-            print(e); return
+            print(f"\x1b[31;1mnavbar.search:\x1b[0m {e}")
+            return
         if browser.isTerminalized():
             cmd = self.text()
             self.setText("")
