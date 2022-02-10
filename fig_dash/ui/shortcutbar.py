@@ -5,7 +5,7 @@ import os
 from pprint import pprint
 from typing import Union, Tuple, List
 from PyQt5.QtGui import QColor, QKeySequence
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize, QPoint
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QToolBar, QToolButton, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
 # fig_dash
 from fig_dash.assets import FigD
@@ -153,9 +153,16 @@ class PlayPauseBtn(SystemBtn):
 
 
 class MoreToolbar(QToolBar):
+    def connectSideBar(self, sidebar):
+        self.sidebar = sidebar
+
     def focusOutEvent(self, event):
         super(MoreToolbar, self).focusOutEvent(event)
-        self.hide()
+        try:
+            self.sidebar.Hide()
+            self.hide()
+        except Exception as e:
+            print(f"\x1b[31mshortcutbar.MoreToolbar.focusOutEvent\x1b[0m {e}")
 
 
 class MoreBtn(QToolButton):
@@ -178,6 +185,7 @@ class MoreBtn(QToolButton):
         }""")
         self.buttons = buttons
         self.more_toolbar = MoreToolbar()
+        self.more_toolbar.connectSideBar(parent)
         self.more_toolbar.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
         # set icon size.
         self.more_toolbar.setIconSize(QSize(35,35))
@@ -266,12 +274,24 @@ class GShortcutBtn(QToolButton):
         self.tabs = tabs
 # #eb5f34, #ebcc34
 # #a11f53, #eb5f34
-def windowSwitcher():
+class WindowSwitchTimer:
+    def __init__(self, ):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.release)
+
+    def release(self):
+        import pyautogui
+        self.timer.stop()
+        pyautogui.keyUp('alt')
+
+    def engage(self):
+        import pyautogui
+        pyautogui.keyDown('alt')
+        pyautogui.hotkey('tab')
+        self.timer.start(5000)
+window_switcher = WindowSwitchTimer()
     # pyautogui.keyDown("alt")
     # pyautogui.hotkey("tab")
-    print("exited")
-
-
 class AppLauncher(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
         super(AppLauncher, self).__init__(parent)
@@ -327,7 +347,7 @@ class ShortcutBar(QToolBar):
             callback=lambda : pyautogui.hotkey("win","d")
         )
         self.workspaceBtn = SystemBtn(
-            "window_switcher", callback=windowSwitcher,
+            "window_switcher", callback=window_switcher.engage,
             tip="open window switcher (Alt+Tab) on Linux", 
         )
         self.screenshotBtn = SystemBtn(
@@ -422,7 +442,12 @@ class ShortcutBar(QToolBar):
                 self.hangoutsBtn,
             ]
         )
-        
+        self.moreBtns = [
+            self.moreSystemBtn, 
+            self.moreSocialBtn,
+            self.moreMediaBtn, 
+            self.morePagesBtn, 
+        ]
         # add all widgets to layout.
         self.addWidget(self.imagesBtn)
         self.addWidget(self.videosBtn)
@@ -524,23 +549,32 @@ class ShortcutBar(QToolBar):
     def focusOutEvent(self, event):
         super(ShortcutBar, self).focusOutEvent(event)
         # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
+        MoreToolBarHasFocus = False
+        for btn in self.moreBtns:
+            if btn.more_toolbar.hasFocus():
+                MoreToolBarHasFocus = True
+                break
+        if not MoreToolBarHasFocus:
+            self.Hide()
+
+    def Hide(self):
         self.hide()
         self.toggleBtn.show()
         self.appsBtn.show()
 
+    def Show(self):
+        self.toggleBtn.hide()
+        self.appsBtn.hide()
+        self.show()
+        self.setFocus()
+
     def toggle(self):
         if self.isVisible():
-            self.hide()
-            self.toggleBtn.show()
-            self.appsBtn.show()
+            self.Hide()
             # self.toggleBtn.move(0,self.h)
         else:
+            self.Show()
             # self.toggleBtn.move(55,self.h)
-            self.toggleBtn.hide()
-            self.appsBtn.hide()
-            self.show()
-            self.setFocus()
-
     def addSpacer(self):
         spacer = QWidget()
         spacer.setStyleSheet("""

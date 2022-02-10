@@ -141,21 +141,17 @@ class DashMenu(QTabWidget):
         self.addTab(self.viewmenu, "View")
         self.addTab(self.codemenu, "Code")
         self.addTab(self.browsermenu, "Browser")     
-        self.collapse()
         # self.currentChanged.connect(self.onTabChange)
         self.browser_statusbar = BrowserStatusBar()
         self.browser_statusbar.hide()
         self.tabBarClicked.connect(self.tabToggle)
         self.setStyleSheet(menu_style)
         self.setCornerWidget(self.toggleBtn)
+        # set browser index.
+        self.setCurrentIndex(6-1)
+        self.collapse()
 
-    def tabToggle(self, i):
-        '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
-        # print(self.currentIndex(), i)
-        if i == self.currentIndex(): 
-            self.toggle()
-        else: self.expand()
-        # index of "Code" menu.
+    def updateStatusBar(self, i: int):
         if i == 1-1:
             self.fileviewer.statusbar.show()
         else:
@@ -168,6 +164,18 @@ class DashMenu(QTabWidget):
             self.browser_statusbar.show()
         else:
             self.browser_statusbar.hide()
+
+    def setCurrentIndex(self, i: int):
+        self.updateStatusBar(i)
+        super(DashMenu, self).setCurrentIndex(i)
+
+    def tabToggle(self, i):
+        '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
+        # print(self.currentIndex(), i)
+        if i == self.currentIndex(): 
+            self.toggle()
+        else: self.expand()
+        self.updateStatusBar(i)
 
     def initToggleBtn(self):
         btn = QToolButton()

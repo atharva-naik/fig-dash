@@ -187,7 +187,6 @@ class ZoomFactor:
 
     def lt(self, zoom_factors):
         for value in zoom_factors:
-            # print(value)
             if value.value < self.value: 
                 return value
         return value
@@ -222,7 +221,6 @@ class DashTabWidget(QTabWidget):
         # list of zoom factors.
         self.zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
         self.zoomFactors = [ZoomFactor(zf) for zf in self.zoomFactors]
-        # print(f"\x1b[34;1m{self.zoomFactors}\x1b[0m")
         self.tabbar = TabBar()
         self.setTabBar(self.tabbar)
         self.tabbar.tabs = self
@@ -264,7 +262,6 @@ class DashTabWidget(QTabWidget):
         try: 
             dash_window = self.dash_window
             browser = self.widget(i).browser
-            print(browser.url())
             dash_window.navbar.searchbar.setUrl(browser.url())
             # dash_window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
         except AttributeError as e: 
@@ -292,7 +289,7 @@ class DashTabWidget(QTabWidget):
         browser.loadDevTools()
         browser.setSpellCheck(lang)
         self.setTabText(i, "  "+browser.page().title())
-        print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
+        # print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)
         browser.setZoomFactor(browser.currentZoomFactor)
         if browser.isTerminalized():
@@ -379,6 +376,10 @@ class DashTabWidget(QTabWidget):
     def home(self):
         currentWidget = self.currentWidget()
         try:
+            self.dash_window.navbar.setFocus()
+        except Exception as e:
+            print("\x1b[31;1mtab.home:\x1b[0m", e)
+        try:
             currentWidget.browser.load(
                 FigD.static(
                     "home.html",
@@ -405,6 +406,10 @@ class DashTabWidget(QTabWidget):
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
+        try:
+            self.dash_window.navbar.setFocus()
+        except Exception as e:
+            print("\x1b[31;1mtab.openHome:\x1b[0m", e)
         self.setTabText(i, "  "+url.strip())
         browser.loadFinished.connect(
             lambda _, i = i, browser = browser:
@@ -445,11 +450,19 @@ class DashTabWidget(QTabWidget):
             print(f"\x1b[31;1mtab.openWidget:\x1b[0m {e}")
 
     def openUrl(self, url: str="file:///tmp/fig_dash.rendered.content.html"):
-        qurl = QUrl(url)
+        if isinstance(url, str):
+            qurl = QUrl(url)
+        else: 
+            qurl = url
+            url = url.toString()
         browser = Browser(self)
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
+        try:
+            self.dash_window.navbar.setFocus()
+        except Exception as e:
+            print("\x1b[31;1mtab.openUrl:\x1b[0m", e)
         self.setTabText(i, "  "+url.strip())
         browser.loadFinished.connect(
             lambda _, i = i, browser = browser:
@@ -581,6 +594,10 @@ class DashTabWidget(QTabWidget):
         label.setText(open(path).read())
         title = collapseuser(path)
         i = self.addTab(label, self.tabIcons[-1], title)
+        try:
+            self.dash_window.navbar.setFocus()
+        except Exception as e:
+            print("\x1b[31;1mtab.openFile:\x1b[0m", e)
         self.setCurrentIndex(i)
 
     def getIconName(self, path: str):

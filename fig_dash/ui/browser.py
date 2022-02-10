@@ -9,11 +9,7 @@ import socket
 import getpass
 import pathlib
 import subprocess
-from tqdm import tqdm
-from pprint import pprint
-from queue import Queue, Empty
-from typing import Union, Tuple
-from threading import Thread
+from typing import Union, Tuple, List
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
@@ -23,6 +19,7 @@ from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, Q
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.utils import QFetchIcon, collapseuser
+from fig_dash.api.system.translate import DashTranslator
 from fig_dash.api.browser.extensions import ExtensionManager
     
 
@@ -525,8 +522,77 @@ class BrowserSearchPanel(QWidget):
 
 class SilentWebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, *args, **kwargs):
-        '''silence javascript error mesages'''
         pass
+
+
+class CustomWebPage(QWebEnginePage):
+    def __init__(self, *args, logging_level=0, **kwargs) -> None:
+        super(CustomWebPage, self).__init__(*args, **kwargs)
+        self.consoleLoggingLevel = logging_level
+        self.translator = DashTranslator()
+
+    def translate(self, target_lang="en"):
+        self.target_lang = target_lang
+        self.runJavaScript("document.getElementsByTagName('p')", self.translate_p)
+
+    def translate_p(self, p_texts: List[str]) -> None:
+        """[summary]
+        get the list of strings.
+
+        Args:
+            p_texts (List[str]): [description]
+        """
+        print(p_texts)
+        new_texts = []
+        for p_text in p_texts:
+            new_texts.append(p_text)
+            self.translator(p_text, self.target_lang)
+        print(new_texts)
+
+    def javaScriptConsoleMessage(self, level: QWebEnginePage.JavaScriptConsoleMessageLevel, 
+                                 message: str, lineNumber: int, sourceID: str) -> None:
+        """[summary]
+
+        Args:
+            level (QWebEnginePage.JavaScriptConsoleMessageLevel): [description] Level indicates the severity of the event that triggered the message
+            
+            QWebEnginePage::InfoMessageLevel (0) The message is purely informative and can safely be ignored.
+            
+            QWebEnginePage::WarningMessageLevel	(1)	The message informs about unexpected behavior or errors that may need attention.
+            
+            QWebEnginePage::ErrorMessageLevel (2) The message indicates there has been an error.
+            message (str): [description] the string message
+            lineNumber (int): [description] In case of evaluation errors the source URL may be provided in sourceID as well as the lineNumber.
+            sourceID (str): [description] In case of evaluation errors the source URL may be provided in sourceID as well as the lineNumber.
+        """
+        if level == QWebEnginePage.InfoMessageLevel:
+            if level >= self.consoleLoggingLevel:
+                print(f"\x1b[34;1mjs:\x1b[0m {lineNumber}: {level} {message}")
+        elif level == QWebEnginePage.WarningMessageLevel:
+            if level >= self.consoleLoggingLevel:
+                print(f"\x1b[33;1mjs:\x1b[0m {lineNumber}: {level} {message}")
+        elif level == QWebEnginePage.ErrorMessageLevel:
+            if level >= self.consoleLoggingLevel:
+                print(f"\x1b[31;1mjs:\x1b[0m {lineNumber}: {level} {message}")
+    
+    def acceptNavigationRequest(self, url: QUrl, navType: int, isMainFrame: bool):
+        """[summary]
+        modified method to change reaction to url being clicked.
+
+        Args:
+            url (QUrl): [description]
+            navType (int): [description]
+            isMainFrame (bool): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        # print(f"\x1b[32;1m{navType == QWebEnginePage.NavigationTypeLinkClicked}\x1b[0m: {url}")
+        # if navType == QWebEnginePage.NavigationTypeLinkClicked:
+        #     print(url.toString())
+        return super(CustomWebPage, self).acceptNavigationRequest(
+            url, navType, isMainFrame
+        )
 
 
 class DevToolbarBtn(QToolButton):
@@ -558,7 +624,8 @@ class DebugWebView(QWebEngineView):
     def __init__(self, parent=None,
                  zoomFactor=1.25, dev_tools_zoom=1.35):
         super(DebugWebView, self).__init__(parent)
-        # self.py_dev_view = PyDevToolsView()
+        custom_page = CustomWebPage(self, logging_level=2)
+        self.setPage(custom_page)
         self.devTools = self.initDevTools()
         self.devCloseBtn.clicked.connect(
             self.devTools.hide
@@ -867,7 +934,15 @@ class Browser(DebugWebView):
         # self.extension_manager = ExtensionManager()
         # modify settings.
         self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
         self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        
+        # set true if clipboard permission is granted.
+        # self.settings().setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
+        # set true to allow spatial navigation
+        # self.settings().setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.ScrollAnimatorEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
@@ -884,6 +959,7 @@ class Browser(DebugWebView):
         # self.Deselect.activated.connect(self.deselect)
     def onSelectionChange(self):
         selText = self.selectedText()
+        selText = " ".join(selText.strip().split("\n"))
         try:
             menu = self.dash_window.menu
             menu.browser_statusbar.updateSelection(selText)
@@ -999,7 +1075,19 @@ class Browser(DebugWebView):
         self.menu = self.page().createStandardContextMenu()
         data = self.page().contextMenuData()
         # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
-
+        transToEnglish = None
+        openLinkInNewTab = None
+        actions = self.menu.actions()
+        for i, action in enumerate(actions):
+            if action.text() == "Open link in new tab":
+                openLinkInNewTab = actions[i]
+        # open link in new tab action.
+        if openLinkInNewTab:
+            qurl = data.linkUrl()
+            # print(f"open {qurl.toString()} in new tab")
+            openLinkInNewTab.triggered.connect(
+                lambda: self.tabs.openUrl(url=qurl)
+            )
         # get the inspect action
         inspectAction = self.menu.actions()[-1]
         # verify that it is in fact the Inspect action.
@@ -1019,8 +1107,10 @@ class Browser(DebugWebView):
         self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
         highlightAction = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
         self.menu.addSeparator()
-        self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
-
+        transToEnglish = self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
+        transToEnglish.triggered.connect(
+            lambda: self.page().translate(target_lang="en")
+        )
         # profile = self.page().profile()
         # languages = profile.spellCheckLanguages()
         # menu = self.page().createStandardContextMenu()
@@ -1132,7 +1222,7 @@ class Browser(DebugWebView):
                 self.url().toString(QUrl.FullyEncoded)
             )
             self.dash_window.statusBar().clearMessage()
-            print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
+            # print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
         except AttributeError as e:
             print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
         self.append(self.url())
@@ -1143,7 +1233,7 @@ class Browser(DebugWebView):
             if self != currentWidget.browser: return
             i = self.tabWidget.currentIndex()
             if i < 0: return
-            print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
+            # print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
             self.page().loadFinished.connect(
                 lambda: self.tabWidget.setupTabForBrowser(
                     i=i, browser=self,

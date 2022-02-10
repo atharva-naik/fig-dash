@@ -13,8 +13,6 @@ from fig_dash.api.system.network import NetworkHandler
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout
-
-
 # title_bar_style = '''
 # QToolBar {
 #     margin: 0px; 
