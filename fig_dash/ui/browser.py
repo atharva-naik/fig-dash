@@ -530,6 +530,21 @@ class CustomWebPage(QWebEnginePage):
         super(CustomWebPage, self).__init__(*args, **kwargs)
         self.consoleLoggingLevel = logging_level
         self.translator = DashTranslator()
+        self.featurePermissionRequested.connect(self.permissionDialog)
+    # def connectWindow(self, window: QWidget) -> None:
+    #     self.dash_window = window
+    #     print(f"\x1b[32;1mconnectWindow:\x1b[0m connected {window} to {self}")
+    def permissionDialog(self, securityOrigin: QUrl, feature: QWebEnginePage.Feature):
+        print(f"{securityOrigin.toString()}: opening permission dialog for {feature}")
+        """
+        QWebEnginePage::PermissionUnknown	0	It is unknown whether the user grants or denies permission.
+        QWebEnginePage::PermissionGrantedByUser	1	The user has granted permission.
+        QWebEnginePage::PermissionDeniedByUser	2	The user has denied permission.
+        """
+        self.setFeaturePermission(
+            securityOrigin, feature, 
+            QWebEnginePage.PermissionGrantedByUser
+        )
 
     def translate(self, target_lang="en"):
         self.target_lang = target_lang
@@ -590,6 +605,7 @@ class CustomWebPage(QWebEnginePage):
         # print(f"\x1b[32;1m{navType == QWebEnginePage.NavigationTypeLinkClicked}\x1b[0m: {url}")
         # if navType == QWebEnginePage.NavigationTypeLinkClicked:
         #     print(url.toString())
+        # self.dash_window.statusBar().showMessage(url.toString())
         return super(CustomWebPage, self).acceptNavigationRequest(
             url, navType, isMainFrame
         )
@@ -622,9 +638,10 @@ class DevToolbarBtn(QToolButton):
 
 class DebugWebView(QWebEngineView):
     def __init__(self, parent=None,
-                 zoomFactor=1.25, dev_tools_zoom=1.35):
+                 zoomFactor=1.25, 
+                 dev_tools_zoom=1.35):
         super(DebugWebView, self).__init__(parent)
-        custom_page = CustomWebPage(self, logging_level=2)
+        custom_page = CustomWebPage(self, logging_level=3)
         self.setPage(custom_page)
         self.devTools = self.initDevTools()
         self.devCloseBtn.clicked.connect(
@@ -923,11 +940,13 @@ def inspectTriggerd(browser, inspect_action):
 
 
 class Browser(DebugWebView):
-    def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25):
+    def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25, window: QWidget=None):
         super(Browser, self).__init__(parent=parent)
         self.mime_database = QMimeDatabase()
         self.historyIndex = 0
-        self.browsingHistory = []
+        self.dash_window = window
+        # if window is not None:
+        #     self.page().connectWindow(self.dash_window)
         # self.pbar = tqdm(range(100)) 
         # self.currentZoomFactor = zoomFactor
         # self.setZoomFactor(self.currentZoomFactor)
@@ -1137,40 +1156,11 @@ class Browser(DebugWebView):
         # highlight action.
         highlightAction.triggered.connect(self.highlightSelectedText)
         self.menu.popup(event.globalPos())
-
-    # def on_spell_check(self, lang):
-    #     profile = self.page().profile()
-    #     profile.setSpellCheckLanguages((lang,))
-
-    def append(self, url: Union[str, QUrl]):
-        '''append url to browsing history.'''
-        try: url = url.toString()
-        except AttributeError as e: 
-            print(f"\x1b[31;1mbrowser.append:\x1b[0m {e}")
-            pass
-        # store in local tab browsing history.
-        if len(self.browsingHistory) > 0 and self.browsingHistory[-1] == url:
-            self.browsingHistory.append(url)
-            self.historyIndex = len(self.browsingHistory)-1
-        try:
-            if len(self.dash_window.browsingHistory) > 0 and self.dash_window.browsingHistory[-1] == url:
-                return
-            else:
-                self.dash_window.browsingHistory.append(url)
-                print(f"\x1b[44;1m{self.dash_window.browsingHistory}\x1b[0m")
-        except AttributeError as e:
-            print(f"\x1b[31;1mbrowser.append:\x1b[0m {e}")
-            print("not connected to a DashWindow")
-            return    
-
+   
     def prevInHistory(self):
-        self.historyIndex -= 1
-        self.historyIndex = max(0, self.historyIndex)
         self.back()
 
     def nextInHistory(self):
-        self.historyIndex += 1
-        self.historyIndex = min(len(self.browsingHistory)-1, self.historyIndex)
         self.forward()
 
     def load(self, url):
@@ -1225,7 +1215,6 @@ class Browser(DebugWebView):
             # print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
         except AttributeError as e:
             print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
-        self.append(self.url())
         try:
             # change title of the tab that contains this browser only.
             currentWidget =  self.tabWidget.currentWidget()
@@ -1243,7 +1232,6 @@ class Browser(DebugWebView):
             print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
             # print("not connected to a TabWidget")
     def setUrl(self, url):
-        self.append(url)
         self.dash_window.statusBar().showMessage(f"loading {url.toString()}")
         super(Browser, self).setUrl(url)
 

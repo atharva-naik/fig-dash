@@ -340,7 +340,7 @@ class DashTabWidget(QTabWidget):
         currentSplitter = self.currentWidget()
         qurl = currentSplitter.browser.url()
         url = qurl.toString()
-        browser = Browser(self)
+        browser = Browser(self, window=self.dash_window)
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
@@ -402,7 +402,7 @@ class DashTabWidget(QTabWidget):
             CAROUSEL_CSS=FigD.staticUrl("carousel.css"),
         ).toString()
         qurl = QUrl(url)
-        browser = HomePageView(self)
+        browser = HomePageView(self, window=self.dash_window)
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
@@ -455,7 +455,7 @@ class DashTabWidget(QTabWidget):
         else: 
             qurl = url
             url = url.toString()
-        browser = Browser(self)
+        browser = Browser(self, window=self.dash_window)
         browser.connectTabWidget(self)
         browser.setUrl(qurl)
         i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  "+url.strip())
