@@ -293,7 +293,7 @@ class TitleBar(QToolBar):
         self.closeBtn = self.initTitleBtn(
             "titlebar/close.svg", 
             tip="close window",
-            callback=self.callback if parent is None else parent.close
+            callback=self.callback if parent is None else parent.hide
         )
         # minimize window
         self.minimizeBtn = self.initTitleBtn(

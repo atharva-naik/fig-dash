@@ -61,6 +61,7 @@ class DashUI(QApplication):
         self.logsAction = QAction("Get logs")
         self.supportAction = QAction("Collect support files")
         # connect functions to actions.
+        self.showAction.triggered.connect(self.window.show)
         self.quitAction.triggered.connect(self.quit)
         # tray icon menu.
         self.trayMenu = QMenu()
