@@ -5,7 +5,7 @@ import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
 from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QGraphicsBlurEffect
+from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMainWindow, QGraphicsBlurEffect
 # fig-dash imports.
 # try:
 from fig_dash.config import *
@@ -54,7 +54,7 @@ class DashUI(QApplication):
         )
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
-        width = self.window.width()
+        self.window_args = kwargs
         # actions for tray icon context menu.
         self.showAction = QAction("Show")
         self.quitAction = QAction("Quit")
@@ -94,6 +94,15 @@ class DashUI(QApplication):
     #         currentWidget.setGraphicsEffect(None)
     #         # print("unbluring background")
     #     return super().notify(obj, event)
+    def newMainWindow(self, **kwargs) -> QMainWindow:
+        window = DashWindow(open_home=False, **self.window_args)
+        windowFlags = kwargs.get("windowFlags", ["frameless", "ontop"])
+        window.setFlags(*windowFlags)
+        window.setWindowIcon(FigD.Icon("logo.svg"))
+        window.show()
+
+        return window 
+
     def launch(self, maximized=True):
         '''
         launch app ui.

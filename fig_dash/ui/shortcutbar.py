@@ -294,7 +294,7 @@ window_switcher = WindowSwitchTimer()
     # pyautogui.hotkey("tab")
 class AppLauncher(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
-        super(AppLauncher, self).__init__(parent)
+        super(AppLauncher, self).__init__("App Launcher", parent)
         self.metaBtns = {}
         self.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
         # set icon size.

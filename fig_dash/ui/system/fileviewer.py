@@ -1066,6 +1066,13 @@ class FileViewerGroup(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         # self.layout.setSpacing(2)
         self.group.setLayout(self.layout)
+        self.setStyleSheet("""
+        QWidget {
+            border: 0px;
+            background: transparent;
+            margin-left: 5px;
+            margin-right: 5px;
+        }""")
         layout.addStretch(1)
         layout.addWidget(self.group)
         layout.addWidget(self.Label(name))
@@ -1802,31 +1809,39 @@ class FileViewerMenu(QWidget):
         self.selectgroup = FileViewerSelectGroup()
         # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.pathgroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.editgroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.selectgroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.viewgroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.opengroup)
-        self.layout.addWidget(self.addSeparator(10))
+        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.sharegroup)
 
         self.layout.addStretch(1)
         self.setLayout(self.layout)
-
-    def addSeparator(self, width: Union[None, int]=None):
+    # def addSeparator(self, width: Union[None, int]=None):
+    #     sep = QFrame()
+    #     sep.setFrameShape(QFrame.VLine)
+    #     sep.setFrameShadow(QFrame.Sunken)
+    #     sep.setStyleSheet('''background: #292929;''')
+    #     sep.setLineWidth(1)
+    #     # sep.setMaximumHeight(90)
+    #     if width: 
+    #         sep.setFixedWidth(width)
+    #     return sep
+    def addSeparator(self):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
-        sep.setStyleSheet('''background: #292929;''')
-        sep.setLineWidth(1)
-        # sep.setMaximumHeight(90)
-        if width: 
-            sep.setFixedWidth(width)
+        sep.setStyleSheet(f'''background: #292929''')
+        sep.setLineWidth(4)
+        sep.setMaximumHeight(100)
+
         return sep
 
     def connectWidget(self, widget):

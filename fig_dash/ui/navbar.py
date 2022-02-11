@@ -20,6 +20,7 @@ QLineEdit {
     padding-top: 3px;
     padding-bottom: 3px;
     color: #fff; /* #ad3700; */
+    selection-background-color: #eb5f34;
     /* background: qlineargradient(x1 : 1, y1 : 0, x2 : 0, y2: 0, stop: 0 #828282, stop: 0.5 #eee, stop: 1 #828282); */
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
     border-radius: {{ BORDER_RADIUS }};
@@ -125,6 +126,10 @@ class DashSearchBar(QLineEdit):
         self.searchHistory = []
         self.setCompleter(self.completer)
 
+    def setText(self, text: str):
+        super(DashSearchBar, self).setText(text)
+        self.setCursorPosition(0)
+
     def toggleTerminal(self):
         '''terminalize current tab.'''
         try: tabWidget = self.tabWidget
@@ -176,8 +181,9 @@ class DashSearchBar(QLineEdit):
     def mousePressEvent(self, event):
         '''select text on click'''
         super(DashSearchBar, self).mousePressEvent(event)
-        self.setCursorPosition(0)
-        self.selectAll()
+        if not self.hasSelectedText():
+            self.setCursorPosition(0)
+            self.selectAll()
 
     def focusInEvent(self, event):
         super(DashSearchBar, self).focusInEvent(event)
@@ -186,6 +192,7 @@ class DashSearchBar(QLineEdit):
     def focusOutEvent(self, event):
         super(DashSearchBar, self).focusOutEvent(event)
         self.unglow()
+        self.setCursorPosition(0)
 
     def setUrl(self, url: Union[QUrl, str]):
         if isinstance(url, QUrl):
@@ -256,9 +263,9 @@ QToolButton {
 QToolButton:hover {
     background: rgba(125, 125, 125, 0.7);
 }''')
-class DashBarBtn(QToolButton):
+class DashNavBarBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, **kwargs):
-        super(DashBarBtn, self).__init__(parent)
+        super(DashNavBarBtn, self).__init__(parent)
         icon = kwargs.get("icon")
         self.icon_path = icon
         stem, ext = os.path.splitext(icon)
@@ -278,7 +285,7 @@ class DashBarBtn(QToolButton):
             self.setIcon(FigD.Icon(self.icon_path))
         else:
             self.setIcon(FigD.Icon(self.icon_disabled_path))
-        super(DashBarBtn, self).setEnabled(value)
+        super(DashNavBarBtn, self).setEnabled(value)
 
 
 dash_navbar_style = jinja2.Template('''
@@ -293,7 +300,7 @@ class DashNavBar(QWidget):
         self.setLayout(layout)
         # go to previous page in history.
         self.btns = []
-        self.prevBtn = DashBarBtn(
+        self.prevBtn = DashNavBarBtn(
             icon="navbar/prev.svg",
             tip="go to previous page in history",
             style=dash_bar_btn_style
@@ -301,7 +308,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.prevBtn)
         self.btns.append(self.prevBtn)
         # go to next page in history.
-        self.nextBtn = DashBarBtn(
+        self.nextBtn = DashNavBarBtn(
             icon="navbar/next.svg",
             tip="go to next page in history",
             style=dash_bar_btn_style
@@ -309,7 +316,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.nextBtn)
         self.btns.append(self.nextBtn)
         # reload page.
-        self.reloadBtn = DashBarBtn(
+        self.reloadBtn = DashNavBarBtn(
             icon="navbar/reload.svg",
             tip="reload page",
             style=dash_bar_btn_style
@@ -317,7 +324,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.reloadBtn)
         self.btns.append(self.reloadBtn)
         # open homepage.
-        self.homeBtn = DashBarBtn(
+        self.homeBtn = DashNavBarBtn(
             icon="navbar/home.svg",
             tip="open homepage",
             style=dash_bar_btn_style
@@ -330,7 +337,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.searchbar)
         self.setStyleSheet(dash_navbar_style.render())
         # extensions.
-        self.extensionsBtn = DashBarBtn(
+        self.extensionsBtn = DashNavBarBtn(
             icon="navbar/extensions.svg",
             tip="open extensions",
             style=dash_bar_btn_style
@@ -338,7 +345,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.extensionsBtn)
         self.btns.append(self.extensionsBtn)
         # account.
-        self.accountBtn = DashBarBtn(
+        self.accountBtn = DashNavBarBtn(
             icon="navbar/account.png",
             tip="open account settings",
             style=dash_bar_btn_style,
@@ -347,7 +354,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.accountBtn)
         self.btns.append(self.accountBtn)
         # history.
-        self.historyBtn = DashBarBtn(
+        self.historyBtn = DashNavBarBtn(
             icon="navbar/history.svg",
             tip="open search history",
             style=dash_bar_btn_style,
@@ -356,7 +363,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.historyBtn)
         self.btns.append(self.historyBtn)
         # settings.
-        self.settingsBtn = DashBarBtn(
+        self.settingsBtn = DashNavBarBtn(
             icon="navbar/more_settings.svg",
             tip="open browser settings",
             style=dash_bar_btn_style

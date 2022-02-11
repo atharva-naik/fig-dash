@@ -526,14 +526,33 @@ class SilentWebPage(QWebEnginePage):
 
 
 class CustomWebPage(QWebEnginePage):
-    def __init__(self, *args, logging_level=0, **kwargs) -> None:
+    def __init__(self, *args, logging_level=0, 
+                 dash_window=None, **kwargs) -> None:
         super(CustomWebPage, self).__init__(*args, **kwargs)
         self.consoleLoggingLevel = logging_level
         self.translator = DashTranslator()
+        self.dash_window = dash_window
         self.featurePermissionRequested.connect(self.permissionDialog)
     # def connectWindow(self, window: QWidget) -> None:
     #     self.dash_window = window
     #     print(f"\x1b[32;1mconnectWindow:\x1b[0m connected {window} to {self}")
+    def createWindow(self, windowType: QWebEnginePage.WebWindowType):
+        if windowType == QWebEnginePage.WebBrowserTab:
+            return self.dash_window.tabs.openUrl("https://google.com")
+        elif windowType == QWebEnginePage.WebBrowserWindow:
+            app = QApplication.instance()
+            window = app.newMainWindow()
+            return window.tabs.openTab()
+        else:
+            # handle this case appropriately.
+            print(windowType)
+            return None
+            # popup = PopupWindow(profile())
+            # popup.setAttribute(Qt.WA_DeleteOnClose)
+            # popup.show()
+
+            # return popup.page()
+
     def permissionDialog(self, securityOrigin: QUrl, feature: QWebEnginePage.Feature):
         print(f"{securityOrigin.toString()}: opening permission dialog for {feature}")
         """
@@ -945,6 +964,8 @@ class Browser(DebugWebView):
         self.mime_database = QMimeDatabase()
         self.historyIndex = 0
         self.dash_window = window
+        custom_page = CustomWebPage(self, logging_level=3, dash_window=window)
+        self.setPage(custom_page)
         # if window is not None:
         #     self.page().connectWindow(self.dash_window)
         # self.pbar = tqdm(range(100)) 
@@ -1095,18 +1116,18 @@ class Browser(DebugWebView):
         data = self.page().contextMenuData()
         # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
         transToEnglish = None
-        openLinkInNewTab = None
-        actions = self.menu.actions()
-        for i, action in enumerate(actions):
-            if action.text() == "Open link in new tab":
-                openLinkInNewTab = actions[i]
-        # open link in new tab action.
-        if openLinkInNewTab:
-            qurl = data.linkUrl()
-            # print(f"open {qurl.toString()} in new tab")
-            openLinkInNewTab.triggered.connect(
-                lambda: self.tabs.openUrl(url=qurl)
-            )
+        # openLinkInNewTab = None
+        # actions = self.menu.actions()
+        # for i, action in enumerate(actions):
+        #     if action.text() == "Open link in new tab":
+        #         openLinkInNewTab = actions[i]
+        # # open link in new tab action.
+        # if openLinkInNewTab:
+        #     qurl = data.linkUrl()
+        #     # print(f"open {qurl.toString()} in new tab")
+        #     openLinkInNewTab.triggered.connect(
+        #         lambda: self.tabs.openUrl(url=qurl)
+        #     )
         # get the inspect action
         inspectAction = self.menu.actions()[-1]
         # verify that it is in fact the Inspect action.

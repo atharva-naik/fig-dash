@@ -15,19 +15,20 @@ from fig_dash.ui.widget.codemirror import CodeMirrorEditor
 from fig_dash.ui.system.fileviewer import FileViewerWidget
 
 
+menu_background = "transparent" 
 menu_style = '''
 QWidget#DashMenuTab {
     border: 0px;
-    background: transparent;
+    background: '''+menu_background+''';
 }
 QWidget#DashSubMenu {
     /* border: 1px solid #eb5f34; */
-    background: transparent;
+    background: '''+menu_background+''';
 }
 QTabWidget {
     color: #fff;
     border: 0px;
-    background: transparent;
+    background: '''+menu_background+''';
 }
 QTabWidget::pane {
     border: 0px;
@@ -345,9 +346,9 @@ class DashMenu(QTabWidget):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
-        sep.setStyleSheet('''background: #292929''')
-        sep.setLineWidth(1)
-        sep.setMaximumHeight(90)
+        sep.setStyleSheet(f'''background: #292929''')
+        sep.setLineWidth(4)
+        sep.setMaximumHeight(100)
 
         return sep
 

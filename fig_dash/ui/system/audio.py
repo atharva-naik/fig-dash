@@ -74,8 +74,7 @@ class VolumeSlider(QWidget):
         self.FnF3 = QShortcut(Qt.Key_F3, self)
         self.FnF3.activated.connect(self.increase)
         try:
-            import chime
-            chime.theme('material')
+            import chime # chime.theme('material')
             print(f"using chime theme: {chime.theme()}")
             self._chime = chime
         except ImportError as e:

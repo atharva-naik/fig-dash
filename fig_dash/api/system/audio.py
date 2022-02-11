@@ -20,6 +20,7 @@
 import chime
 import pulsectl
 
+# https://superuser.com/questions/431079/how-to-disable-auto-mute-mode#:~:text=F5%20(show%20all%20controls),hit%20Esc%20to%20exit
 
 class PulseController:
     '''convenience wrapper around pulsectl, which itself is a pyton wrapper around libpulse (I think)'''

@@ -202,18 +202,19 @@ class DashWindow(QMainWindow):
         if event.key() == Qt.Key_F11:
             self.titlebar.fullscreenBtn.toggle()
 
-    def initTabWidget(self):
+    def initTabWidget(self, open_home=True, **kwargs):
         tabs = DashTabWidget(self)
         tabs.partialConnectWindow(self)
-        tabs.openHome()
-        # tabs.openUrl("https://github.com/atharva-naik")
-        dummyBtn = QToolButton(self)
-        dummyBtn.setStyleSheet("""
-        QToolButton {
-            border: 0px;
-            background: transparent;
-        }""")
-        tabs.tabBar().setTabButton(0, QTabBar.RightSide, dummyBtn)
+        if open_home:
+            tabs.openHome()
+            dummyBtn = QToolButton(self)
+            dummyBtn.setStyleSheet("""
+            QToolButton {
+                border: 0px;
+                background: transparent;
+            }""")
+            tabs.tabBar().setTabButton(0, QTabBar.RightSide, dummyBtn)
+        else: print("\x1b[32;1mopen_home=False\x1b[0m")
         # for i in range(5):
         #     tabs.openUrl("https://google.com")
         # tabs.connectWindow(self)
@@ -230,7 +231,7 @@ class DashWindow(QMainWindow):
         centralWidget.setLayout(layout)
         # add tab widget.
         self.navbar = DashNavBar(self)
-        self.tabs = self.initTabWidget()
+        self.tabs = self.initTabWidget(**kwargs)
         # top bar.
         self.topbar = QWidget()
         topLayout = QHBoxLayout()

@@ -358,6 +358,8 @@ class DashTabWidget(QTabWidget):
 				self.setupTabForBrowser(i, browser)
         )
         currentSplitter.addWidget(browser)
+
+        return browser.page()
         # self.setCurrentIndex(i)
     def VSplitCurrentTab(self):
         pass
@@ -425,6 +427,8 @@ class DashTabWidget(QTabWidget):
         )
         self.setCurrentIndex(i)
 
+        return browser.page()
+
     def openFolder(self, folder: str):
         pass
 
@@ -457,6 +461,18 @@ class DashTabWidget(QTabWidget):
         except Exception as e: 
             print(f"\x1b[31;1mtab.openWidget:\x1b[0m {e}")
 
+    def openTab(self):
+        browser = Browser(self, window=self.dash_window)
+        browser.connectTabWidget(self)
+        i = self.addTab(browser.splitter, FigD.Icon("browser.svg"), "  ")
+        try:
+            self.dash_window.navbar.setFocus()
+        except Exception as e:
+            print("\x1b[31;1mtab.openUrl:\x1b[0m", e)
+        self.setCurrentIndex(i)
+
+        return browser.page()
+
     def openUrl(self, url: str="file:///tmp/fig_dash.rendered.content.html"):
         if isinstance(url, str):
             qurl = QUrl(url)
@@ -477,6 +493,8 @@ class DashTabWidget(QTabWidget):
 				self.setupTabForBrowser(i, browser)
         )
         self.setCurrentIndex(i)
+
+        return browser.page()
 
     def nextUrl(self, i: int):
         currentWidget = self.currentWidget().browser
