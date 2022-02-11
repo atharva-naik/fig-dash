@@ -131,3 +131,4 @@ dmypy.json
 
 # client secrets
 client_secret_*
+IGNORE

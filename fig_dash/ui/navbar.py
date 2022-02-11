@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 import jinja2
 from typing import Union
 # fig-dash imports.
@@ -259,6 +260,9 @@ class DashBarBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, **kwargs):
         super(DashBarBtn, self).__init__(parent)
         icon = kwargs.get("icon")
+        self.icon_path = icon
+        stem, ext = os.path.splitext(icon)
+        self.icon_disabled_path = stem + "_disabled" + ext
         self.setIcon(FigD.Icon(icon))
         size = kwargs.get("size", (20, 20))
         self.setIconSize(QSize(*size))
@@ -268,6 +272,13 @@ class DashBarBtn(QToolButton):
         self.setStyleSheet(stylesheet.render(
             ICON_SIZE=size[0],
         ))
+
+    def setEnabled(self, value: bool):
+        if value:
+            self.setIcon(FigD.Icon(self.icon_path))
+        else:
+            self.setIcon(FigD.Icon(self.icon_disabled_path))
+        super(DashBarBtn, self).setEnabled(value)
 
 
 dash_navbar_style = jinja2.Template('''

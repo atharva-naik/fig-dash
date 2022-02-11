@@ -1159,9 +1159,22 @@ class Browser(DebugWebView):
    
     def prevInHistory(self):
         self.back()
-
+        # try:
+        #     if self.history().canGoBack():
+        #         self.dash_window.navbar.prevBtn.setEnabled(True)
+        #     else:
+        #         self.dash_window.navbar.prevBtn.setEnabled(False)
+        # except Exception as e:
+        #     print(f"\x1b[31;1mbrowser.prevInHistory:\x1b[0m", e)
     def nextInHistory(self):
         self.forward()
+        # try:
+        #     if self.history().canGoForward():
+        #         self.dash_window.navbar.nextBtn.setEnabled(True)
+        #     else:
+        #         self.dash_window.navbar.nextBtn.setEnabled(False)
+        # except Exception as e:
+        #     print(f"\x1b[31;1mbrowser.prevInHistory:\x1b[0m", e)
 
     def load(self, url):
         '''redefined load function which shows url being loaded on status bar.'''

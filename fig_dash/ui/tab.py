@@ -292,6 +292,14 @@ class DashTabWidget(QTabWidget):
         # print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)
         browser.setZoomFactor(browser.currentZoomFactor)
+        if browser.history().canGoBack():
+            self.dash_window.navbar.prevBtn.setEnabled(True)
+        else:
+            self.dash_window.navbar.prevBtn.setEnabled(False)
+        if browser.history().canGoForward():
+            self.dash_window.navbar.nextBtn.setEnabled(True)
+        else:
+            self.dash_window.navbar.nextBtn.setEnabled(False)
         if browser.isTerminalized():
             browser.execTerminalJS()
         else:
