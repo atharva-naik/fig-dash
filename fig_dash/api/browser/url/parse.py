@@ -1494,7 +1494,7 @@ class UrlOrQuery:
     def __init__(self, url_or_query: str):
         self.url_or_query = url_or_query
         parse_result = self.add_protocol(url_or_query)
-        print(parse_result)
+        # print(parse_result)
         self.isUrl = self.checkIfUrl(parse_result)
         self.parse_result = parse_result
         if self.isUrl:

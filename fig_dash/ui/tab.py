@@ -7,6 +7,7 @@ from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon, QColor, QKeySequence
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice
+from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog
 # fig-dash imports.
 from ..utils import collapseuser
@@ -263,6 +264,14 @@ class DashTabWidget(QTabWidget):
             dash_window = self.dash_window
             browser = self.widget(i).browser
             dash_window.navbar.searchbar.setUrl(browser.url())
+            if browser.history().canGoBack():
+                dash_window.navbar.prevBtn.setEnabled(True)
+            else: 
+                dash_window.navbar.prevBtn.setEnabled(False)
+            if browser.history().canGoForward():
+                dash_window.navbar.nextBtn.setEnabled(True)
+            else: 
+                dash_window.navbar.nextBtn.setEnabled(False)
             # dash_window.menu.browsermenu.devToolsBtn = browser.devToolsBtn
         except AttributeError as e: 
             print("\x1b[31;1mtab.onTabChange:\x1b[0m", e)
@@ -577,13 +586,25 @@ class DashTabWidget(QTabWidget):
             print(f"tab-{i} is not a browser instance") 
 
     def reloadUrl(self, i: int):
-        currentWidget = self.currentWidget().browser
         try:
-            currentWidget.reload()
+            browser = self.currentWidget().browser
+            browser.reload()
         except AttributeError as e: 
             i = self.currentIndex()
             print(f"\x1b[31;1mtab.reloadUrl:\x1b[0m {e}")
             print(f"tab-{i} is not a browser instance") 
+
+    def goToItem(self, item: QWebEngineHistoryItem) -> None:
+        """[summary]
+
+        Args:
+            item (QWebEngineHistoryItem): [description]
+        """
+        try:
+            browser = self.currentWidget().browser
+            browser.history().goToItem(item)
+        except Exception as e:
+            print("\x1b[31;1mtab.goToItem:\x1b[0m", e)
 
     def loadUrlForIndex(self, i: int, url: Union[str, QUrl]):
         if isinstance(url, str):

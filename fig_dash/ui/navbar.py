@@ -3,13 +3,14 @@
 import os
 import jinja2
 from typing import Union
+from functools import partial
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QSize, QPoint, QUrl
-from PyQt5.QtWidgets import QWidget, QToolBar, QLabel, QToolButton, QMainWindow, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
+from PyQt5.QtCore import Qt, QSize, QPoint, QUrl, QEvent
+from PyQt5.QtWidgets import QWidget, QToolBar, QMenu, QLabel, QToolButton, QMainWindow, QTabWidget, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
 dash_searchbar_style = jinja2.Template('''
@@ -253,7 +254,7 @@ class DashSearchBar(QLineEdit):
         super(DashSearchBar, self).resizeEvent(event)
 
 
-dash_bar_btn_style = jinja2.Template('''
+dash_bar_btn_style = jinja2.Template("""
 QToolButton {
     border: 0px;
     padding: 3px;
@@ -262,7 +263,22 @@ QToolButton {
 }
 QToolButton:hover {
     background: rgba(125, 125, 125, 0.7);
-}''')
+}
+QMenu {
+    color: #fff;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    /* background: rgba(29,29,29,0.8); */
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(0,0,0,0.9), stop : 0.6 rgba(29,29,29,0.9));
+}
+QMenu:selected  {
+    color: #292929;
+    font-weight: bold;
+    background: #eb5f34; /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+}
+QMenu::separator {
+    background: #484848;
+}""")
 class DashNavBarBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None, **kwargs):
         super(DashNavBarBtn, self).__init__(parent)
@@ -288,6 +304,91 @@ class DashNavBarBtn(QToolButton):
         super(DashNavBarBtn, self).setEnabled(value)
 
 
+class ReloadBtn(DashNavBarBtn):
+    def __init__(self, *args, **kwargs):
+        super(ReloadBtn, self).__init__(*args, **kwargs)
+        self.menu = QMenu(self)
+        self.hardReload = self.menu.addAction(
+            FigD.Icon("navbar/reload.svg"), 
+            "hard refresh"
+        )
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.onContextMenu)
+        
+    def onContextMenu(self, point):
+        self.menu.exec_(self.mapToGlobal(point))
+
+
+class BackNavBtn(DashNavBarBtn):
+    def __init__(self, *args, **kwargs):
+        super(BackNavBtn, self).__init__(*args, **kwargs)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.onContextMenu)
+
+    def connectTabWidget(self, tabWidget: QTabWidget):
+        self.tabWidget = tabWidget
+
+    def showHistory(self):
+        print("full history")
+
+    def goToItem(self, item):
+        print(item.title())
+        self.tabWidget.goToItem(item)
+
+    def onContextMenu(self, point):
+        self.historyActions = []
+        try:
+            currentWidget = self.tabWidget.currentWidget()
+            browser = currentWidget.browser
+            history = browser.history()
+            currentIndex = history.currentItemIndex()
+            self.menu = QMenu(self)
+            items = []
+            for i, item in enumerate(history.items()):
+                if i >= currentIndex: continue
+                items.append(item)
+            for i, item in enumerate(items[::-1]):
+                action = self.menu.addAction(
+                    FigD.Icon("browser.svg"), 
+                    item.title()
+                )
+                action.triggered.connect(partial(
+                    self.goToItem, item
+                ))
+                self.historyActions.append(action)
+            self.menu.addSeparator()
+            self.showHistoryAction = self.menu.addAction(FigD.Icon("navbar/history.svg"), "Show full history")
+            self.showHistoryAction.triggered.connect(self.showHistory)
+            self.menu.exec_(self.mapToGlobal(point))
+        except Exception as e:
+            print("\x1b[31;1mnavbar.BackNavBtn.onContextMenu:\x1b[0m", e)
+
+
+class NextNavBtn(BackNavBtn):
+    def onContextMenu(self, point):
+        self.historyActions = []
+        try:
+            currentWidget = self.tabWidget.currentWidget()
+            browser = currentWidget.browser
+            history = browser.history()
+            currentIndex = history.currentItemIndex()
+            self.menu = QMenu(self)
+            for i, item in enumerate(history.items()):
+                if i <= currentIndex: continue
+                action = self.menu.addAction(
+                    FigD.Icon("browser.svg"), 
+                    item.title()
+                )
+                action.triggered.connect(partial(self.goToItem, item))
+                self.historyActions.append(action)
+            self.menu.addSeparator()
+            self.showHistoryAction = self.menu.addAction(FigD.Icon("navbar/history.svg"), "Show full history")
+            self.showHistoryAction.triggered.connect(self.showHistory)
+            self.menu.exec_(self.mapToGlobal(point))
+        except Exception as e:
+            print("\x1b[31;1mnavbar.NextNavBtn.onContextMenu:\x1b[0m", e)
+
+
 dash_navbar_style = jinja2.Template('''
 QWidget {
     background: #b1b1b1;
@@ -300,7 +401,7 @@ class DashNavBar(QWidget):
         self.setLayout(layout)
         # go to previous page in history.
         self.btns = []
-        self.prevBtn = DashNavBarBtn(
+        self.prevBtn = BackNavBtn(
             icon="navbar/prev.svg",
             tip="go to previous page in history",
             style=dash_bar_btn_style
@@ -308,7 +409,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.prevBtn)
         self.btns.append(self.prevBtn)
         # go to next page in history.
-        self.nextBtn = DashNavBarBtn(
+        self.nextBtn = NextNavBtn(
             icon="navbar/next.svg",
             tip="go to next page in history",
             style=dash_bar_btn_style
@@ -316,7 +417,7 @@ class DashNavBar(QWidget):
         layout.addWidget(self.nextBtn)
         self.btns.append(self.nextBtn)
         # reload page.
-        self.reloadBtn = DashNavBarBtn(
+        self.reloadBtn = ReloadBtn(
             icon="navbar/reload.svg",
             tip="reload page",
             style=dash_bar_btn_style
@@ -391,6 +492,8 @@ class DashNavBar(QWidget):
         self.nextBtn.clicked.connect(tabWidget.nextUrl)
         self.prevBtn.clicked.connect(tabWidget.prevUrl)
         self.homeBtn.clicked.connect(tabWidget.home)
+        self.nextBtn.connectTabWidget(tabWidget)
+        self.prevBtn.connectTabWidget(tabWidget)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):
 #         super(DashSearchBar, self).__init__(parent)

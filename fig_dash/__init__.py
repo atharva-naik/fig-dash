@@ -41,7 +41,10 @@ class DashUI(QApplication):
         QToolTip {
             color: #fff;
             border: 0px;
-            padding: 5px;
+            padding-top: -1px;
+            padding-left: 5px;
+            padding-right: 5px;
+            padding-bottom: -1px;
             font-size:  17px;
             background: #000;
             font-family: 'Be Vietnam Pro', sans-serif;
