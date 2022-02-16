@@ -4,6 +4,7 @@
 import os
 import sys
 import copy
+from fig_dash.ui import DashWidgetGroup
 import jinja2
 import socket
 import getpass
@@ -16,7 +17,7 @@ from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
 from PyQt5.QtGui import QColor, QKeySequence, QIcon, QPixmap
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
-from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox
+from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.utils import QFetchIcon, collapseuser
@@ -328,6 +329,54 @@ class PyDevToolsView(QWidget):
         except Exception as e:
             print("\x1b[31;1mbrowser.exec\x1b[0m", e)
             self.output.setText(str(e))
+
+
+class BrowserViewGroup(DashWidgetGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(BrowserViewGroup, self).__init__(parent, "View")
+        self.wordCountBtn = self.initBtn(
+            icon="browser/word_count.svg", 
+            tip="toggle visibility of word count, time to read display",
+        )
+        self.layout.addStretch(1)
+        self.layout.addWidget(self.wordCountBtn)
+        self.layout.addStretch(1) 
+
+    def connectWindow(self, window):
+        self.dash_window = window
+        # self.tabs = self.dash_window.tabs
+        self.wordCountBtn.clicked.connect(
+            self.dash_window.page_info.toggle
+        )
+
+
+class BrowserMenu(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(BrowserMenu, self).__init__(parent)
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        # create groups.
+        self.viewgroup = BrowserViewGroup()
+        # create layout.
+        self.layout.addWidget(self.viewgroup)
+        self.layout.addWidget(self.addSeparator())
+        self.layout.addStretch(1)
+        # set layout.
+        self.setLayout(self.layout)
+
+    def addSeparator(self):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #292929''')
+        sep.setLineWidth(2)
+        sep.setMaximumHeight(100)
+
+        return sep
+
+    def connectWindow(self, widget):
+        self.viewgroup.connectWindow(widget)
 
 
 class BrowserSearchPanelBtn(QToolButton):
@@ -711,7 +760,7 @@ class DebugWebView(QWebEngineView):
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
 
     def onPrintRequest(self):
-        print("print requested")
+        print("\x1b[34mprint requested\x1b[0m")
         defaultPrinter = QPrinter(
                 QPrinterInfo.defaultPrinter()
             )
@@ -722,17 +771,18 @@ class DebugWebView(QWebEngineView):
             self.page().print(self._printer, self.printResult)
 
     def printResult(self, success):
+        print("\x1b[32mprint result\x1b[0m")
         if success:
             QMessageBox.information(self, 'Print completed', 
                 'Printing has been completed!', QMessageBox.Ok)
         else:
             QMessageBox.warning(self, 'Print failed', 
                 'Printing has failed!', QMessageBox.Ok)
-            self.onPrintRequest()
+            # self.onPrintRequest()
         del self._printer
 
     def reactToCtrlR(self):
-        pass
+        self.reload()
 
     def setSpellCheck(self, lang: str="en-US") -> None:
         """[summary]

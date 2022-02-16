@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+from re import S
 from tkinter import Button
 from fig_dash.ui.tab import DashTabWidget
 import jinja2
@@ -11,6 +12,7 @@ from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QEvent
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QFrame, QAction, QVBoxLayout, QHBoxLayout
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.browser import BrowserMenu
 from fig_dash.ui.widget.git import DashGitUI
 from fig_dash.ui.widget.jupyter_nb import JupyterNBWidget
 from fig_dash.ui.widget.codemirror import CodeMirrorEditor
@@ -144,14 +146,16 @@ class DashMenu(QTabWidget):
         self.editmenu = self.initEditMenu(**args)
         self.viewmenu = self.initViewMenu(**args)
         self.codemenu = self.initCodeMenu(**args)
+        self.imagemenu = self.initImageMenu(**args)
         self.formatmenu = self.initFormatMenu(**args)
         self.browsermenu = self.initBrowserMenu(**args)
         self.addTab(self.filemenu, "File")        
         self.addTab(self.editmenu, "Edit")
         self.addTab(self.formatmenu, "Format")
         self.addTab(self.viewmenu, "View")
-        self.addTab(self.codemenu, "Code")
+        self.addTab(self.codemenu, "Code") 
         self.addTab(self.browsermenu, "Browser")     
+        self.addTab(self.imagemenu, "Image")
         # self.currentChanged.connect(self.onTabChange)
         self.browser_statusbar = BrowserStatusBar()
         self.browser_statusbar.hide()
@@ -259,12 +263,18 @@ class DashMenu(QTabWidget):
 
         return formatmenu
 
+    def initImageMenu(self, **args):
+        imagemenu = QWidget()
+        imagemenu.setObjectName("DashMenuTab")
+
+        return imagemenu
+
     def initBrowserMenu(self, **args):
         browsermenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        self.devToolsBtn = QToolButton()
-        layout.addWidget(self.devToolsBtn)
+        self._browsermenu = BrowserMenu()
+        layout.addWidget(self._browsermenu)
         browsermenu.setLayout(layout)
         browsermenu.setObjectName("DashMenuTab")
 
@@ -351,6 +361,10 @@ class DashMenu(QTabWidget):
         codemenu.setObjectName("DashMenuTab")
 
         return codemenu
+
+    def connectWindow(self, window):
+        self.dash_window = window
+        self._browsermenu.connectWindow(window)
 
     def addSeparator(self):
         sep = QFrame()

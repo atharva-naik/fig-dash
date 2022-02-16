@@ -31,7 +31,7 @@ QToolButton {
 }
 QToolButton:hover {
     color: #292929;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #eb5f34, stop: 0.9 #338fc0);
 }
 QToolTip {
     color: #fff;
@@ -41,26 +41,51 @@ QToolTip {
 DASH_WIDGET_GROUP = jinja2.Template("""
 """)
 class DashWidgetGroupBtn(QToolButton):
-    '''File viewer button'''
+    '''Dash Widget button'''
     def __init__(self, parent: Union[None, QWidget]=None, **args):
         super(DashWidgetGroupBtn, self).__init__(parent)
         tip = args.get("tip", "a tip")
         size = args.get("size", (23,23))
+        icon = args.get("icon")
+        text = args.get("text")
+        style = args.get("style")
         self.hover_response = "background"
-        if "icon" in args:
-            self.inactive_icon = os.path.join("system/fileviewer", args["icon"])
+        if icon:
+            self.inactive_icon = args["icon"]
             stem, ext = os.path.splitext(Path(args["icon"]))
-            active_icon = f"{stem}_active{ext}"
-            self.active_icon = os.path.join("system/fileviewer", active_icon)
+            self.active_icon = f"{stem}_active{ext}"
             if os.path.exists(FigD.icon(self.active_icon)):
                 self.hover_response = "foreground"
             self.setIcon(FigD.Icon(self.inactive_icon))
-        elif "text" in args:
-            self.setText(args["text"])
+        if text: self.setText(args["text"])
+        if style: self.setToolButtonStyle(style)
         self.setIconSize(QSize(*size))
         self.setToolTip(tip)
         self.setStatusTip(tip)
+        # stylesheet attributes.
+        background = args.get("background", "transparent")
+        # print(font_size)
         if self.hover_response == "background":
+            self.setStyleSheet(jinja2.Template('''
+            QToolButton {
+                color: #fff;
+                border: 0px;
+                font-size: 14px;
+                background: {{ background }};
+            }
+            QToolButton:hover {
+                color: #292929;
+                background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220));
+            }
+            QToolTip {
+                color: #fff;
+                border: 0px;
+                background: #000;
+            }''').render(
+                    background=background,
+                )
+            )
+        else:
             self.setStyleSheet('''
             QToolButton {
                 color: #fff;
@@ -69,21 +94,7 @@ class DashWidgetGroupBtn(QToolButton):
                 background: transparent;
             }
             QToolButton:hover {
-                color: #292929;
-                background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-            }
-            QToolTip {
-                color: #fff;
-                border: 0px;
-                background: #000;
-            }''')
-        else:
-            self.setStyleSheet('''
-            QToolButton {
-                color: #fff;
-                border: 0px;
-                font-size: 14px;
-                background: transparent;
+                color: #eb5f34;
             }
             QToolTip {
                 color: #fff;
@@ -112,12 +123,20 @@ class DashWidgetGroup(QWidget):
         # layout.setSpacing(0)
         self.group = QWidget()
         self.layout = QHBoxLayout()
+        self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
         # self.layout.setSpacing(2)
         self.group.setLayout(self.layout)
-        layout.addWidget(self.Label(name))
-        layout.addWidget(self.group)
+        self.setStyleSheet("""
+        QWidget {
+            border: 0px;
+            background: transparent;
+            margin-left: 5px;
+            margin-right: 5px;
+        }""")
         layout.addStretch(1)
+        layout.addWidget(self.group)
+        layout.addWidget(self.Label(name))
         self.setLayout(layout)
 
     def Label(self, name):
@@ -126,22 +145,26 @@ class DashWidgetGroup(QWidget):
         name.setStyleSheet('''
         QLabel {
             border: 0px;
+            border-right: 1px;
             padding: 6px;
-            color: #69bfee;
+            color: #eb5f34;
             font-size: 16px;
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
         }''')
         return name
 
-    def initBtnGroup(self, btn_args, 
-                     orient="horizontal"):
+    def initBtnGroup(self, btn_args, orient="horizontal", 
+                     alignment_flag=None, spacing=None):
         btnGroup = QWidget()
         btnGroup.btns = []
         if orient == "horizontal":
             layout = QHBoxLayout()
         elif orient == "vertical":
             layout = QVBoxLayout()
+        if spacing is not None:
+            # print("setting spacing")
+            layout.setSpacing(spacing)
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
         btnGroup.setLayout(layout)
@@ -149,13 +172,17 @@ class DashWidgetGroup(QWidget):
         QWidget {
             color: #fff;
             border: 0px;
+            font-size: 10px;
             background: transparent;
         }''')
         layout.addStretch(1)
         for args in btn_args:
             btn = self.initBtn(**args)
             btnGroup.btns.append(btn)
-            layout.addWidget(btn, 0, Qt.AlignCenter)
+            if alignment_flag is None:
+                layout.addWidget(btn, 0, Qt.AlignCenter)
+            else:
+                layout.addWidget(btn, 0, alignment_flag)
         layout.addStretch(1)
         btnGroup.setLayout(layout)
 

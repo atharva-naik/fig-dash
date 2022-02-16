@@ -269,11 +269,9 @@ class RichTextEditor(QMainWindow):
         self.actionAlignCenter.setShortcut(Qt.CTRL + Qt.Key_E)
         self.actionAlignCenter.setCheckable(True)
         self.actionAlignCenter.setPriority(QAction.LowPriority)
-
-        self.actionAlignRight.setShortcut(Qt.CTRL + Qt.Key_R)
-        self.actionAlignRight.setCheckable(True)
-        self.actionAlignRight.setPriority(QAction.LowPriority)
-
+        # self.actionAlignRight.setShortcut(Qt.CTRL + Qt.Key_R)
+        # self.actionAlignRight.setCheckable(True)
+        # self.actionAlignRight.setPriority(QAction.LowPriority)
         self.actionAlignJustify.setShortcut(Qt.CTRL + Qt.Key_J)
         self.actionAlignJustify.setCheckable(True)
         self.actionAlignJustify.setPriority(QAction.LowPriority)

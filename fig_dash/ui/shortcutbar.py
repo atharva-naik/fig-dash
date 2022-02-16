@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
+import jinja2
 from pprint import pprint
 from typing import Union, Tuple, List
 from PyQt5.QtGui import QColor, QKeySequence
@@ -292,13 +293,14 @@ class WindowSwitchTimer:
 window_switcher = WindowSwitchTimer()
     # pyautogui.keyDown("alt")
     # pyautogui.hotkey("tab")
-class AppLauncher(QToolBar):
-    def __init__(self, parent: Union[QWidget, None]=None) -> None:
-        super(AppLauncher, self).__init__("App Launcher", parent)
+class SideToolBar(QToolBar):
+    def __init__(self, parent: Union[QWidget, None]=None, 
+                 name: str="", icon_size=(35,35)) -> None:
+        super(SideToolBar, self).__init__(name, parent)
         self.metaBtns = {}
         self.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
         # set icon size.
-        self.setIconSize(QSize(35,35))
+        self.setIconSize(QSize(*icon_size))
         self.setMovable(False)
         self.hide()
 
@@ -307,12 +309,10 @@ class AppLauncher(QToolBar):
             self.metaBtns[key] = value
 
     def focusInEvent(self, event):
-        # print(f"\x1b[33mShortcutSidebar: focus in\x1b[0m")
-        super(AppLauncher, self).focusInEvent(event)
+        super(SideToolBar, self).focusInEvent(event)
 
     def focusOutEvent(self, event):
-        super(AppLauncher, self).focusOutEvent(event)
-        # print(f"\x1b[33mShortcutSidebar: {event}\x1b[0m")
+        super(SideToolBar, self).focusOutEvent(event)
         self.hide()
         for btn in self.metaBtns.values():
             btn.show()
@@ -327,6 +327,130 @@ class AppLauncher(QToolBar):
                 btn.hide()
             self.show()
             self.setFocus()
+
+    def addSpacer(self):
+        spacer = QWidget()
+        spacer.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            background: transparent;
+        }""")
+        spacer.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
+        self.addWidget(spacer)
+
+
+class AppLauncher(SideToolBar):
+    def __init__(self, parent: Union[QWidget, None]=None) -> None:
+        super(AppLauncher, self).__init__(parent, "App Launcher")
+
+
+utils_menu_btn_style = jinja2.Template('''
+QWidget {
+    background: transparent;
+}
+QToolButton {
+    color: #292929;
+    padding: 10px;
+    margin-right: 5px;
+    margin-bottom: 5px;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    border-radius: 28px;
+}
+QToolButton:hover {
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 0.8), stop : 0.6 rgba(235, 204, 52, 0.9));
+}''')
+class UtilsLauncher(SideToolBar):
+    def __init__(self, parent: Union[QWidget, None]=None) -> None:
+        super(UtilsLauncher, self).__init__(parent, "Utilities Launcher")
+        # weather button.
+        self.weatherBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/weather.png"),
+            tip="View today's weather and weekly forecast.",
+            size=QSize(45,45),
+        )
+        self.calendarBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/calendar.png"),
+            tip="Calendar widget.",
+            size=QSize(45,45),
+        )
+        self.clockBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/clock.png"),
+            tip="Clock, timer, stopwatch and other widgets.",
+            size=QSize(45,45),
+        )
+        self.whiteboardBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/whiteboard.png"),
+            tip="Need to explain something? Present your ideas on a whiteboard.",
+            size=QSize(45,45),
+        )
+        self.kanbanBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/kanban.jpg"),
+            tip="Organize your project with a kanban board.",
+            size=QSize(45,45),
+        )
+        self.notesBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/notes.png"),
+            tip="Add new notes.",
+            size=QSize(45,45),
+        )
+        self.ideasBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/ideas.png"),
+            tip="Have an idea? write it down. Tell me when I should remind you.",
+            size=QSize(45,45),
+        )
+        self.newsBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/news.png"),
+            tip="Discover news and tune your feed to suit your interests.",
+            size=QSize(45,45),
+        )
+        self.botBtn = self.initUtilsBtn(
+            icon=FigD.Icon("widget/floatmenu/bot.png"),
+            tip="Bot assistant to help you out with productivity.",
+            size=QSize(45,45),
+        )
+        # add buttons.
+        self.addSpacer()
+        self.addWidget(self.weatherBtn)
+        self.addWidget(self.calendarBtn)
+        self.addWidget(self.clockBtn)
+        self.addSpacer()
+        self.addWidget(self.whiteboardBtn)
+        self.addWidget(self.kanbanBtn)
+        self.addSpacer()
+        self.addWidget(self.notesBtn)
+        self.addWidget(self.ideasBtn)
+        self.addWidget(self.newsBtn)
+        self.addWidget(self.botBtn)
+        self.addSpacer()
+
+    def connectWindow(self, dash_window):
+        self.dash_window = dash_window
+        self.calendarBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
+        self.clockBtn.clicked.connect(dash_window.datetime_notifs_splitter.toggle)
+        self.ideasBtn.clicked.connect(dash_window.ideas.toggle)
+        self.weatherBtn.clicked.connect(dash_window.weather.toggle)
+
+    def initUtilsBtn(self, **args):
+        btn = QToolButton(self)
+        btn.setIcon(args.get("icon"))
+        btn.setIconSize(
+            args.get(
+                "size", 
+                QSize(20,20)
+            )
+        )
+        btn.setToolTip(args.get("tip", "a tip."))
+        btn.setStyleSheet(
+            utils_menu_btn_style.render()
+        )
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(3,3)
+        glow_effect.setColor(QColor(235, 95, 52))
+        btn.setGraphicsEffect(glow_effect)
+
+        return btn
 
 
 class ShortcutBar(QToolBar):
@@ -492,6 +616,7 @@ class ShortcutBar(QToolBar):
             tip="toggle fig-dash shortcut panel",
         )
         self.app_launcher = AppLauncher(parent)
+        self.utils_launcher = UtilsLauncher(parent)
         # intialization of appsBtn depends on initialization of app launcher
         # as the appsBtn needs the app launcher show method as it's 
         self.appsBtn = self.initMetaBtn(
@@ -499,8 +624,20 @@ class ShortcutBar(QToolBar):
             callback=self.app_launcher.toggle,
             parent=parent
         )
+        self.utilsBtn = self.initMetaBtn(
+            icon="utils", tip="open utils launcher",
+            callback=self.utils_launcher.toggle,
+            parent=parent
+        )
+        self.metaBtns = [self.toggleBtn, self.appsBtn, self.utilsBtn]
         self.app_launcher.connectMetaBar(
             appsBtn=self.appsBtn,
+            utilsBtn=self.utilsBtn,
+            toggleBtn=self.toggleBtn,
+        )
+        self.utils_launcher.connectMetaBar(
+            appsBtn=self.appsBtn,
+            utilsBtn=self.utilsBtn,
             toggleBtn=self.toggleBtn,
         )
         self.hide()
@@ -538,8 +675,9 @@ class ShortcutBar(QToolBar):
         parent = self.parent()
         if parent is None: height = 400
         else: height = parent.height()//2 
-        self.toggleBtn.move(0, height-35)
-        self.appsBtn.move(0, height+35)
+        self.toggleBtn.move(0, height-70)
+        self.appsBtn.move(0, height)
+        self.utilsBtn.move(0, height+70)
         self.h = height
 
     def focusInEvent(self, event):
@@ -559,22 +697,21 @@ class ShortcutBar(QToolBar):
 
     def Hide(self):
         self.hide()
-        self.toggleBtn.show()
-        self.appsBtn.show()
+        for metaBtn in self.metaBtns:
+            metaBtn.show()
 
     def Show(self):
-        self.toggleBtn.hide()
-        self.appsBtn.hide()
+        for metaBtn in self.metaBtns:
+            metaBtn.hide()
         self.show()
         self.setFocus()
 
     def toggle(self):
         if self.isVisible():
             self.Hide()
-            # self.toggleBtn.move(0,self.h)
         else:
             self.Show()
-            # self.toggleBtn.move(55,self.h)
+
     def addSpacer(self):
         spacer = QWidget()
         spacer.setStyleSheet("""

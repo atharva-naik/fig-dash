@@ -102,10 +102,13 @@ class LinuxNetInfo(argparse.Namespace):
             # set attribute values from parsed output.
             for j, attr_name in enumerate(self.templates[i][1]):
                 try:
-                    setattr(self, 
-                        attr_name, 
-                        attr_values[j].strip())
-                except AttributeError:
+                    setattr(
+                        self, attr_name, 
+                        attr_values[j].strip()
+                    )
+                except (AttributeError, TypeError) as e:
+                    self.name = "Disconnected"
+                    print(f"api.system.network.parse: {e}")
                     pass
 
     def serialize(self, prefix: str, attr: str) -> str:

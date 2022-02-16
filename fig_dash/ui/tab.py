@@ -8,7 +8,7 @@ from typing import Union
 from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject
 from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem, QWebEnginePage
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog, QSizePolicy
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -114,6 +114,14 @@ class TabSplitVBtn(QToolButton):
         self.setStyleSheet(tab_btn_style.render())    
 
 
+class TaskViewBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TaskViewBtn, self).__init__(parent)
+        self.setObjectName("TaskViewBtn")
+        self.setIcon(FigD.Icon("tabbar/task-view.svg"))
+        self.setStyleSheet(tab_btn_style.render())    
+
+
 class TabSplitHBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]):
         super(TabSplitHBtn, self).__init__(parent)
@@ -134,11 +142,14 @@ class TabCornerWidget(QWidget):
         self.plusBtn = TabPlusBtn(self)
         self.splitHBtn = TabSplitHBtn(self)
         self.splitVBtn = TabSplitVBtn(self)
+        self.taskViewBtn = TaskViewBtn(self)
 
         self.layout.addWidget(self.initBlank())
         self.layout.addWidget(self.plusBtn)
+        self.layout.addStretch(1)
         self.layout.addWidget(self.splitHBtn)
         self.layout.addWidget(self.splitVBtn)
+        self.layout.addWidget(self.taskViewBtn)
         self.layout.addWidget(self.dropdownBtn)
         self.layout.addWidget(self.initBlank())
         # self.layout.addStretch(1)
@@ -212,6 +223,10 @@ class DashTabWidget(QTabWidget):
         super(DashTabWidget, self).__init__(parent)
         # tab corner widget.
         tabCornerWidget = TabCornerWidget(self)
+        # tabCornerWidget.setStyleSheet("""
+        # QWidget {
+        #     background: red;
+        # }""")
         tabCornerWidget.splitHBtn.clicked.connect(self.HSplitCurrentTab)
         tabCornerWidget.splitVBtn.clicked.connect(self.VSplitCurrentTab)
         self.dropdownBtn = tabCornerWidget.dropdownBtn
@@ -282,15 +297,23 @@ class DashTabWidget(QTabWidget):
     def onTabRightClick(self):
         print("tab right click!")
 
+    def toggleDevTools(self):
+        browser = self.currentWidget().browser
+        try:
+            browser.toggleDevTools()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"\x1b[31;1mtab.toggleDevTools:\x1b[0m {e}")
+
     def printPage(self):
         browser = self.currentWidget().browser
         try:
             page = browser.page()
             page.printRequested.emit()
+            print("\x1b[31mprint request emitted\x1b[0m")
         except AttributeError as e: 
             i = self.currentIndex()
-            print(f"\x1b[31;1mtab.viewSource:\x1b[0m {e}")
-
+            print(f"\x1b[31;1mtab.printPage:\x1b[0m {e}")
 
     def viewSource(self):
         browser = self.currentWidget().browser

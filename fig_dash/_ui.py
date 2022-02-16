@@ -145,6 +145,8 @@ class DashWindow(QMainWindow):
         self.addToolBar(Qt.TopToolBarArea, self.titlebar)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.app_launcher)
+        self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.utils_launcher)
+        self.shortcutbar.utils_launcher.connectWindow(self)
         # install event filter.
         self.installEventFilter(self)
         self.setStyleSheet(dash_window_style.render())
@@ -160,6 +162,7 @@ class DashWindow(QMainWindow):
         spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         spacer2 = QWidget()
         spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.menu.connectWindow(self)
         self.statusBar().addWidget(spacer1)
         self.statusBar().addWidget(self.menu.fileviewer.statusbar)
         self.statusBar().addWidget(self.menu.cm_editor.statusbar)
@@ -245,11 +248,12 @@ class DashWindow(QMainWindow):
         self.tabbar = self.tabs.tabBar()
         self.tabbar.setStyleSheet(dash_tabbar_style.render())
         topLayout.addWidget(self.tabbar)
-
-        spacer = QWidget()
-        spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        topLayout.addWidget(spacer)
         # corner widget.
+        self.tabs.cornerWidget(            
+        ).setSizePolicy(
+            QSizePolicy.Expanding, 
+            QSizePolicy.Fixed
+        )
         topLayout.addWidget(self.tabs.cornerWidget())
         # topLayout.addWidget(self.tabs.dropdownBtn)
         # add search bar.
@@ -265,9 +269,9 @@ class DashWindow(QMainWindow):
         self.h_split.setSizes([800,200,200])
         self.tabs.connectDropdown(self.h_split)
         # float menu widget
-        self.floatmenu = FloatMenu(self.tabs)
-        self.floatmenu.hide()
-        self.floatmenu.move(2,30)
+        # self.floatmenu = FloatMenu(self.tabs)
+        # self.floatmenu.hide()
+        # self.floatmenu.move(2,30)
         # system utilities bar.
         self.sysutilsbar = SysUtilsBar(self.tabs)
         self.sysutilsbar.hide()
@@ -287,7 +291,7 @@ class DashWindow(QMainWindow):
         layout.insertWidget(0, self.navbar)
         layout.insertWidget(0, self.menu)
         layout.insertWidget(0, self.topbar)
-        self.floatmenu.connectWindow(self)
+        # self.floatmenu.connectWindow(self)
         # layout.addStretch(1)
         return centralWidget
 

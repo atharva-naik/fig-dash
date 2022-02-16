@@ -307,12 +307,12 @@ class TitleBar(QToolBar):
             tip="maximize window",
             callback=self.callback if parent is None else self.maximize
         )
-        # widget bar toggle button
-        self.widgetsToggleBtn = self.initTitleBtn(
-            "titlebar/widgets_bar.svg", 
-            tip="toggle dashboard widgets visibility",
-            callback=self.callback if parent is None else parent.floatmenu.toggle 
-        )
+        # # widget bar toggle button
+        # self.widgetsToggleBtn = self.initTitleBtn(
+        #     "titlebar/widgets_bar.svg", 
+        #     tip="toggle dashboard widgets visibility",
+        #     callback=self.callback if parent is None else parent.floatmenu.toggle 
+        # )
         self.printBtn = self.initTitleBtn(
             "titlebar/print.svg", 
             tip="print the webpage (as PDF).",
@@ -334,15 +334,20 @@ class TitleBar(QToolBar):
             tip="zoom in",
             # callback=self.callback if parent is None else parent.tabs.save
         )
-        self.wordCountBtn = self.initTitleBtn(
-            "titlebar/word_count.svg", 
-            tip="toggle visibility of word count, time to read display",
-            callback=self.callback if parent is None else parent.page_info.toggle
-        )
+        # self.wordCountBtn = self.initTitleBtn(
+        #     "titlebar/word_count.svg", 
+        #     tip="toggle visibility of word count, time to read display",
+        #     callback=self.callback if parent is None else parent.page_info.toggle
+        # )
         self.findBtn = self.initTitleBtn(
             "titlebar/find_in_page.svg", 
             tip="find in page",
             # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.devToolsBtn = self.initTitleBtn(
+            "titlebar/dev_tools.svg", 
+            tip="toggle dev tools sidebar.",
+            callback=self.callback if parent is None else parent.tabs.toggleDevTools
         )
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
@@ -437,15 +442,15 @@ class TitleBar(QToolBar):
         self.addWidget(self.initBlank())
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
+        self.addWidget(self.devToolsBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.printBtn)
         self.addWidget(self.zoomInBtn)
         self.addWidget(self.zoomLabel)
         self.addWidget(self.zoomSlider)
         self.addWidget(self.zoomOutBtn)
-        self.addWidget(self.widgetsToggleBtn)
         self.addWidget(self.sysUtilsBtn)
-        self.addWidget(self.wordCountBtn)
+        # self.addWidget(self.wordCountBtn)
         self.addWidget(self.tabToggleBtn)
         self.addWidget(self.initSpacer(30))
         self.addWidget(self.title)

@@ -10,8 +10,6 @@ from PyQt5.QtWidgets import QWidget, QToolBar, QToolButton, QApplication, QVBoxL
 from fig_dash.assets import FigD
 
 
-floatmenu_style = '''
-'''
 floatmenu_btn_style = jinja2.Template('''
 QWidget {
     background: transparent;
