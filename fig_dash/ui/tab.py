@@ -5,9 +5,9 @@ import jinja2
 import getpass
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon, QColor, QKeySequence
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice
-from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem
+from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject
+from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem, QWebEnginePage
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog
 # fig-dash imports.
 from ..utils import collapseuser
@@ -243,6 +243,64 @@ class DashTabWidget(QTabWidget):
     def partialConnectWindow(self, window):
         self.dash_window = window
 
+    def eventFilter(self, obj: QObject, event:  QEvent):
+        """[summary]
+
+        Args:
+            obj (QObject): [description]
+            event (QEvent): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        if (obj != self.tabBar()):
+            return super(DashTabWidget, self).eventFilter(obj, event)
+        if (event.type() != QEvent.MouseButtonPress):
+            return super(DashTabWidget, self).eventFilter(obj, event)
+        # compute the tab number.
+        mouseEvent = QMouseEvent(event)
+        pos: QPoint = mouseEvent.pos()
+        count = self.tabBar().count()
+        clickedItem = -1
+        for i in range(count):
+            if self.tabBar().tabRect(i).contains(pos):
+                clickedItem = i
+                break
+        # just in case.
+        if clickedItem == -1:
+            return super(DashTabWidget, self).eventFilter(obj, event)
+        print(clickedItem)
+        if mouseEvent.button() == Qt.LeftButton:
+            return super(DashTabWidget, self).eventFilter(obj, event)
+        elif mouseEvent.button() == Qt.RightButton:
+            return self.onTabRightClick()
+        elif mouseEvent.button() == Qt.MidButton:
+            return super(DashTabWidget, self).eventFilter(obj, event)
+        else:
+            return super(DashTabWidget, self).eventFilter(obj, event)            
+
+    def onTabRightClick(self):
+        print("tab right click!")
+
+    def printPage(self):
+        browser = self.currentWidget().browser
+        try:
+            page = browser.page()
+            page.printRequested.emit()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"\x1b[31;1mtab.viewSource:\x1b[0m {e}")
+
+
+    def viewSource(self):
+        browser = self.currentWidget().browser
+        try:
+            page = browser.page()
+            page.action(QWebEnginePage.ViewSource).trigger()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"\x1b[31;1mtab.viewSource:\x1b[0m {e}")
+
     def toggleTabBar(self) -> None:
         """[summary]
         actually topbar is toggled. 
@@ -295,6 +353,9 @@ class DashTabWidget(QTabWidget):
         except AttributeError as e: 
             print(f"\x1b[31;1mtab.setupTabForBrowser:\x1b[0m {e}")
             return
+        browser.page().printRequested.connect(
+            browser.onPrintRequest
+        )
         browser.loadDevTools()
         browser.setSpellCheck(lang)
         self.setTabText(i, "  "+browser.page().title())
@@ -384,11 +445,11 @@ class DashTabWidget(QTabWidget):
         i = self.currentIndex()
         self.setTabText(i, text)
 
-    def renameDialog(self):
+    def renameDialog(self, i: Union[int, None]):
         '''initiate an input dialog to rename the current tab.'''
-        i = self.currentIndex()
+        if i is None: i = self.currentIndex()
         currentText = self.tabText(i).strip()
-        newText, done = QInputDialog.getText(self, f"Rename tab '{currentText}'", "Rename tab to")
+        newText, done = QInputDialog.getText(self.tabBar(), f"Rename tab '{currentText}'", f"Rename tab from {currentText} to", QLineEdit.Normal, "New Name")
         if done:
             self.setTabText(i, newText)
 
@@ -515,9 +576,14 @@ class DashTabWidget(QTabWidget):
             print(f"tab-{i} is not a browser instance") 
 
     def save(self):
-        currentWidget = self.currentWidget().browser
-        if isinstance(currentWidget, Browser):
-            print(currentWidget.page())
+        print(f"\x1b[32;1msaving page using tab.DashTabWidget.save\x1b[0m")
+        browser = self.currentWidget().browser
+        try:
+            page = browser.page()
+            print(page.save(page.title()+".html"))
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"\x1b[31;1mtab.save:\x1b[0m {e}")
 
     def saveAs(self):
         browser = self.currentWidget().browser
@@ -529,7 +595,7 @@ class DashTabWidget(QTabWidget):
             )
             if name != "":
                 browser.saveAs(name)
-            # print(currentWidget.page())
+
     def setTabZoom(self, zoom):
         zoom /= 100
         try:
@@ -661,6 +727,7 @@ class TabBar(QTabBar):
     # plusClicked = pyqtSignal()
     def __init__(self):
         super(TabBar, self).__init__()
+        self.setAcceptDrops(True)
         # # Plus Button
         # self.plusButton = QPushButton("+")
         # self.plusButton.setParent(self)
@@ -674,14 +741,31 @@ class TabBar(QTabBar):
     #     width = sizeHint.width()
     #     height = sizeHint.height()
     #     return QSize(width+50, height)
+    def dragEnterEvent(self, event):
+        if event.mimeData():
+            print("tab.TabBar.dragEnterEvent", event.mimeData.formats())
+        else:
+            event.ignore()
+
     def contextMenuEvent(self, event):
         contextMenu = QMenu(self)
+        pos = event.pos()
+        # compute the tab number.
+        # mouseEvent = QMouseEvent(event)
+        # pos: QPoint = mouseEvent.pos()
+        count = self.count()
+        clickedItem = -1
+        for i in range(count):
+            if self.tabRect(i).contains(pos):
+                clickedItem = i
+                break
+        print(clickedItem)
         # contextMenu.setIconSize(QSize(30,30))
         newTabToRight = contextMenu.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab to the right")
         addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
         addToGroup = contextMenu.addAction("Add tab to group")
         moveTab = contextMenu.addAction("Move tab to new window")
-        renameTab = contextMenu.addAction("Rename active tab")
+        renameTab = contextMenu.addAction("Rename tab")
         contextMenu.addSeparator()
         reloadAct = contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
         duplicate = contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
@@ -716,7 +800,7 @@ class TabBar(QTabBar):
         action = contextMenu.exec_(self.mapToGlobal(event.pos()))
         if action == renameTab:
             # print(event.x(), event.y())
-            try: self.tabs.renameDialog()
+            try: self.tabs.renameDialog(clickedItem)
             except Exception as e: 
                 print("\x1b[31;1mtab.contextMenuEvent\x1b[0m", e)
 

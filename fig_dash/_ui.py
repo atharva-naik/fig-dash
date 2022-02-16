@@ -232,6 +232,7 @@ class DashWindow(QMainWindow):
         # add tab widget.
         self.navbar = DashNavBar(self)
         self.tabs = self.initTabWidget(**kwargs)
+        self.tabs.installEventFilter(self)
         # top bar.
         self.topbar = QWidget()
         topLayout = QHBoxLayout()

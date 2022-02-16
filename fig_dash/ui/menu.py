@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+from tkinter import Button
+from fig_dash.ui.tab import DashTabWidget
 import jinja2
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QIcon, QMouseEvent
+from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QEvent
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QFrame, QAction, QVBoxLayout, QHBoxLayout
 # fig-dash imports.
 from fig_dash.assets import FigD
@@ -87,7 +89,12 @@ class BrowserStatusBar(QWidget):
             icon="select_text.png",
             text=" None"
         )
+        self.scrollPosIndicator = self.initBtn(
+            icon="scroll.png",
+            text=" (0,0)",
+        )
         self.layout.addWidget(self.selectedTextIndicator)
+        self.layout.addWidget(self.scrollPosIndicator)
         self.setLayout(self.layout)
 
     def initBtn(self, icon: str=None, text: str=None) -> QToolButton:
@@ -121,6 +128,9 @@ class BrowserStatusBar(QWidget):
         }''')
 
         return btn
+
+    def updateScrollPos(self, x: float, y: float):
+        self.scrollPosIndicator.setText(f"({x:.0f},{y:.0f})")
 
     def updateSelection(self, text: str):
         self.selectedTextIndicator.setText(" "+text)

@@ -767,12 +767,12 @@ class FileViewerSearchBar(QLineEdit):
             FigD.Icon("system/fileviewer/suffix.svg")
         )
         self.addAction(self.suffixAction, self.TrailingPosition)
-        # match contains.
-        self.containsAction = QAction()
-        self.containsAction.setIcon(
-            FigD.Icon("system/fileviewer/match_contains.svg")
-        )
-        self.addAction(self.containsAction, self.TrailingPosition)
+        # # match contains.
+        # self.containsAction = QAction()
+        # self.containsAction.setIcon(
+        #     FigD.Icon("system/fileviewer/match_contains.svg")
+        # )
+        # self.addAction(self.containsAction, self.TrailingPosition)
         self.setStyleSheet(fileviewer_searchbar_style.render(
             BORDER_RADIUS=16,
         ))
@@ -997,8 +997,11 @@ class FileViewerBtn(QToolButton):
         super(FileViewerBtn, self).__init__(parent)
         tip = args.get("tip", "a tip")
         size = args.get("size", (23,23))
+        icon = args.get("icon")
+        text = args.get("text")
+        style = args.get("style")
         self.hover_response = "background"
-        if "icon" in args:
+        if icon:
             self.inactive_icon = os.path.join("system/fileviewer", args["icon"])
             stem, ext = os.path.splitext(Path(args["icon"]))
             active_icon = f"{stem}_active{ext}"
@@ -1006,18 +1009,21 @@ class FileViewerBtn(QToolButton):
             if os.path.exists(FigD.icon(self.active_icon)):
                 self.hover_response = "foreground"
             self.setIcon(FigD.Icon(self.inactive_icon))
-        elif "text" in args:
-            self.setText(args["text"])
+        if text: self.setText(args["text"])
+        if style: self.setToolButtonStyle(style)
         self.setIconSize(QSize(*size))
         self.setToolTip(tip)
         self.setStatusTip(tip)
+        # stylesheet attributes.
+        background = args.get("background", "transparent")
+        # print(font_size)
         if self.hover_response == "background":
-            self.setStyleSheet('''
+            self.setStyleSheet(jinja2.Template('''
             QToolButton {
                 color: #fff;
                 border: 0px;
                 font-size: 14px;
-                background: transparent;
+                background: {{ background }};
             }
             QToolButton:hover {
                 color: #292929;
@@ -1027,7 +1033,10 @@ class FileViewerBtn(QToolButton):
                 color: #fff;
                 border: 0px;
                 background: #000;
-            }''')
+            }''').render(
+                    background=background,
+                )
+            )
         else:
             self.setStyleSheet('''
             QToolButton {
@@ -1035,6 +1044,9 @@ class FileViewerBtn(QToolButton):
                 border: 0px;
                 font-size: 14px;
                 background: transparent;
+            }
+            QToolButton:hover {
+                color: #69bfee;
             }
             QToolTip {
                 color: #fff;
@@ -1063,6 +1075,7 @@ class FileViewerGroup(QWidget):
         # layout.setSpacing(0)
         self.group = QWidget()
         self.layout = QHBoxLayout()
+        self.layout.setSpacing(0)
         self.layout.setContentsMargins(0, 0, 0, 0)
         # self.layout.setSpacing(2)
         self.group.setLayout(self.layout)
@@ -1093,10 +1106,8 @@ class FileViewerGroup(QWidget):
         }''')
         return name
 
-    def initBtnGroup(self, btn_args, 
-                     orient="horizontal", 
-                     alignment_flag=None,
-                     spacing=None):
+    def initBtnGroup(self, btn_args, orient="horizontal", 
+                     alignment_flag=None, spacing=None):
         btnGroup = QWidget()
         btnGroup.btns = []
         if orient == "horizontal":
@@ -1113,6 +1124,7 @@ class FileViewerGroup(QWidget):
         QWidget {
             color: #fff;
             border: 0px;
+            font-size: 10px;
             background: transparent;
         }''')
         layout.addStretch(1)
@@ -1191,31 +1203,9 @@ class FileViewerFileGroup(FileViewerGroup):
         self.linkGroup = self.initBtnGroup([
             {"icon": "link.svg", "size": (20,20)},
             {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
-        ])
-        self.linkNServer = QWidget()
-        self.linkNServerLayout = QVBoxLayout()
-        self.linkNServerLayout.setContentsMargins(0, 0, 0, 0)
-        self.linkNServer.setLayout(self.linkNServerLayout)
-        self.linkNServerLayout.addWidget(self.connectToServerBtn)
-        self.linkNServerLayout.addWidget(self.linkGroup)
-        self.layout.addWidget(self.creationWidget)
-        self.layout.addWidget(self.linkNServer)
-
-    def connectWidget(self, widget):
-        self.widget = widget
-        # self.newFileBtn.clicked.connect(widget.createFile)
-        self.newFolderBtn.clicked.connect(
-            lambda: widget.createDialogue(item_type="folder")
-        )
-        self.newFileBtn.clicked.connect(
-            lambda: widget.createDialogue(item_type="file")
-        )
-
-
-class FileViewerPathGroup(FileViewerGroup):
-    def __init__(self, parent: Union[None, QWidget]=None):
-        super(FileViewerPathGroup, self).__init__(parent, "Path")
-        # just to convert to VBox Layout.
+        ], spacing=0)
+        
+        # copied from path widget.
         # path copying tools.
         self.pathWidget = QWidget()
         self.pathLayout = QVBoxLayout()
@@ -1257,11 +1247,6 @@ class FileViewerPathGroup(FileViewerGroup):
             text=".ext", size=(25,25),
             tip="copy extension of file",
         )
-        # move to view
-        # self.hideExtBtn =  self.initBtn(
-        #     icon="hide_extension.svg",
-        #     size=(20,20)
-        # )
         self.pathLayout.addWidget(self.copyPathBtn)
         self.pathLayout.addWidget(self.copyNameBtn)
         self.pathLayout.addWidget(self.copyUrlBtn)
@@ -1271,54 +1256,140 @@ class FileViewerPathGroup(FileViewerGroup):
         self.navLayout.addWidget(self.backPathBtn)
         self.navLayout.addWidget(self.stemBtn)
         self.navLayout.addWidget(self.extBtn)
-        
-        self.layout.addStretch(1)
+
+        self.linkNServer = QWidget()
+        self.linkNServerLayout = QVBoxLayout()
+        self.linkNServerLayout.setContentsMargins(0, 0, 0, 0)
+        self.linkNServer.setLayout(self.linkNServerLayout)
+        self.linkNServerLayout.addWidget(self.connectToServerBtn)
+        self.linkNServerLayout.addWidget(self.linkGroup)
+        self.layout.addWidget(self.creationWidget)
+        self.layout.addWidget(self.linkNServer)
         self.layout.addWidget(self.pathWidget)
         self.layout.addWidget(self.navWidget)
-        self.layout.addStretch(1)
 
     def updateExt(self, ext: str):
         '''update extension layout.'''
         self.extBtn.setText(ext)
 
     def connectWidget(self, widget):
+        self.widget = widget
+        # self.newFileBtn.clicked.connect(widget.createFile)
+        self.newFolderBtn.clicked.connect(
+            lambda: widget.createDialogue(item_type="folder")
+        )
+        self.newFileBtn.clicked.connect(
+            lambda: widget.createDialogue(item_type="file")
+        )
         self.backPathBtn.clicked.connect(widget.openParent)
+        self.stemBtn.clicked.connect(widget.copyStemToClipboard)
         self.copyUrlBtn.clicked.connect(widget.copyUrlToClipboard)
         self.copyNameBtn.clicked.connect(widget.copyNameToClipboard)
         self.copyPathBtn.clicked.connect(widget.copyPathToClipboard)
         self.extBtn.clicked.connect(
             lambda: widget.copyToClipboard(self.extBtn.text())
         )
+# class FileViewerPathGroup(FileViewerGroup):
+#     def __init__(self, parent: Union[None, QWidget]=None):
+#         super(FileViewerPathGroup, self).__init__(parent, "Path")
+#         # just to convert to VBox Layout.
+#         # path copying tools.
+#         self.pathWidget = QWidget()
+#         self.pathLayout = QVBoxLayout()
+#         self.pathLayout.setContentsMargins(0, 0, 0, 0)
+#         self.pathLayout.setSpacing(0)
+#         self.pathWidget.setLayout(self.pathLayout)
+#         # path navigation tools.
+#         self.navWidget = QWidget()
+#         self.navLayout = QVBoxLayout()
+#         self.navLayout.setContentsMargins(0, 0, 0, 0)
+#         self.navLayout.setSpacing(0)
+#         self.navWidget.setLayout(self.navLayout)
+#         # buttons.
+#         self.backPathBtn = self.initBtn(
+#             icon="back.svg",
+#             size=(25,25),
+#             tip="go back to parent folder",
+#         )
+#         self.copyPathBtn =  self.initBtn(
+#             icon="copy_filepath.png",
+#             size=(25,25),
+#             tip="copy filepath",
+#         )
+#         self.copyNameBtn = self.initBtn(
+#             icon="copy_filename.svg",
+#             size=(25,25),
+#             tip="copy filename",
+#         )
+#         self.copyUrlBtn =  self.initBtn(
+#             icon="copy_as_url.svg",
+#             size=(25,25),
+#             tip="copy file path as url",
+#         )
+#         self.stemBtn = self.initBtn(
+#             text="stem", size=(25,25),
+#             tip="copy file name without extension",
+#         )
+#         self.extBtn = self.initBtn(
+#             text=".ext", size=(25,25),
+#             tip="copy extension of file",
+#         )
+#         self.pathLayout.addWidget(self.copyPathBtn)
+#         self.pathLayout.addWidget(self.copyNameBtn)
+#         self.pathLayout.addWidget(self.copyUrlBtn)
+#         self.pathLayout.addStretch(1)
 
+#         self.navLayout.addStretch(1)
+#         self.navLayout.addWidget(self.backPathBtn)
+#         self.navLayout.addWidget(self.stemBtn)
+#         self.navLayout.addWidget(self.extBtn)
+        
+#         self.layout.addStretch(1)
+#         self.layout.addWidget(self.pathWidget)
+#         self.layout.addWidget(self.navWidget)
+#         self.layout.addStretch(1)
 
+#     def updateExt(self, ext: str):
+#         '''update extension layout.'''
+#         self.extBtn.setText(ext)
+
+#     def connectWidget(self, widget):
+#         self.backPathBtn.clicked.connect(widget.openParent)
+#         self.copyUrlBtn.clicked.connect(widget.copyUrlToClipboard)
+#         self.copyNameBtn.clicked.connect(widget.copyNameToClipboard)
+#         self.copyPathBtn.clicked.connect(widget.copyPathToClipboard)
+#         self.extBtn.clicked.connect(
+#             lambda: widget.copyToClipboard(self.extBtn.text())
+#         )
 class FileViewerEditGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerEditGroup, self).__init__(parent, "Edit")
         self.editWidget = QWidget()
         self.editWidget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding) 
         self.editLayout = QVBoxLayout()
+        self.editLayout.setSpacing(0)
         self.editLayout.setContentsMargins(0, 0, 0, 0)
         # undo, redo, rename
         self.renameGroup = self.initBtnGroup([
-            {"icon": "undo.svg", "size": (25,25), "tip": "undo rename"},
-            {"icon": "rename.svg", "size": (25,25), "tip": "rename file/folder"},
-            {"icon": "redo.svg", "size": (25,25) , "tip": "redo rename"},
-        ])
+            {"icon": "undo.svg", "size": (23,23), "tip": "undo rename", "text": "undo", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "rename.svg", "size": (23,23), "tip": "rename file/folder", "text": "rename", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "redo.svg", "size": (23,23) , "tip": "redo rename", "text": "redo", "style": Qt.ToolButtonTextUnderIcon},
+        ], spacing=0)
         self.undoBtn = self.renameGroup.btns[0]
         self.renameBtn = self.renameGroup.btns[1]
         self.redoBtn = self.renameGroup.btns[2]
         # cut, copy, paste
         self.moveGroup = self.initBtnGroup([
-            {"icon": "cut.png", "size": (28,28), "tip": "cut selected item"},
-            {"icon": "copy.svg", "size": (35,35), "tip": "copy selected items"},
-            {"icon": "paste.png", "size": (37,37), "tip": "paste selected items from the clipboard"},
-        ])
+            {"icon": "cut.png", "size": (23,23), "tip": "cut selected item", "text": "cut", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "copy.svg", "size": (30,30), "tip": "copy selected items",  "text": "copy", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "paste.png", "size": (32,32), "tip": "paste selected items from the clipboard", "text": "paste", "style": Qt.ToolButtonTextUnderIcon},
+        ], spacing=0, alignment_flag=Qt.AlignCenter | Qt.AlignBottom)
         # make link, release link, move to trash
         self.linkGroup = self.initBtnGroup([
             # {"icon": "link.svg", "size": (20,20)},
             # {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
-            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash"},
-        ], orient="vertical")
+            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash", "text": "trash", "style": Qt.ToolButtonTextUnderIcon},
+        ], orient="vertical", spacing=0)
         # self.sortWidget = QWidget()
         # self.editLayout.addStretch(1)
         self.editLayout.addWidget(self.renameGroup)
@@ -1343,25 +1414,25 @@ class FileViewerViewGroup(FileViewerGroup):
         self.viewLayout.setContentsMargins(0, 0, 0, 0)
         # layout of file items
         self.layoutGroup = self.initBtnGroup([
-            {"icon": "gridview.svg", "size": (25,25), "tip": "tile view"},
-            {"icon": "list_view.svg", "size": (20,20), "tip": "list view"},
-            {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view"},
+            {"icon": "gridview.svg", "size": (20,20), "tip": "tile view", "text": "grid", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "list_view.svg", "size": (20,20), "tip": "list view", "text": "list", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view", "text": "tree", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "toggle_hidden_files.png", "size": (23,23), "tip": "toggle visibility of hidden files"},
-        ])
+        ], spacing=0)
         # hidden files, folder bar visibility, side bar visibility, search bar visibility.
         self.visibilityGroup = self.initBtnGroup([
             {"icon": "toggle_folderbar.svg", "size": (35,35), "tip": "toggle visibility of folder bar"},
             {"icon": "toggle_searchbar.svg", "size": (27,27), "tip": "toggle visibility of search bar"},
             {"icon": "toggle_sidebar.svg", "size": (27,27), "tip": "toggle visibility of sidebar"},
-        ])
+        ], spacing=0)
         self.hiddenFilesBtn = self.layoutGroup.btns[-1]
         self.folderbarBtn = self.visibilityGroup.btns[0]
         self.searchbarBtn = self.visibilityGroup.btns[1]
         self.sidebarBtn = self.visibilityGroup.btns[2]
         self.arrangeGroup = self.initBtnGroup([
-            {"icon": "sidebar_left.svg", "size": (25,25), "tip": "sidebar to the left"},
-            {"icon": "sidebar_right.svg", "size": (25,25), "tip": "sidebar to the right"},
-        ], orient="vertical", spacing=0)     
+            {"icon": "sidebar_left.svg", "size": (25,25), "tip": "sidebar to the left", "text": " left", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
+            {"icon": "sidebar_right.svg", "size": (25,25), "tip": "sidebar to the right", "text": " right", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
+        ], orient="vertical", spacing=0, alignment_flag=Qt.AlignLeft)     
         self.viewLayout.addStretch(1)
         self.viewLayout.addWidget(self.layoutGroup)
         self.viewLayout.addWidget(self.visibilityGroup)
@@ -1396,14 +1467,19 @@ class FileViewerSelectGroup(FileViewerGroup):
             {"icon": "clear_selection.png", "size": (30,30), "tip": "clear current selection", "icon_size": (30,30)},
             {"icon": "select_all.png", "size": (30,30), "tip": "select all items", "icon_size": (30,30)},
         ], orient="vertical", spacing=0)
-        self.selectionGroup2 = self.initBtnGroup([
-            {"icon": "invert_selection.png", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
-        ], orient="vertical", spacing=0)
+        # self.selectionGroup2 = self.initBtnGroup([
+        #     {"icon": "invert_selection.png", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
+        # ], orient="vertical", spacing=0)
+        self.invertBtn = self.initBtn(
+            icon="invert_selection.png", size=(30,30), 
+            tip="invert selected items", icon_size=(30,30)
+        )
         self.clearBtn = self.selectionGroup1.btns[0]
         self.selectAllBtn = self.selectionGroup1.btns[1]
-        self.invertBtn = self.selectionGroup2.btns[0]
+        # self.invertBtn = self.selectionGroup2.btns[0]
         self.layout.addWidget(self.selectionGroup1)
-        self.layout.addWidget(self.selectionGroup2, 0, Qt.AlignCenter | Qt.AlignBottom)
+        self.layout.addWidget(self.invertBtn, 0, Qt.AlignBottom)
+        # self.layout.addWidget(self.selectionGroup2, 0, Qt.AlignCenter | Qt.AlignBottom)
         # self.selectionLayout.addWidget(self.selectionGroup)
         # self.selectionLayout.addStretch(1)
         # self.selectionWidget.setLayout(self.selectionLayout)
@@ -1573,40 +1649,52 @@ class FileViewerShareGroup(FileViewerGroup):
         # twitter, reddit, facebook, youtube, instagram
         self.nativeGroup1 = self.initBtnGroup([
             {"icon": "devices.svg", "size":(18,18),
-            'tip': "share to linked devices"},
-            {"icon": "bluetooth.svg", "size":(18,18),
-            'tip': "share using bluetooth"},
+            'tip': "share to linked devices", "text": "device", "style": Qt.ToolButtonTextBesideIcon},
             {"icon": "qr.svg", "size":(18,18),
-            'tip': "create qr code for file"},
-        ], orient="vertical", spacing=5)
+            'tip': "create qr code for file", "text": "QR code", "style": Qt.ToolButtonTextBesideIcon},
+            {"icon": "bluetooth.svg", "size":(18,18),
+            'tip': "share using bluetooth", "text": "bluetooth", "style": Qt.ToolButtonTextBesideIcon},
+        ], orient="vertical", spacing=5, alignment_flag=Qt.AlignLeft)
         self.nativeGroup2 = self.initBtnGroup([
-            {"icon": "email.svg", "size":(25,25),
-            'tip': "share file as email attachment"},
-            {"icon": "copy_content.svg", "size":(25,25),
-            'tip': "copy file contents to clipboard"}
-        ], orient="vertical", spacing=15)
+            {"icon": "email.svg", "size":(23,23),
+            'tip': "share file as email attachment", "text": "email", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "copy_content.svg", "size":(23,23),
+            'tip': "copy file contents to clipboard", "text": "content", "style": Qt.ToolButtonTextUnderIcon}
+        ], orient="vertical", spacing=0)
         self.appsGroup1 = self.initBtnGroup([
             {"icon": "youtube.png", "size":(28,28),
             'tip': "share video on youtube"},
-            {"icon": "twitter.png", "size":(35,35),
+            {"icon": "twitter.png", "size":(30,30),
             'tip': "share on twitter"},
             {"icon": "reddit.png", "size":(32,32),
             'tip': "share on reddit"},
-        ])
+        ], spacing=0, alignment_flag=Qt.AlignBottom)
         self.appsGroup2 = self.initBtnGroup([
-            {"icon": "facebook.png", "size":(32,32),
+            {"icon": "facebook.png", "size":(28,28),
             'tip': "share on facebook"},
-            {"icon": "instagram.png", "size":(32,32),
+            {"icon": "instagram.png", "size":(28,28),
             'tip': "share image on instagram"},
-            {"icon": "whatsapp.png", "size":(32,32),
-            'tip': "share video on youtube"},
-        ])
+            {"icon": "whatsapp.png", "size":(28,28),
+            'tip': "share on whatsapp"},
+        ], spacing=0, alignment_flag=Qt.AlignBottom)
         self.shareWidget = QWidget()
         self.shareLayout = QVBoxLayout()
-        # self.shareLayout.setSpacing(0)
+        self.shareLayout.setSpacing(0)
         self.shareLayout.setContentsMargins(0,0,0,0)
-        self.shareLayout.addWidget(self.appsGroup1)
-        self.shareLayout.addWidget(self.appsGroup2)
+        
+        self.shareLabel = QLabel()
+        self.shareLabel.setText("share online")
+        self.shareLabel.setStyleSheet("""
+        QLabel {
+            color: #fff;
+            font-size: 14px;
+            background: transparent;
+        }""")
+        self.shareLayout.addStretch(1)
+        self.shareLayout.addWidget(self.appsGroup1, 0, Qt.AlignLeft)
+        self.shareLayout.addWidget(self.appsGroup2, 0, Qt.AlignLeft)
+        self.shareLayout.addWidget(self.shareLabel, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        # self.shareLayout.addStretch(1)
         self.shareWidget.setLayout(self.shareLayout)
 
         self.layout.addStretch(1)
@@ -1614,13 +1702,22 @@ class FileViewerShareGroup(FileViewerGroup):
         self.layout.addWidget(self.nativeGroup2)
         self.layout.addWidget(self.shareWidget)
         self.layout.addStretch(1)   
-# class FileViewerPropGroup(QWidget):
+# class FileViewerPropGroup(QWidget): # change permissions, owner, group, thumbnailer
 # class FileViewerFilterGroup(QWidget):
-# class FileViewerUtilsGroup(QWidget): encryption, compression, file conversion (for images, videos,document formats etc.)
+class FileViewerBackupGroup(FileViewerGroup):
+    def __init__(self, parent):
+        super(FileViewerBackupGroup, self).__init__(parent, "Backup") # backup, VCS
 
-# class FileViewerMiscGroup(QWidget): note, bookmark
-# class FileViewerVCSGroup(QWidget):
-# class FileViewerBackupGroup(QWidget):
+
+class FileViewerMiscGroup(FileViewerGroup):
+    def __init__(self, parent):
+        super(FileViewerMiscGroup, self).__init__(parent, "Backup")
+        # self.tagsGroup = self.initBtnGroup()
+        # self.notesGroup = self.initBtnGroup()
+        # self.bookmarksGroup = self.initBtnGroup()
+        # self.encryptionGroup
+        # self.compressionGroup
+        # self.coversionGroup # file conversion (for images, videos, document formats etc.)
 
 
 class AppearanceSlider(QWidget):
@@ -1801,7 +1898,7 @@ class FileViewerMenu(QWidget):
         self.icon_provider = QFileIconProvider()
 
         self.filegroup = FileViewerFileGroup()
-        self.pathgroup = FileViewerPathGroup()
+        # self.pathgroup = FileViewerPathGroup()
         self.editgroup = FileViewerEditGroup()
         self.viewgroup = FileViewerViewGroup()
         self.opengroup = FileViewerOpenGroup()
@@ -1809,8 +1906,8 @@ class FileViewerMenu(QWidget):
         self.selectgroup = FileViewerSelectGroup()
         # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
-        self.layout.addWidget(self.addSeparator())
-        self.layout.addWidget(self.pathgroup)
+        # self.layout.addWidget(self.addSeparator())
+        # self.layout.addWidget(self.pathgroup)
         self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.editgroup)
         self.layout.addWidget(self.addSeparator())
@@ -1839,7 +1936,7 @@ class FileViewerMenu(QWidget):
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
         sep.setStyleSheet(f'''background: #292929''')
-        sep.setLineWidth(4)
+        sep.setLineWidth(2)
         sep.setMaximumHeight(100)
 
         return sep
@@ -1848,7 +1945,7 @@ class FileViewerMenu(QWidget):
         self.filegroup.connectWidget(widget)
         self.editgroup.connectWidget(widget)
         self.viewgroup.connectWidget(widget)
-        self.pathgroup.connectWidget(widget)
+        # self.pathgroup.connectWidget(widget)
         # self.opengroup.connectWidget(widget)
         self.selectgroup.connectWidget(widget)
         # self.appearancegroup.connectWidget(widget)
@@ -2154,7 +2251,8 @@ class FileViewerKeyPressSearch(QLineEdit):
 
 
 class FileViewerWidget(QMainWindow):
-    def __init__(self, parent: Union[None, QWidget]=None,
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                 logo: Union[None, str, QIcon]=None, 
                  zoom_factor: float=1.35, **args):
         super(FileViewerWidget, self).__init__(parent)
         self.layout = QVBoxLayout()
@@ -2167,6 +2265,14 @@ class FileViewerWidget(QMainWindow):
         self.menu.setMaximumHeight(130)
         self.font_color = args.get("font_color", '#fff')
         # data
+        # set logo.
+        if isinstance(logo, QIcon):
+            self.setWindowIcon(logo)
+        elif isinstance(logo, str):
+            print("FileViewerWidget logo:", logo)
+            self.setWindowIcon(
+                FigD.Icon("system/fileviewer/logo.svg")
+            )
         self.background_image = QUrl.fromLocalFile(
             args.get("background")
         ).toString()
@@ -2207,6 +2313,9 @@ class FileViewerWidget(QMainWindow):
         # self.SelectAll.setEnabled(False)
     
         # add the dev tools button to the view group.
+        self.webview.devToolsBtn.setText("dev\ntools")
+        self.webview.devToolsBtn.setIconSize(QSize(25,25))
+        self.webview.devToolsBtn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
@@ -2552,7 +2661,7 @@ class FileViewerWidget(QMainWindow):
         # print(file_ext)
         icon = self.getIcon(item)
         mimetype = self.mime_database.mimeTypeForFile(item).name()
-        self.menu.pathgroup.updateExt(file_ext)
+        self.menu.filegroup.updateExt(file_ext)
         self.menu.opengroup.updateMimeBtn(
             mimetype=mimetype, 
             icon=icon, path=item
@@ -2619,7 +2728,13 @@ class FileViewerWidget(QMainWindow):
         if self.clipboard and self.selected_item:
             url = QUrl.fromLocalFile(self.selected_item).toString()
             self.clipboard.setText(url)
-            print(f"copied {url} to clipboard")    
+            print(f"copied {url} to clipboard")  
+
+    def copyStemToClipboard(self):
+        if self.clipboard and self.selected_item:
+            stem = Path(self.selected_item).stem
+            self.clipboard.setText(stem)
+            print(f"copied {stem} to clipboard")    
 
     def copyPathToClipboard(self):
         if self.clipboard and self.selected_item:
@@ -2682,6 +2797,7 @@ def test_fileviewer():
     fileviewer = FileViewerWidget(
         clipboard=app.clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
+        logo="system/fileviewer/logo.svg",
         font_color="#fff",
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
@@ -2691,9 +2807,11 @@ def test_fileviewer():
     fileviewer.open("~")
     fileviewer.setGeometry(200, 200, 800, 600)
     fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
-    if platform.system() == "Linux":
-        fileviewer.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
-        app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
+    fileviewer.statusBar().addWidget(
+        fileviewer.statusbar
+    )
+    # if platform.system() == "Linux":
+    app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
     # fileviewer.saveScreenshot("fileviewer.html")
     fileviewer.show()
     app.exec()

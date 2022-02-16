@@ -12,10 +12,11 @@ import subprocess
 from typing import Union, Tuple, List
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
+from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
 from PyQt5.QtGui import QColor, QKeySequence, QIcon, QPixmap
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
-from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut
+from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.utils import QFetchIcon, collapseuser
@@ -249,6 +250,7 @@ class DevToolsBtn(QToolButton):
         self.setStyleSheet('''
         QToolButton {
             border: 0px;
+            font-size: 12px;
             background: transparent;
         }''')
 
@@ -533,9 +535,21 @@ class CustomWebPage(QWebEnginePage):
         self.translator = DashTranslator()
         self.dash_window = dash_window
         self.featurePermissionRequested.connect(self.permissionDialog)
+        self.scrollPositionChanged.connect(self.updateScrollPos)
     # def connectWindow(self, window: QWidget) -> None:
     #     self.dash_window = window
     #     print(f"\x1b[32;1mconnectWindow:\x1b[0m connected {window} to {self}")
+    def updateScrollPos(self):
+        scrollPos = self.scrollPosition()
+        x = scrollPos.x()
+        y = scrollPos.y()
+        try:
+            menu = self.dash_window.menu
+            menu.browser_statusbar.updateScrollPos(x, y)
+        except Exception as e: 
+            # it will be noisy for FileViewerWidget.
+            pass
+
     def createWindow(self, windowType: QWebEnginePage.WebWindowType):
         if windowType == QWebEnginePage.WebBrowserTab:
             return self.dash_window.tabs.openUrl("https://google.com")
@@ -688,11 +702,37 @@ class DebugWebView(QWebEngineView):
         self.Esc.activated.connect(self.searchPanel.closePanel)
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
         self.CtrlF.activated.connect(self.reactToCtrlF)
+        self.CtrlR = QShortcut(QKeySequence("Ctrl+R"), self)
+        self.CtrlR.activated.connect(self.reactToCtrlR)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
 
         self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def onPrintRequest(self):
+        print("print requested")
+        defaultPrinter = QPrinter(
+                QPrinterInfo.defaultPrinter()
+            )
+        dialog = QPrintDialog(defaultPrinter, self)
+        if dialog.exec():
+            # printer object has to be persistent
+            self._printer = dialog.printer()
+            self.page().print(self._printer, self.printResult)
+
+    def printResult(self, success):
+        if success:
+            QMessageBox.information(self, 'Print completed', 
+                'Printing has been completed!', QMessageBox.Ok)
+        else:
+            QMessageBox.warning(self, 'Print failed', 
+                'Printing has failed!', QMessageBox.Ok)
+            self.onPrintRequest()
+        del self._printer
+
+    def reactToCtrlR(self):
+        pass
 
     def setSpellCheck(self, lang: str="en-US") -> None:
         """[summary]

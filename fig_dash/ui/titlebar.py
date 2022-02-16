@@ -313,9 +313,15 @@ class TitleBar(QToolBar):
             tip="toggle dashboard widgets visibility",
             callback=self.callback if parent is None else parent.floatmenu.toggle 
         )
+        self.printBtn = self.initTitleBtn(
+            "titlebar/print.svg", 
+            tip="print the webpage (as PDF).",
+            callback=self.callback if parent is None else parent.tabs.printPage
+        ) 
         self.viewSourceBtn = self.initTitleBtn(
             "titlebar/source.svg", 
             tip="view the source of the webpage.",
+            callback=self.callback if parent is None else parent.tabs.viewSource
             # callback=self.callback if parent is None else parent.tabs.save
         )
         self.saveSourceBtn = self.initTitleBtn(
@@ -432,6 +438,7 @@ class TitleBar(QToolBar):
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.findBtn)
+        self.addWidget(self.printBtn)
         self.addWidget(self.zoomInBtn)
         self.addWidget(self.zoomLabel)
         self.addWidget(self.zoomSlider)
@@ -510,7 +517,7 @@ class TitleBar(QToolBar):
         self.findBtn.clicked.connect(self.tabs.triggerFind)
         self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
-        self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
+        # self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
         self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
         self.CtrlS.activated.connect(self.tabs.saveAs)
         self.zoomSlider.connectTabWidget(self.tabs)
