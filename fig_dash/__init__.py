@@ -49,29 +49,41 @@ class DashUI(QApplication):
             background: #000;
             font-family: 'Be Vietnam Pro', sans-serif;
         }""")
-        QFontDatabase.addApplicationFont(
+        ID = QFontDatabase.addApplicationFont(
             FigD.font("datetime/digital-7.ttf")
         )
-        QFontDatabase.addApplicationFont(
+        print(QFontDatabase.applicationFontFamilies(ID))
+        ID = QFontDatabase.addApplicationFont(
             FigD.font("BeVietnamPro-Regular.ttf")
         )
+        print(QFontDatabase.applicationFontFamilies(ID))
         self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
         self.window_args = kwargs
         # actions for tray icon context menu.
-        self.showAction = QAction("Show")
+        self.showAction = QAction("Open")
         self.quitAction = QAction("Quit")
         self.logsAction = QAction("Get logs")
         self.supportAction = QAction("Collect support files")
+        self.settingsAction = QAction("Settings")
+        # add icons.
+        self.showAction.setIcon(FigD.Icon("tray/open.svg"))
+        self.quitAction.setIcon(FigD.Icon("tray/close.svg"))
+        self.logsAction.setIcon(FigD.Icon("tray/logs.svg"))
+        self.supportAction.setIcon(FigD.Icon("tray/logs.svg"))
+        self.settingsAction.setIcon(FigD.Icon("tray/settings.svg"))
         # connect functions to actions.
         self.showAction.triggered.connect(self.window.show)
         self.quitAction.triggered.connect(self.quit)
         # tray icon menu.
         self.trayMenu = QMenu()
         self.trayMenu.addAction(self.logsAction)
+        self.trayMenu.addAction(self.supportAction)
+        self.trayMenu.addSeparator()
+        self.trayMenu.addAction(self.settingsAction)
+        self.trayMenu.addSeparator()
         self.trayMenu.addAction(self.showAction)
         self.trayMenu.addAction(self.quitAction)
-        self.trayMenu.addAction(self.supportAction)
         # tray icon button.
         self.trayIcon = QSystemTrayIcon(FigD.Icon("tray_icon.svg"), self)
         self.trayIcon.setContextMenu(self.trayMenu)
@@ -104,6 +116,8 @@ class DashUI(QApplication):
         window.setFlags(*windowFlags)
         window.setWindowIcon(FigD.Icon("logo.svg"))
         window.show()
+        url = kwargs.get("url")
+        if url: window.tabs.loadUrl(url)
 
         return window 
 
@@ -116,6 +130,7 @@ class DashUI(QApplication):
             self.window.showMaximized()
         else:
             self.window.show()
+        self.window.notifsPanel.hide()
         sys.exit(self.run())
 
     def Exit(self, flag):

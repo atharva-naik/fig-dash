@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
-from re import S
-from tkinter import Button
-from fig_dash.ui.tab import DashTabWidget
 import jinja2
 from typing import Union
 # Qt imports.
 from PyQt5.QtGui import QIcon, QMouseEvent
 from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QEvent
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QFrame, QAction, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QFrame, QAction, QVBoxLayout, QHBoxLayout, QScrollArea
 # fig-dash imports.
+from fig_dash.ui import DashWidgetGroup
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import BrowserMenu
 from fig_dash.ui.widget.git import DashGitUI
@@ -138,24 +136,121 @@ class BrowserStatusBar(QWidget):
         self.selectedTextIndicator.setText(" "+text)
 
 
+class ViewMenuVisGroup(DashWidgetGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(ViewMenuVisGroup, self).__init__(parent, "Visibility")
+        # widgets with togglable visibility.
+        self.toggleGroup1 = self.initBtnGroup([
+            {"icon": "browser/word_count.svg", "tip": "toggle visibility of word count, time to read display"},
+            {"icon": "menu/tabs.png", "tip": "toggle visibility of tab bar"},
+            {"icon": "menu/dock.svg", "tip": "toggle visibility of dock"},
+        ], orient="vertical", spacing=5)
+        self.toggleGroup2 = self.initBtnGroup([
+            {"icon": "menu/sysutils.svg", "tip": "open system utilites menu"},
+            {"icon": "menu/notifications.svg", "tip": "toggle visibility of notifications overlay"},
+        ], orient="vertical", spacing=5)
+        self.wordCountBtn = self.toggleGroup1.btns[0]
+        self.tabToggleBtn = self.toggleGroup1.btns[1]
+        self.dockBtn = self.toggleGroup1.btns[2]
+        self.sysUtilsBtn = self.toggleGroup2.btns[0]
+        self.notifsBtn = self.toggleGroup2.btns[1]
+        # add widgets to layout.
+        self.layout.addWidget(self.toggleGroup1, 0, Qt.AlignBottom)
+        self.layout.addWidget(self.toggleGroup2, 0, Qt.AlignBottom)
+
+    def connectWindow(self, window):
+        self.dash_window = window
+        # self.tabs = self.dash_window.tabs
+        self.wordCountBtn.clicked.connect(
+            window.page_info.toggle
+        )
+        titlebar = window.titlebar
+        self.dockBtn.clicked.connect(
+            titlebar.toggleInfo
+        )
+        self.tabToggleBtn.clicked.connect(
+            window.tabs.toggleTabBar
+        )
+        self.sysUtilsBtn.clicked.connect(
+            window.sysutilsbar.toggle
+        )
+        self.notifsBtn.clicked.connect(
+            window.notifsPanel.toggle
+        )
+
+
+class ViewMenu(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(ViewMenu, self).__init__(parent)
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setSpacing(0)
+        # create groups.
+        self.viewgroup = ViewMenuVisGroup()
+        self.notifsBtn = self.viewgroup.notifsBtn
+        # create layout.
+        self.layout.addWidget(self.viewgroup)
+        self.layout.addWidget(self.addSeparator())
+        self.layout.addStretch(1)
+        # set layout.
+        self.setLayout(self.layout)
+
+    def addSeparator(self):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #292929''')
+        sep.setLineWidth(2)
+        sep.setMaximumHeight(100)
+
+        return sep
+
+    def connectWindow(self, widget):
+        self.viewgroup.connectWindow(widget)
+
+
 class DashMenu(QTabWidget):
     def __init__(self, parent: Union[None, QWidget]=None, **args):
         super(DashMenu, self).__init__(parent)
+        # self.setUsesScrollButtons(False)
         self.toggleBtn = self.initToggleBtn()
+        
         self.filemenu = self.initFileMenu(**args)
+        self.formmenu = self.initFormMenu(**args)
         self.editmenu = self.initEditMenu(**args)
         self.viewmenu = self.initViewMenu(**args)
         self.codemenu = self.initCodeMenu(**args)
+        self.mailmenu = self.initMailMenu(**args)
+        self.eventmenu = self.initEventMenu(**args)
         self.imagemenu = self.initImageMenu(**args)
+        self.videomenu = self.initVideoMenu(**args)
+        self.musicmenu = self.initMusicMenu(**args)
+        self.devicemenu = self.initDeviceMenu(**args)
         self.formatmenu = self.initFormatMenu(**args)
         self.browsermenu = self.initBrowserMenu(**args)
+        self.terminalmenu = self.initTerminalMenu(**args)
+        # create, payment, entertainment.
+        self.createmenu = self.initCreateMenu(**args)
+        self.paymentmenu = self.initPaymentMenu(**args)
+        self.entertainmentmenu = self.initEntertainmentMenu(**args)
+
         self.addTab(self.filemenu, "File")        
         self.addTab(self.editmenu, "Edit")
         self.addTab(self.formatmenu, "Format")
         self.addTab(self.viewmenu, "View")
         self.addTab(self.codemenu, "Code") 
-        self.addTab(self.browsermenu, "Browser")     
-        self.addTab(self.imagemenu, "Image")
+        self.addTab(self.browsermenu, "Browser") 
+        self.addTab(self.mailmenu, "Mail")    
+        self.addTab(self.musicmenu, "Music")
+        self.addTab(self.imagemenu, "Images")
+        self.addTab(self.videomenu, "Videos")
+        self.addTab(self.formmenu, "Forms")
+        self.addTab(self.eventmenu, "Events")
+        self.addTab(self.terminalmenu, "Terminal")
+        self.addTab(self.devicemenu, "Devices")
+        self.addTab(self.createmenu, "Create")
+        self.addTab(self.paymentmenu, "Payments")
+        self.addTab(self.entertainmentmenu, "Entertainment")
         # self.currentChanged.connect(self.onTabChange)
         self.browser_statusbar = BrowserStatusBar()
         self.browser_statusbar.hide()
@@ -183,6 +278,20 @@ class DashMenu(QTabWidget):
     def setCurrentIndex(self, i: int):
         self.updateStatusBar(i)
         super(DashMenu, self).setCurrentIndex(i)
+
+    def wrapInScrollArea(self, widget):
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(widget)
+        scrollArea.setAttribute(Qt.WA_TranslucentBackground)
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setStyleSheet("""
+        QScrollArea {
+            border: 0px;
+            background: """+menu_background+""";
+        }""")
+
+        return scrollArea
 
     def tabToggle(self, i):
         '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
@@ -217,7 +326,7 @@ class DashMenu(QTabWidget):
     def expand(self):
         self._collapsed = False
         self.toggleBtn.setIcon(FigD.Icon("menu/collapse.svg"))
-        self.setFixedHeight(160)
+        self.setFixedHeight(165)
 
     def collapse(self):
         self._collapsed = True
@@ -242,20 +351,13 @@ class DashMenu(QTabWidget):
         filemenu.setLayout(layout)
         filemenu.setObjectName("DashMenuTab")
 
-        return filemenu
+        return self.wrapInScrollArea(filemenu)
 
     def initViewMenu(self, **args):
-        viewmenu = QWidget()
-        # layout = QHBoxLayout()
-        # layout.setContentsMargins(0, 0, 0, 0)
-        # self.fileviewer = FileViewerWidget(
-        #     background=args.get("wallpaper")
-        # )
-        # layout.addWidget(self.viewmenu)
-        # viewmenu.setLayout(layout)
-        viewmenu.setObjectName("DashMenuTab")
+        self._viewmenu = ViewMenu()
+        self._viewmenu.setObjectName("DashMenuTab")
 
-        return viewmenu
+        return self._viewmenu
 
     def initFormatMenu(self, **args):
         formatmenu = QWidget()
@@ -263,13 +365,81 @@ class DashMenu(QTabWidget):
 
         return formatmenu
 
+    def initTerminalMenu(self, **args):
+        terminalmenu = QWidget()
+        terminalmenu.setObjectName("DashMenuTab")
+
+        return terminalmenu
+
+    def initDeviceMenu(self, **args):
+        """_summary_
+        keep a track of/connect to mounted devices, VPN, peripherals, remote access to resources/servers, connect to mobile phone, bluetooth connections, casting etc.
+
+        Returns:
+            _type_: _description_
+        """
+        devicemenu = QWidget()
+        devicemenu.setObjectName("DashMenuTab")
+
+        return devicemenu
+
+    def initCreateMenu(self, **args):
+        createmenu = QWidget()
+        createmenu.setObjectName("DashMenuTab")
+
+        return createmenu
+
+    def initPaymentMenu(self, **args):
+        # paypal, credit card, ycrpto.
+        paymentmenu = QWidget()
+        paymentmenu.setObjectName("DashMenuTab")
+
+        return paymentmenu
+
+    def initEntertainmentMenu(self, **args):
+        entertainmentmenu = QWidget()
+        entertainmentmenu.setObjectName("DashMenuTab")
+
+        return entertainmentmenu
+
+    def initMailMenu(self, **args):
+        mailmenu = QWidget()
+        mailmenu.setObjectName("DashMenuTab")
+
+        return mailmenu
+
     def initImageMenu(self, **args):
         imagemenu = QWidget()
         imagemenu.setObjectName("DashMenuTab")
 
         return imagemenu
 
+    def initVideoMenu(self, **args):
+        videomenu = QWidget()
+        videomenu.setObjectName("DashMenuTab")
+
+        return videomenu
+
+    def initMusicMenu(self, **args):
+        musicmenu = QWidget()
+        musicmenu.setObjectName("DashMenuTab")
+
+        return musicmenu
+
+    def initFormMenu(self, **args):
+        """_summary_
+        Create forms, polls, surveys and charts 
+
+        Returns:
+            _type_: _description_
+        """
+        formmenu = QWidget()
+        formmenu.setObjectName("DashMenuTab")
+
+        return formmenu
+
     def initBrowserMenu(self, **args):
+        # web archive, shields, cookie management, ad block, content policy, reading list, bookmarks, password manager, history tools, permissions.
         browsermenu = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -302,6 +472,18 @@ class DashMenu(QTabWidget):
             background: transparent;
         }''')
         return name
+
+    def initEventMenu(self, **args):
+        """_summary_
+        schedule meetings (google, cisco, zoom) and manage calendar events, alarm, reminders.
+
+        Returns:
+            _type_: _description_
+        """
+        eventmenu = QWidget()
+        eventmenu.setObjectName("DashMenuTab")
+
+        return eventmenu        
 
     def initCodeMenu(self, **args):
         codemenu = QWidget()
@@ -365,6 +547,7 @@ class DashMenu(QTabWidget):
     def connectWindow(self, window):
         self.dash_window = window
         self._browsermenu.connectWindow(window)
+        self._viewmenu.connectWindow(window)
 
     def addSeparator(self):
         sep = QFrame()

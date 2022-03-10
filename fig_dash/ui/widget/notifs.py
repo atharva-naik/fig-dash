@@ -16,7 +16,8 @@ notif_style = '''
 QWidget {
     border: 0px;
     color: #fff;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 0.8), stop : 0.6 rgba(29, 29, 29, 0.8));  
 }
 QToolButton {
     border: 0px;
@@ -71,40 +72,60 @@ class Notification(QWidget):
         self.dismissBtn.notif = self
         # create notification header.
         self.header = QWidget()
+        self.header.setAttribute(Qt.WA_TranslucentBackground)
         self.headerBox = QHBoxLayout()
         self.headerBox.setContentsMargins(0, 0, 0, 0)
         self.headerBox.addWidget(self.appIcon)
         self.headerBox.addWidget(self.appName)
         self.headerBox.addWidget(self.timeLabel) 
+        self.header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.headerBox.addStretch(1)
         self.headerBox.addWidget(self.dismissBtn)
         self.header.setLayout(self.headerBox)
-        self.layout.addWidget(self.header)
+        # self.layout.addWidget(self.header)
         # set notif message.
         self.content = QTextEdit()
-        self.content.setHtml(args.get("msg"))
-        self.content.setMaximumHeight(100)
-        self.content.setMinimumHeight(60)
+        html = 2*"<br>"+args.get("msg")
+        self.content.setHtml(html)
+        self.content.setMaximumHeight(150)
+        # self.content.setMinimumHeight(80)
         self.content.setReadOnly(True)
+        self.content.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.content.setTextInteractionFlags(Qt.LinksAccessibleByMouse)
         self.content.setStyleSheet('''
         QTextEdit {
             color: #fff;
             border: 0px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));  
+            padding-left: 10px;
+            padding-right: 10px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 0.8), stop : 0.6 rgba(29, 29, 29, 0.8));  
         }''')
         # self.content.setAttribute(Qt.WA_TranslucentBackground)
         self.layout.addWidget(self.content)
+        self.header.setParent(self.content)
         # add shadow to give 3D appearance.
         glow_effect = QGraphicsDropShadowEffect()
         glow_effect.setBlurRadius(5)
-        glow_effect.setOffset(3,3)
-        glow_effect.setColor(QColor(235, 95, 52))
+        glow_effect.setOffset(0,0)
+        glow_effect.setColor(QColor(235, 95, 52, 200))
         self.setStyleSheet(notif_style)
-        # apply glow effect for 3D appearance.
-        self.setGraphicsEffect(glow_effect)
+        # # apply glow effect for 3D appearance.
+        # self.setGraphicsEffect(glow_effect)
         # set layout.
         self.layout.addStretch(1)
         self.setLayout(self.layout)
+
+    def enterEvent(self, event):
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(5)
+        glow_effect.setOffset(0,0)
+        glow_effect.setColor(QColor(235, 95, 52, 255))
+        self.setGraphicsEffect(glow_effect)
+        super(Notification, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setGraphicsEffect(None)
+        super(Notification, self).enterEvent(event)
 
 
 class NotifsPanel(QScrollArea):
@@ -116,7 +137,7 @@ class NotifsPanel(QScrollArea):
         self.box = QWidget()
         self.boxLayout = QVBoxLayout()
         self.boxLayout.setContentsMargins(0, 0, 0, 0)
-        self.boxLayout.setSpacing(2)
+        self.boxLayout.setSpacing(5)
         self.box.setLayout(self.boxLayout)
         self.boxLayout.addStretch(1)
         self.setStyleSheet('''
@@ -131,6 +152,11 @@ class NotifsPanel(QScrollArea):
         self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)        
 
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
     def popNotif(self, i: int):
         pass
 
@@ -144,6 +170,8 @@ class NotifsPanel(QScrollArea):
         now = datetime.datetime.now()
         time = now.strftime("%a, %b %d  %-I:%M %p")
         notif = Notification(self, time=time, **args)
+        notif.setFixedWidth(500)
+        notif.header.setFixedWidth(500)
         notif.dismissBtn.clicked.connect(self.dismiss)
         self.boxLayout.insertWidget(1, notif)
 

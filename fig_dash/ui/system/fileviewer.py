@@ -20,7 +20,7 @@ from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
 # filweviewer widget.
 ViSelectJS = r'''/*! @viselect/vanilla 3.0.0-beta.13 MIT | https://github.com/Simonwep/selection */
 const t=(t,e="px")=>"number"==typeof t?t+e:t;function e({style:e},s,i){if("object"==typeof s)for(const[i,o]of Object.entries(s))e[i]=t(o);else void 0!==i&&(e[s]=t(i))}function s(t){return(e,s,i,o={})=>{e instanceof HTMLCollection||e instanceof NodeList?e=Array.from(e):Array.isArray(e)||(e=[e]),Array.isArray(s)||(s=[s]);for(const n of e)for(const e of s)n[t](e,i,{capture:!1,...o});return[e,s,i,o]}}const i=s("addEventListener"),o=s("removeEventListener"),n=t=>{const e=t.touches&&t.touches[0]||t;return{tap:e,x:e.clientX,y:e.clientY,target:e.target}};function r(t){let e=t.path||t.composedPath&&t.composedPath();if(e)return e;let s=t.target.parentElement;for(e=[t.target,s];s=s.parentElement;)e.push(s);return e.push(document,window),e}function h(t,e,s="touch"){switch(s){case"center":{const s=e.left+e.width/2,i=e.top+e.height/2;return s>=t.left&&s<=t.right&&i>=t.top&&i<=t.bottom}case"cover":return e.left>=t.left&&e.top>=t.top&&e.right<=t.right&&e.bottom<=t.bottom;case"touch":return t.right>=e.left&&t.left<=e.right&&t.bottom>=e.top&&t.top<=e.bottom;default:throw new Error(`Unkown intersection mode: ${s}`)}}function c(t,e){const s=t.indexOf(e);~s&&t.splice(s,1)}function a(t,e=document){const s=Array.isArray(t)?t:[t],i=[];for(let t=0,o=s.length;t<o;t++){const o=s[t];"string"==typeof o?i.push(...Array.from(e.querySelectorAll(o))):o instanceof Element&&i.push(o)}return i}const l=()=>matchMedia("(hover: none), (pointer: coarse)").matches,u=(t,e)=>{for(const[s,i]of Object.entries(t)){const o=e[s];t[s]=void 0===o?t[s]:"object"!=typeof o||"object"!=typeof i||null===i||Array.isArray(i)?o:u(i,o)}return t},{abs:d,max:p,min:f,ceil:m}=Math;class SelectionArea extends class{constructor(){this.t=new Map,this.on=this.addEventListener,this.off=this.removeEventListener,this.emit=this.dispatchEvent}addEventListener(t,e){const s=this.t.get(t)||new Set;return this.t.set(t,s),s.add(e),this}removeEventListener(t,e){return this.t.get(t)?.delete(e),this}dispatchEvent(t,...e){let s=!0;for(const i of this.t.get(t)||[])s=!1!==i(...e)&&s;return s}unbindAllListeners(){this.t.clear()}}{constructor(t){super(),this.i={touched:[],stored:[],selected:[],changed:{added:[],removed:[]}},this.o=[],this.h=new DOMRect,this.l={y1:0,x2:0,y2:0,x1:0},this.u=!0,this.p=!0,this.m={x:0,y:0},this.v={x:0,y:0},this.disable=this.g.bind(this,!1),this.enable=this.g,this._=u({selectionAreaClass:"selection-area",selectionContainerClass:void 0,selectables:[],document:window.document,behaviour:{overlap:"invert",intersect:"touch",startThreshold:{x:10,y:10},scrolling:{speedDivider:10,manualSpeed:750,startScrollMargins:{x:0,y:0}}},features:{range:!0,touch:!0,singleTap:{allow:!0,intersect:"native"}},startAreas:["html"],boundaries:["html"],container:"body"},t);for(const t of Object.getOwnPropertyNames(Object.getPrototypeOf(this)))"function"==typeof this[t]&&(this[t]=this[t].bind(this));const{document:s,selectionAreaClass:i,selectionContainerClass:o}=this._;this.S=s.createElement("div"),this.A=s.createElement("div"),this.A.appendChild(this.S),this.S.classList.add(i),o&&this.A.classList.add(o),e(this.S,{willChange:"top, left, bottom, right, width, height",top:0,left:0,position:"fixed"}),e(this.A,{overflow:"hidden",position:"fixed",transform:"translate3d(0, 0, 0)",pointerEvents:"none",zIndex:"1"}),this.T=(t=>{let e,s=-1,i=!1;return{next(...o){e=o,i||(i=!0,s=requestAnimationFrame((()=>{t(...e),i=!1})))},cancel(){cancelAnimationFrame(s),i=!1}}})((t=>{this.L(),this.C(),this.M("move",t),this.j()})),this.enable()}g(t=!0){const{document:e,features:s}=this._,n=t?i:o;n(e,"mousedown",this.k),s.touch&&n(e,"touchstart",this.k,{passive:!1})}k(t,e=!1){const{x:s,y:o,target:c}=n(t),{_:l}=this,{document:u}=this._,d=c.getBoundingClientRect(),p=a(l.startAreas,l.document),f=a(l.boundaries,l.document);this.O=f.find((t=>h(t.getBoundingClientRect(),d)));const m=r(t);if(!this.O||!p.find((t=>m.includes(t)))||!f.find((t=>m.includes(t))))return;if(!e&&!1===this.M("beforestart",t))return;this.l={x1:s,y1:o,x2:0,y2:0};const v=u.scrollingElement||u.body;this.v={x:v.scrollLeft,y:v.scrollTop},this.u=!0,this.clearSelection(!1),i(u,["touchmove","mousemove"],this.R,{passive:!1}),i(u,["mouseup","touchcancel","touchend"],this.$),i(u,"scroll",this.D)}F(t){const{singleTap:{intersect:e},range:s}=this._.features,i=n(t);let o=null;if("native"===e)o=i.target;else if("touch"===e){this.resolveSelectables();const{x:t,y:e}=i;o=this.o.find((s=>{const{right:i,left:o,top:n,bottom:r}=s.getBoundingClientRect();return t<i&&t>o&&e<r&&e>n}))}if(!o)return;for(this.resolveSelectables();!this.o.includes(o);){if(!o.parentElement)return;o=o.parentElement}const{stored:r}=this.i;if(this.M("start",t),t.shiftKey&&r.length&&s){const t=this.q??r[0],[e,s]=4&t.compareDocumentPosition(o)?[o,t]:[t,o],i=[...this.o.filter((t=>4&t.compareDocumentPosition(e)&&2&t.compareDocumentPosition(s))),e,s];this.select(i)}else r.includes(o)&&(1===r.length||t.ctrlKey||r.every((t=>this.i.stored.includes(t))))?this.deselect(o):(this.q=o,this.select(o));this.M("stop",t)}R(t){const{container:s,document:r,features:h,behaviour:{startThreshold:c}}=this._,{x1:u,y1:p}=this.l,{x:f,y:m}=n(t),v=typeof c;if("number"===v&&d(f+m-(u+p))>=c||"object"===v&&d(f-u)>=c.x||d(m-p)>=c.y){if(o(r,["mousemove","touchmove"],this.R,{passive:!1}),!1===this.M("beforedrag",t))return void o(r,["mouseup","touchcancel","touchend"],this.$);i(r,["mousemove","touchmove"],this.H,{passive:!1}),e(this.S,"display","block"),a(s,r)[0].appendChild(this.A),this.resolveSelectables(),this.u=!1,this.W=this.O.getBoundingClientRect(),this.p=this.O.scrollHeight!==this.O.clientHeight||this.O.scrollWidth!==this.O.clientWidth,this.p&&(i(r,"wheel",this.I,{passive:!1}),this.o=this.o.filter((t=>this.O.contains(t)))),this.N(),this.M("start",t),this.H(t)}h.touch&&l()&&t.preventDefault()}N(){const{A:t,O:s,S:i}=this,o=this.W=s.getBoundingClientRect();this.p?(e(t,{top:o.top,left:o.left,width:o.width,height:o.height}),e(i,{marginTop:-o.top,marginLeft:-o.left})):(e(t,{top:0,left:0,width:"100%",height:"100%"}),e(i,{marginTop:0,marginLeft:0}))}H(t){const{x:e,y:s}=n(t),{m:i,l:o,_:r,T:h}=this,{features:c}=r,{speedDivider:a}=r.behaviour.scrolling,u=this.O;if(o.x2=e,o.y2=s,this.p&&(i.y||i.x)){const e=()=>{if(!i.x&&!i.y)return;const{scrollTop:s,scrollLeft:n}=u;i.y&&(u.scrollTop+=m(i.y/a),o.y1-=u.scrollTop-s),i.x&&(u.scrollLeft+=m(i.x/a),o.x1-=u.scrollLeft-n),h.next(t),requestAnimationFrame(e)};requestAnimationFrame(e)}else h.next(t);c.touch&&l()&&t.preventDefault()}D(){const{v:t,_:{document:e}}=this,{scrollTop:s,scrollLeft:i}=e.scrollingElement||e.body;this.l.x1+=t.x-i,this.l.y1+=t.y-s,t.x=i,t.y=s,this.N(),this.T.next(null)}I(t){const{manualSpeed:e}=this._.behaviour.scrolling,s=t.deltaY?t.deltaY>0?1:-1:0,i=t.deltaX?t.deltaX>0?1:-1:0;this.m.y+=s*e,this.m.x+=i*e,this.H(t),t.preventDefault()}L(){const{m:t,l:e,h:s,O:i,W:o,_:n}=this,{scrollTop:r,scrollHeight:h,clientHeight:c,scrollLeft:a,scrollWidth:l,clientWidth:u}=i,m=o,{x1:v,y1:g}=e;let{x2:y,y2:_}=e;const{behaviour:{scrolling:{startScrollMargins:x}}}=n;y<m.left+x.x?(t.x=a?-d(m.left-y+x.x):0,y=y<m.left?m.left:y):y>m.right-x.x?(t.x=l-a-u?d(m.left+m.width-y-x.x):0,y=y>m.right?m.right:y):t.x=0,_<m.top+x.y?(t.y=r?-d(m.top-_+x.y):0,_=_<m.top?m.top:_):_>m.bottom-x.y?(t.y=h-r-c?d(m.top+m.height-_-x.y):0,_=_>m.bottom?m.bottom:_):t.y=0;const b=f(v,y),S=f(g,_),w=p(v,y),A=p(g,_);s.x=b,s.y=S,s.width=w-b,s.height=A-S}j(){const{x:t,y:e,width:s,height:i}=this.h,{style:o}=this.S;o.left=`${t}px`,o.top=`${e}px`,o.width=`${s}px`,o.height=`${i}px`}$(t,s){const{document:i,features:n}=this._,{u:r}=this;o(i,["mousemove","touchmove"],this.R),o(i,["touchmove","mousemove"],this.H),o(i,["mouseup","touchcancel","touchend"],this.$),o(i,"scroll",this.D),t&&r&&n.singleTap.allow?this.F(t):r||s||(this.C(),this.M("stop",t)),this.m.x=0,this.m.y=0,this.p&&o(i,"wheel",this.I,{passive:!0}),this.A.remove(),this.T?.cancel(),e(this.S,"display","none"),this.U()}C(){const{o:t,_:e,i:s,h:i}=this,{stored:o,selected:n,touched:r}=s,{intersect:c,overlap:a}=e.behaviour,l="invert"===a,u=[],d=[],p=[];for(let e=0;e<t.length;e++){const s=t[e];if(h(i,s.getBoundingClientRect(),c)){if(n.includes(s))o.includes(s)&&!r.includes(s)&&r.push(s);else{if(l&&o.includes(s)){p.push(s);continue}d.push(s)}u.push(s)}}l&&d.push(...o.filter((t=>!n.includes(t))));const f="keep"===a;for(let t=0;t<n.length;t++){const e=n[t];u.includes(e)||f&&o.includes(e)||p.push(e)}s.selected=u,s.changed={added:d,removed:p},this.q=u[u.length-1]}M(t,e){return this.emit(t,{event:e,store:this.i,selection:this})}U(){const{_:t,i:e}=this,{selected:s,changed:i,touched:o,stored:n}=e,r=s.filter((t=>!n.includes(t)));switch(t.behaviour.overlap){case"drop":e.stored=[...r,...n.filter((t=>!o.includes(t)))];break;case"invert":e.stored=[...r,...n.filter((t=>!i.removed.includes(t)))];break;case"keep":e.stored=[...n,...s.filter((t=>!n.includes(t)))]}}trigger(t,e=!0){this.k(t,e)}resolveSelectables(){this.o=a(this._.selectables,this._.document)}clearSelection(t=!0){this.i={stored:t?[]:this.i.stored,selected:[],touched:[],changed:{added:[],removed:[]}}}getSelection(){return this.i.stored}getSelectionArea(){return this.S}cancel(t=!1){this.$(null,!t)}destroy(){this.cancel(),this.disable(),this.A.remove(),super.unbindAllListeners()}select(t,e=!1){const{changed:s,selected:i,stored:o}=this.i,n=a(t,this._.document).filter((t=>!i.includes(t)&&!o.includes(t)));return o.push(...n),i.push(...n),s.added.push(...n),!e&&this.M("move",null),n}deselect(t,e=!1){const{selected:s,stored:i,changed:o}=this.i;return!(!s.includes(t)&&!i.includes(t))&&(o.removed.push(t),c(i,t),c(s,t),!e&&this.M("move",null),!0)}}SelectionArea.version="3.0.0-beta.13";export{SelectionArea as default};
@@ -698,6 +698,14 @@ FileViewerHtml = jinja2.Template(r'''
         </footer>
     </body>
 </html>''')
+# IMPORTANT: URL to share page on 
+# twitter
+# https://twitter.com/intent/tweet?url={enc_page_url}&text=#{enc_page_title}
+# facebook
+# https://www.facebook.com/sharer/sharer.php?u={enc_url}
+# linkedin
+# https://www.linkedin.com/sharing/share-offsite/?url={enc_url}
+
 class EventHandler(QObject):
     def __init__(self, fileviewer):
         super(EventHandler, self).__init__()
@@ -787,6 +795,11 @@ class FileViewerSearchBar(QLineEdit):
         # self.completer.setCompletionMode(QCompleter.PopupCompletion)
         # self.completer.setFilterMode(Qt.MatchContains)
         self.setCompleter(self.completer)
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
 
     def search(self):
         pass
@@ -1027,7 +1040,10 @@ class FileViewerBtn(QToolButton):
             }
             QToolButton:hover {
                 color: #292929;
-                background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+                border: 1px solid #0a4c70;
+                border-radius: 2px;
+                background: rgba(105, 191, 238, 150);
+                /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0); */
             }
             QToolTip {
                 color: #fff;
@@ -1080,16 +1096,29 @@ class FileViewerGroup(QWidget):
         # self.layout.setSpacing(2)
         self.group.setLayout(self.layout)
         self.setStyleSheet("""
-        QWidget {
+        QWidget#FileViewerGroup {
             border: 0px;
-            background: transparent;
             margin-left: 5px;
             margin-right: 5px;
+            background: transparent;
         }""")
+        self.setObjectName("FileViewerGroup")
         layout.addStretch(1)
         layout.addWidget(self.group)
         layout.addWidget(self.Label(name))
         self.setLayout(layout)
+
+    def initLabel(self, text: str):
+        lbl = QLabel(text)
+        lbl.setStyleSheet("""
+        QLabel {
+            color: #fff;
+            border: 0px;
+            font-size: 14px;
+            background: transparent;
+        }""")
+
+        return lbl
 
     def Label(self, name):
         name = QLabel(name)
@@ -1099,12 +1128,81 @@ class FileViewerGroup(QWidget):
             border: 0px;
             border-right: 1px;
             padding: 6px;
-            color: #69bfee;
+            color: #6e6e6e;
+            /* color: #69bfee; */
             font-size: 16px;
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
+            padding-bottom: 0px;
         }''')
         return name
+
+    def initBtnGrid(self, btn_args, spacing=None, 
+                    alignment_flag=None):
+        btnGrid = QWidget()
+        btnGrid.btns = []
+        layout = QGridLayout()
+        layout.setContentsMargins(10, 0, 0, 0)
+        if spacing:
+            layout.setSpacing(spacing)
+        else: layout.setSpacing(0)
+        btnGrid.setLayout(layout)
+        btnGrid.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            font-size: 10px;
+            background: transparent;
+        }""")
+        
+        for i, btn_row_args in enumerate(btn_args):
+            for j, args in enumerate(btn_row_args):
+                islabel = args.get("label", False)
+                stretch = args.get("stretch", False)
+                
+                if stretch: layout.addStretch(1)
+                elif islabel:
+                    text = args.get("text", "text not set")
+                    label = QLabel(text)
+                    label.setStyleSheet("""
+                    QLabel {
+                        color: #fff;
+                        border: 0px;
+                        font-size: 14px;
+                        background: transparent;
+                    }""")
+                    layout.addWidget(label)
+                else:
+                    btn = self.initBtn(**args)
+                    btnGrid.btns.append(btn)
+                    if alignment_flag is None:
+                        layout.addWidget(
+                            btn, i, j,
+                            alignment=Qt.AlignCenter
+                        )
+                    else:
+                        layout.addWidget(
+                            btn, i, j,
+                            alignment=alignment_flag
+                        )
+        scrollArea = self.wrapInScrollArea(btnGrid)
+        scrollArea.grid = btnGrid
+
+        return scrollArea
+
+    def wrapInScrollArea(self, widget):
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(widget)
+        # scrollArea.setAttribute(Qt.WA_TranslucentBackground)
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setStyleSheet("border: 2px solid gray;")
+        # scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # scrollArea.setStyleSheet("""
+        # QScrollArea {
+        #     border: 0px;
+        #     background: blue;
+        # }""")
+        return scrollArea
 
     def initBtnGroup(self, btn_args, orient="horizontal", 
                      alignment_flag=None, spacing=None):
@@ -1129,12 +1227,28 @@ class FileViewerGroup(QWidget):
         }''')
         layout.addStretch(1)
         for args in btn_args:
-            btn = self.initBtn(**args)
-            btnGroup.btns.append(btn)
-            if alignment_flag is None:
-                layout.addWidget(btn, 0, Qt.AlignCenter)
+            stretch = args.get("stretch", False)
+            islabel = args.get("label", False)
+            if stretch:
+                layout.addStretch(1)
+            elif islabel:
+                text = args.get("text", "text not set")
+                label = QLabel(text)
+                label.setStyleSheet("""
+                QLabel {
+                    color: #fff;
+                    border: 0px;
+                    font-size: 14px;
+                    background: transparent;
+                }""")
+                layout.addWidget(label)
             else:
-                layout.addWidget(btn, 0, alignment_flag)
+                btn = self.initBtn(**args)
+                btnGroup.btns.append(btn)
+                if alignment_flag is None:
+                    layout.addWidget(btn, 0, Qt.AlignCenter)
+                else:
+                    layout.addWidget(btn, 0, alignment_flag)
         layout.addStretch(1)
         btnGroup.setLayout(layout)
 
@@ -1182,13 +1296,13 @@ class FileViewerFileGroup(FileViewerGroup):
         self.creationLayout.setContentsMargins(0, 0, 0, 0)
         self.creationWidget.setLayout(self.creationLayout)
         self.newFileBtn =  self.initBtn(
-            icon="new_file.svg",
+            icon="file.ico",#"new_file.svg",
             size=(30,30),
             tip="create a new file",
         )
         self.newFolderBtn =  self.initBtn(
-            icon="new_folder.svg",
-            size=(30,30),
+            icon="folder.ico",#"new_folder.svg",
+            size=(40,40),
             tip="create a new folder",
         )
         self.creationLayout.addWidget(self.newFileBtn)
@@ -1196,7 +1310,7 @@ class FileViewerFileGroup(FileViewerGroup):
         self.creationLayout.addStretch(1)
         # connect to server.
         self.connectToServerBtn = self.initBtn(
-            icon="connect_to_server.svg",
+            icon="connect_to_server.ico",
             size=(40,40),
             tip="connect to a server",
         )
@@ -1220,7 +1334,7 @@ class FileViewerFileGroup(FileViewerGroup):
         self.navWidget.setLayout(self.navLayout)
         # buttons.
         self.backPathBtn = self.initBtn(
-            icon="back.svg",
+            icon="back.ico",
             size=(25,25),
             tip="go back to parent folder",
         )
@@ -1372,7 +1486,7 @@ class FileViewerEditGroup(FileViewerGroup):
         # undo, redo, rename
         self.renameGroup = self.initBtnGroup([
             {"icon": "undo.svg", "size": (23,23), "tip": "undo rename", "text": "undo", "style": Qt.ToolButtonTextUnderIcon},
-            {"icon": "rename.svg", "size": (23,23), "tip": "rename file/folder", "text": "rename", "style": Qt.ToolButtonTextUnderIcon},
+            {"icon": "rename.ico", "size": (23,23), "tip": "rename file/folder", "text": "rename", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "redo.svg", "size": (23,23) , "tip": "redo rename", "text": "redo", "style": Qt.ToolButtonTextUnderIcon},
         ], spacing=0)
         self.undoBtn = self.renameGroup.btns[0]
@@ -1386,10 +1500,19 @@ class FileViewerEditGroup(FileViewerGroup):
         ], spacing=0, alignment_flag=Qt.AlignCenter | Qt.AlignBottom)
         # make link, release link, move to trash
         self.linkGroup = self.initBtnGroup([
-            # {"icon": "link.svg", "size": (20,20)},
-            # {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
-            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash", "text": "trash", "style": Qt.ToolButtonTextUnderIcon},
+            {"stretch": True},
+            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash"},
+            {"icon": "invert_selection.ico", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
         ], orient="vertical", spacing=0)
+
+        self.selectionGroup1 = self.initBtnGroup([
+            {"icon": "clear_selection.ico", "size": (30,30), "tip": "clear current selection", "icon_size": (30,30)},
+            {"icon": "select_all.ico", "size": (30,30), "tip": "select all items", "icon_size": (30,30)},
+        ], orient="vertical", spacing=0)
+        self.invertBtn = self.linkGroup.btns[1]
+        self.clearBtn = self.selectionGroup1.btns[0]
+        self.selectAllBtn = self.selectionGroup1.btns[1]
+        # self.layout.addWidget(self.invertBtn, 0, Qt.AlignBottom)
         # self.sortWidget = QWidget()
         # self.editLayout.addStretch(1)
         self.editLayout.addWidget(self.renameGroup)
@@ -1398,12 +1521,16 @@ class FileViewerEditGroup(FileViewerGroup):
         self.editWidget.setLayout(self.editLayout)
         self.layout.addStretch(1)
         self.layout.addWidget(self.editWidget)
-        self.layout.addWidget(self.linkGroup)
+        self.layout.addWidget(self.linkGroup, 0, Qt.AlignBottom)
+        self.layout.addWidget(self.selectionGroup1, 0, Qt.AlignBottom)
         self.layout.addStretch(1)    
 
     def connectWidget(self, widget):
         self.widget = widget
         self.renameBtn.clicked.connect(widget.renameDialog)
+        self.clearBtn.clicked.connect(widget.clearSelection)
+        self.selectAllBtn.clicked.connect(widget.selectAll)
+        self.invertBtn.clicked.connect(widget.invertSelection)
 
 
 class FileViewerViewGroup(FileViewerGroup):
@@ -1417,12 +1544,12 @@ class FileViewerViewGroup(FileViewerGroup):
             {"icon": "gridview.svg", "size": (20,20), "tip": "tile view", "text": "grid", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "list_view.svg", "size": (20,20), "tip": "list view", "text": "list", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view", "text": "tree", "style": Qt.ToolButtonTextUnderIcon},
-            {"icon": "toggle_hidden_files.png", "size": (23,23), "tip": "toggle visibility of hidden files"},
+            {"icon": "toggle_hidden_files.ico", "size": (23,23), "tip": "toggle visibility of hidden files"},
         ], spacing=0)
         # hidden files, folder bar visibility, side bar visibility, search bar visibility.
         self.visibilityGroup = self.initBtnGroup([
             {"icon": "toggle_folderbar.svg", "size": (35,35), "tip": "toggle visibility of folder bar"},
-            {"icon": "toggle_searchbar.svg", "size": (27,27), "tip": "toggle visibility of search bar"},
+            {"icon": "toggle_searchbar.ico", "size": (27,27), "tip": "toggle visibility of search bar"},
             {"icon": "toggle_sidebar.svg", "size": (27,27), "tip": "toggle visibility of sidebar"},
         ], spacing=0)
         self.hiddenFilesBtn = self.layoutGroup.btns[-1]
@@ -1430,8 +1557,8 @@ class FileViewerViewGroup(FileViewerGroup):
         self.searchbarBtn = self.visibilityGroup.btns[1]
         self.sidebarBtn = self.visibilityGroup.btns[2]
         self.arrangeGroup = self.initBtnGroup([
-            {"icon": "sidebar_left.svg", "size": (25,25), "tip": "sidebar to the left", "text": " left", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
-            {"icon": "sidebar_right.svg", "size": (25,25), "tip": "sidebar to the right", "text": " right", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
+            {"icon": "sidebar_left.ico", "size": (25,25), "tip": "sidebar to the left", "text": " left", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
+            {"icon": "sidebar_right.png", "size": (25,25), "tip": "sidebar to the right", "text": " right", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
         ], orient="vertical", spacing=0, alignment_flag=Qt.AlignLeft)     
         self.viewLayout.addStretch(1)
         self.viewLayout.addWidget(self.layoutGroup)
@@ -1454,38 +1581,27 @@ class FileViewerViewGroup(FileViewerGroup):
         self.hiddenFilesBtn.clicked.connect(
             widget.toggleHiddenFiles
         )
+        self.searchbarBtn.clicked.connect(
+            widget.searchbar.toggle
+        )
 
 
 class FileViewerSelectGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerSelectGroup, self).__init__(parent, "Select")
-        # self.selectionWidget = QWidget() 
-        # self.selectionLayout = QVBoxLayout()
-        # self.selectionLayout.setContentsMargins(0, 0, 0, 0)
-        # self.selectionLayout.setSpacing(0)
         self.selectionGroup1 = self.initBtnGroup([
-            {"icon": "clear_selection.png", "size": (30,30), "tip": "clear current selection", "icon_size": (30,30)},
-            {"icon": "select_all.png", "size": (30,30), "tip": "select all items", "icon_size": (30,30)},
+            {"icon": "clear_selection.ico", "size": (30,30), "tip": "clear current selection", "icon_size": (30,30)},
+            {"icon": "select_all.ico", "size": (30,30), "tip": "select all items", "icon_size": (30,30)},
         ], orient="vertical", spacing=0)
-        # self.selectionGroup2 = self.initBtnGroup([
-        #     {"icon": "invert_selection.png", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
-        # ], orient="vertical", spacing=0)
         self.invertBtn = self.initBtn(
-            icon="invert_selection.png", size=(30,30), 
+            icon="invert_selection.ico", size=(30,30), 
             tip="invert selected items", icon_size=(30,30)
         )
         self.clearBtn = self.selectionGroup1.btns[0]
         self.selectAllBtn = self.selectionGroup1.btns[1]
-        # self.invertBtn = self.selectionGroup2.btns[0]
-        self.layout.addWidget(self.selectionGroup1)
+        self.layout.addWidget(self.selectionGroup1, 0, Qt.AlignBottom)
         self.layout.addWidget(self.invertBtn, 0, Qt.AlignBottom)
-        # self.layout.addWidget(self.selectionGroup2, 0, Qt.AlignCenter | Qt.AlignBottom)
-        # self.selectionLayout.addWidget(self.selectionGroup)
-        # self.selectionLayout.addStretch(1)
-        # self.selectionWidget.setLayout(self.selectionLayout)
-        # self.layout.addStretch(1)
-        # self.layout.addWidget(self.selectionWidget)
-        # self.layout.addStretch(1)    
+ 
     def connectWidget(self, widget):
         self.widget = widget
         self.clearBtn.clicked.connect(widget.clearSelection)
@@ -1503,6 +1619,7 @@ class XdgOpenDropdown(QComboBox):
         self.mime_to_apps = MimeTypeDefaults()
         self.populate(mimetype)
         self.currentIndexChanged.connect(self.selChanged)
+        # self.setStyleSheet("")
         self.setStyleSheet("background: #292929; color: #69bfee; font-size: 15px; text-align: left;")
 
     def adjustCursor(self):
@@ -1649,38 +1766,66 @@ class FileViewerShareGroup(FileViewerGroup):
         # twitter, reddit, facebook, youtube, instagram
         self.nativeGroup1 = self.initBtnGroup([
             {"icon": "devices.svg", "size":(18,18),
-            'tip': "share to linked devices", "text": "device", "style": Qt.ToolButtonTextBesideIcon},
+            'tip': "share to linked devices"},
             {"icon": "qr.svg", "size":(18,18),
-            'tip': "create qr code for file", "text": "QR code", "style": Qt.ToolButtonTextBesideIcon},
+            'tip': "create qr code for file"},
             {"icon": "bluetooth.svg", "size":(18,18),
-            'tip': "share using bluetooth", "text": "bluetooth", "style": Qt.ToolButtonTextBesideIcon},
-        ], orient="vertical", spacing=5, alignment_flag=Qt.AlignLeft)
+            'tip': "share using bluetooth"},
+        ], spacing=0, alignment_flag=Qt.AlignLeft)
         self.nativeGroup2 = self.initBtnGroup([
-            {"icon": "email.svg", "size":(23,23),
+            {"icon": "email.ico", "size":(36,30),
             'tip': "share file as email attachment", "text": "email", "style": Qt.ToolButtonTextUnderIcon},
-            {"icon": "copy_content.svg", "size":(23,23),
+            {"icon": "copy_content.svg", "size":(18,18),
             'tip': "copy file contents to clipboard", "text": "content", "style": Qt.ToolButtonTextUnderIcon}
         ], orient="vertical", spacing=0)
-        self.appsGroup1 = self.initBtnGroup([
-            {"icon": "youtube.png", "size":(28,28),
-            'tip': "share video on youtube"},
-            {"icon": "twitter.png", "size":(30,30),
-            'tip': "share on twitter"},
-            {"icon": "reddit.png", "size":(32,32),
-            'tip': "share on reddit"},
-        ], spacing=0, alignment_flag=Qt.AlignBottom)
-        self.appsGroup2 = self.initBtnGroup([
-            {"icon": "facebook.png", "size":(28,28),
-            'tip': "share on facebook"},
-            {"icon": "instagram.png", "size":(28,28),
-            'tip': "share image on instagram"},
-            {"icon": "whatsapp.png", "size":(28,28),
-            'tip': "share on whatsapp"},
-        ], spacing=0, alignment_flag=Qt.AlignBottom)
+        self.shareGroup = self.initBtnGrid([
+            [
+                {"icon": "youtube.png", "size":(35,35),
+                'tip': "share video on youtube"},
+                {"icon": "twitter.png", "size":(35,35),
+                'tip': "share on twitter"},
+                {"icon": "reddit.png", "size":(35,35),
+                'tip': "share on reddit"},                
+            ],
+            [
+                {"icon": "facebook.png", "size":(35,35),
+                'tip': "share on facebook"},
+                {"icon": "instagram.png", "size":(35,35),
+                'tip': "share image on instagram"},
+                {"icon": "whatsapp.png", "size":(35,35),
+                'tip': "share on whatsapp"},  
+            ],
+        ])
+        shareGrid = self.shareGroup.grid
+        shareGrid.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            font-size: 10px;
+            background: transparent;
+        }""")
+        self.shareGroup.setFixedHeight(65)
+        self.shareGroup.setFixedWidth(135)
+        # self.appsGroup1 = self.initBtnGroup([
+        #     {"icon": "facebook.png", "size":(28,28),
+        #     'tip': "share on facebook"},
+        #     {"icon": "instagram.png", "size":(28,28),
+        #     'tip': "share image on instagram"},
+        #     {"icon": "whatsapp.png", "size":(28,28),
+        #     'tip': "share on whatsapp"},
+        # ], spacing=0, alignment_flag=Qt.AlignBottom)
+        # self.appsGroup2 = self.initBtnGroup([
+        #     {"icon": "facebook.png", "size":(28,28),
+        #     'tip': "share on facebook"},
+        #     {"icon": "instagram.png", "size":(28,28),
+        #     'tip': "share image on instagram"},
+        #     {"icon": "whatsapp.png", "size":(28,28),
+        #     'tip': "share on whatsapp"},
+        # ], spacing=0, alignment_flag=Qt.AlignBottom)
         self.shareWidget = QWidget()
         self.shareLayout = QVBoxLayout()
         self.shareLayout.setSpacing(0)
-        self.shareLayout.setContentsMargins(0,0,0,0)
+        self.shareLayout.setContentsMargins(0, 0, 0, 0)
         
         self.shareLabel = QLabel()
         self.shareLabel.setText("share online")
@@ -1691,33 +1836,71 @@ class FileViewerShareGroup(FileViewerGroup):
             background: transparent;
         }""")
         self.shareLayout.addStretch(1)
-        self.shareLayout.addWidget(self.appsGroup1, 0, Qt.AlignLeft)
-        self.shareLayout.addWidget(self.appsGroup2, 0, Qt.AlignLeft)
-        self.shareLayout.addWidget(self.shareLabel, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        # self.shareLayout.addWidget(self.appsGroup1, 0, Qt.AlignLeft)
+        # self.shareLayout.addWidget(self.appsGroup2, 0, Qt.AlignLeft)
+        # self.shareLayout.addWidget(self.shareLabel, 0, Qt.AlignCenter | Qt.AlignVCenter)
+        self.shareLayout.addWidget(self.shareGroup, 0, Qt.AlignVCenter | Qt.AlignCenter)
+        self.shareLayout.addWidget(self.nativeGroup1, 0, Qt.AlignLeft | Qt.AlignVCenter)
         # self.shareLayout.addStretch(1)
         self.shareWidget.setLayout(self.shareLayout)
 
         self.layout.addStretch(1)
-        self.layout.addWidget(self.nativeGroup1)
+        # self.layout.addWidget(self.nativeGroup1)
         self.layout.addWidget(self.nativeGroup2)
         self.layout.addWidget(self.shareWidget)
         self.layout.addStretch(1)   
 # class FileViewerPropGroup(QWidget): # change permissions, owner, group, thumbnailer
 # class FileViewerFilterGroup(QWidget):
 class FileViewerBackupGroup(FileViewerGroup):
-    def __init__(self, parent):
+    def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerBackupGroup, self).__init__(parent, "Backup") # backup, VCS
 
 
 class FileViewerMiscGroup(FileViewerGroup):
-    def __init__(self, parent):
-        super(FileViewerMiscGroup, self).__init__(parent, "Backup")
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerMiscGroup, self).__init__(parent, "Misc")
         # self.tagsGroup = self.initBtnGroup()
         # self.notesGroup = self.initBtnGroup()
+        # self.ratingsGroup = self.initBtnGroup()
+        # self.favoritesGroup = self.initBtnGroup()
         # self.bookmarksGroup = self.initBtnGroup()
-        # self.encryptionGroup
-        # self.compressionGroup
+        # self.fileconvertGroup = self.initBtnGroup()
+        self.cloudStorageGroup = self.initBtnGroup([
+            {"icon": "favourite.ico", "size": (30,30), "tip": "favourite location"},
+            {"icon": "favourite_folder.ico", "size": (30,30), "tip": "open favourited locations"},
+            {"label": True, "text": "cloud"},
+        ], orient="vertical", spacing=0)
+        self.ratingsGroup = self.initBtnGroup([
+            {"icon": "rate.ico", "size": (30,30), "tip": "open ratings panel for selected item"},
+            {"icon": "show_rating.ico", "size": (30,30), "tip": "show ratings for all items"},
+
+        ], spacing=0)
+        self.encryptionGroup = self.initBtnGroup([
+            {"icon": "key.png", "size": (30,30), "tip": "decrypt file"},
+            {"icon": "lock.ico", "size": (30,30), "tip": "encrypt file"},
+        ], orient="horizontal", spacing=0)
+        self.compressionGroup = self.initBtnGroup([
+            {"icon": "zip.ico", "size": (30,30), "tip": "zip file"},
+            {"icon": "compress.svg", "size": (30,30), "tip": "compression tools", "text": "archive", "style": Qt.ToolButtonTextUnderIcon},
+        ], orient="vertical", spacing=0)
+        self.miscWidget1 = QWidget()
+        self.miscLayout1 = QVBoxLayout()
+        self.miscLayout1.setSpacing(0)
+        self.miscLayout1.setContentsMargins(0, 0, 0, 0)
+        
+        self.miscLayout1.addStretch(1)
+        self.miscLayout1.addWidget(self.encryptionGroup, 0, Qt.AlignLeft)
+        self.miscLayout1.addWidget(self.initLabel("encrypt"), 0, Qt.AlignCenter)
+        self.miscLayout1.addWidget(self.ratingsGroup, 0, Qt.AlignLeft)
+        self.miscLayout1.addWidget(self.initLabel("rate"), 0, Qt.AlignCenter)
+        self.miscWidget1.setLayout(self.miscLayout1)
+        # add widgets to layout.
+        self.layout.addWidget(self.compressionGroup)
+        self.layout.addWidget(self.miscWidget1)
+        self.layout.addWidget(self.cloudStorageGroup, 0, Qt.AlignBottom)
         # self.coversionGroup # file conversion (for images, videos, document formats etc.)
+    def connectWidget(self, widget):
+        self.widget = widget
 
 
 class AppearanceSlider(QWidget):
@@ -1874,8 +2057,9 @@ class FileViewerAppearanceGroup(FileViewerGroup):
             background: transparent;
         }
         QToolButton:hover {
-            color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34);
+            border: 1px solid #bf3636;
+            background: #a11f53aa;
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
         }''')
         # btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         btn.setToolTip(tip)
@@ -1902,8 +2086,8 @@ class FileViewerMenu(QWidget):
         self.editgroup = FileViewerEditGroup()
         self.viewgroup = FileViewerViewGroup()
         self.opengroup = FileViewerOpenGroup()
+        self.miscgroup = FileViewerMiscGroup()
         self.sharegroup = FileViewerShareGroup()
-        self.selectgroup = FileViewerSelectGroup()
         # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
         # self.layout.addWidget(self.addSeparator())
@@ -1911,16 +2095,17 @@ class FileViewerMenu(QWidget):
         self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.editgroup)
         self.layout.addWidget(self.addSeparator())
-        self.layout.addWidget(self.selectgroup)
-        self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.viewgroup)
         self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.opengroup)
         self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.sharegroup)
+        self.layout.addWidget(self.addSeparator())
+        self.layout.addWidget(self.miscgroup)
 
         self.layout.addStretch(1)
         self.setLayout(self.layout)
+        self.setAttribute(Qt.WA_TranslucentBackground)
     # def addSeparator(self, width: Union[None, int]=None):
     #     sep = QFrame()
     #     sep.setFrameShape(QFrame.VLine)
@@ -1935,9 +2120,9 @@ class FileViewerMenu(QWidget):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
         sep.setFrameShadow(QFrame.Sunken)
-        sep.setStyleSheet(f'''background: #292929''')
-        sep.setLineWidth(2)
-        sep.setMaximumHeight(100)
+        sep.setStyleSheet(f'''background: #292929;''')
+        sep.setLineWidth(1)
+        sep.setMaximumHeight(110)
 
         return sep
 
@@ -1945,11 +2130,10 @@ class FileViewerMenu(QWidget):
         self.filegroup.connectWidget(widget)
         self.editgroup.connectWidget(widget)
         self.viewgroup.connectWidget(widget)
+        self.miscgroup.connectWidget(widget)
         # self.pathgroup.connectWidget(widget)
         # self.opengroup.connectWidget(widget)
-        self.selectgroup.connectWidget(widget)
         # self.appearancegroup.connectWidget(widget)
-
 class FileViewerFolderBar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerFolderBar, self).__init__(parent)
@@ -1968,8 +2152,8 @@ class FileViewerFolderBar(QWidget):
             font-size: 17px;
             font-weight: bold;
             font-family: 'Be Vietnam Pro', sans-serif;
-            padding-top: 4px;
-            padding-bottom: 4px;
+            padding-top: 2px;
+            padding-bottom: 2px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
         }
         QToolButton:hover {
@@ -1989,8 +2173,8 @@ class FileViewerFolderBar(QWidget):
             font-size: 17px;
             font-weight: bold;
             font-family: 'Be Vietnam Pro', sans-serif;
-            padding-top: 4px;
-            padding-bottom: 4px;
+            padding-top: 2px;
+            padding-bottom: 2px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
         }
@@ -1999,6 +2183,14 @@ class FileViewerFolderBar(QWidget):
             border: 0px;
             background: #000;
         }'''
+        self.backBtn = self.initFolderNavBtn(
+            icon="prev.svg",
+            tip="go back (tied to webview.back)",
+        )
+        self.forwardBtn = self.initFolderNavBtn(
+            icon="next.svg",
+            tip="go forward (tied to webview.forward)",
+        )
 
     def toggle(self):
         print("toggling folderbar visibility")
@@ -2007,13 +2199,14 @@ class FileViewerFolderBar(QWidget):
         else: self.show()
 
     def __len__(self):
-        return len(self.folderBtns)
+        return len(self.folderBtns)+2
 
     def clear(self):
         '''clear all the folder buttons on the folder bar.'''
-        for i in reversed(range(len(self))): 
-            print(i)
-            self.layout.itemAt(i).widget().setParent(None)
+        for i in reversed(range(len(self))): # print(i)
+            try: self.layout.itemAt(i).widget().setParent(None)
+            except AttributeError as e: 
+                print(f"fileviewer.FileViewerFolderBar.clear({i}):", e)
 
     def getSubPaths(self, path):
         sub_paths = []
@@ -2038,7 +2231,7 @@ class FileViewerFolderBar(QWidget):
         self.path = path
         path = Path(path)
         self.folderBtns = []
-        
+
         items = []
         while str(path) != "/":
             items.append((str(path.name), str(path)))
@@ -2054,9 +2247,28 @@ class FileViewerFolderBar(QWidget):
         self.folderBtns = self.folderBtns[::-1]
         self.folderBtns[-1].setStyleSheet(self.folderBtnSelStyle)
         self.layout.addStretch(1)
+        self.layout.insertWidget(0, self.forwardBtn)
+        self.layout.insertWidget(0, self.backBtn)
 
     def connectWidget(self, widget):
         self.widget = widget
+        self.backBtn.clicked.connect(
+            widget.webview.back
+        )
+        self.forwardBtn.clicked.connect(
+            widget.webview.forward
+        )
+
+    def initFolderNavBtn(self, icon: str, 
+                         tip: str="some tip"):
+        btn = QToolButton(self)
+        tip = tip
+        btn.setToolTip(tip)
+        icon = os.path.join("system/fileviewer", icon)
+        btn.setIcon(FigD.Icon(icon))
+        btn.setStyleSheet(self.folderBtnStyle)
+
+        return btn 
 
     def initFolderBtn(self, name, full_path):
         btn = QToolButton(self)
@@ -2092,8 +2304,10 @@ class FileViewerShortcutBtn(QToolButton):
         }
         QToolButton:hover {
             color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+            border: 1px solid #0a4c70;
+            background: rgba(105, 191, 238, 180);
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
         }
         QToolTip {
             color: #fff;
@@ -2262,7 +2476,6 @@ class FileViewerWidget(QMainWindow):
         self.browser = self.webview
         self.zoom_factor = zoom_factor
         self.menu = FileViewerMenu()
-        self.menu.setMaximumHeight(130)
         self.font_color = args.get("font_color", '#fff')
         # data
         # set logo.
@@ -2293,10 +2506,13 @@ class FileViewerWidget(QMainWindow):
         
         self.folderbar = FileViewerFolderBar()
         self.folderbar.setFixedHeight(34)
+        self.folderbar.hide()
+
         self.sidebar = FileViewerSideBar()
         self.sidebar.hide()
         # searchbar.
         self.searchbar = FileViewerSearchBar()
+        self.searchbar.hide()
         # self.searchbar.setParent(self.webview)
         self.searchbar.setMinimumWidth(800)
         self.searchbar.setFixedHeight(34)
@@ -2306,7 +2522,9 @@ class FileViewerWidget(QMainWindow):
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
         self.clipboard = args.get("clipboard")
-        
+        # connect to browser buttom.
+        browserBtn = self.menu.opengroup.browserBtn
+        browserBtn.clicked.connect(self.openFileInWebView)
         # # shortcuts.
         self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
         self.SelectAll.activated.connect(self.selectAll)
@@ -2323,7 +2541,12 @@ class FileViewerWidget(QMainWindow):
         self.layout.insertWidget(0, self.webview.splitter, 0)
         self.layout.insertWidget(0, self.searchbar, 0, Qt.AlignCenter)
         self.layout.insertWidget(0, self.folderbar, 0)
-        self.layout.insertWidget(0, self.menu, 0)
+        if args.get("parentless", False):
+            self.menuArea = self.wrapInScrollArea(self.menu)
+            self.menuArea.setFixedHeight(130)
+            self.layout.insertWidget(0, self.menuArea)
+        else:
+            self.layout.insertWidget(0, self.menu)
         # self.layout.addStretch(1)
 
         self.webview.splitter.insertWidget(0, self.sidebar)
@@ -2355,7 +2578,9 @@ class FileViewerWidget(QMainWindow):
             self.webview.searchPanel.closePanel()
         elif self.keypress_search.isVisible():
             self.keypress_search.hide()
-        else: self.clearSelection()
+        else: 
+            self.selected_item = None
+            self.clearSelection()
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -2380,6 +2605,25 @@ class FileViewerWidget(QMainWindow):
     def openParent(self):
         path = str(self.folder.parent)
         self.open(path)
+
+    def openFileInWebView(self):
+        """opens selected file in webview."""
+        if self.selected_item:
+            self.webview.load(
+                QUrl.fromLocalFile(
+                    self.selected_item
+                )    
+            )
+        else:
+            self.webview.load(
+                QUrl.fromLocalFile(
+                    str(self.folder)
+                )    
+            )
+
+    def openFileInTerminal(self):
+        """opens selected file in terminal."""
+        pass
 
     def callXdgOpen(self, path: str):
         '''call xdg-open for the appropriate mimetype.'''
@@ -2612,7 +2856,8 @@ class FileViewerWidget(QMainWindow):
                     icon_paths.append(QUrl.fromLocalFile(path).toString())
                     continue
                 path = "/usr/share/icons/breeze/mimetypes/32/text-plain.svg"
-                icon_paths.append(QUrl.fromLocalFile(path).toString())     
+                icon_paths.append(QUrl.fromLocalFile(path).toString())    
+        print(self.webview.url()) 
         # def chunk_string(string, k=12):
         #     result = []
         #     for i in range(0, len(string), k):
@@ -2721,6 +2966,7 @@ class FileViewerWidget(QMainWindow):
         super(FileViewerWidget, self).keyPressEvent(event)
 
     def onUrlChange(self):
+        self.selected_item = None
         self.webview.setZoomFactor(self.zoom_factor)
         self.webview.loadFinished.connect(self.webview.loadDevTools)
 
@@ -2788,6 +3034,20 @@ class FileViewerWidget(QMainWindow):
         print("FileViewerWidget: \x1b[32;1mconnected to DashWindow\x1b[0m")
         self.dash_window = window
 
+    def wrapInScrollArea(self, widget):
+        scrollArea = QScrollArea()
+        scrollArea.setWidget(widget)
+        scrollArea.setAttribute(Qt.WA_TranslucentBackground)
+        scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scrollArea.setStyleSheet("""
+        QScrollArea {
+            border: 0px;
+            background: transparent;
+        }""")
+
+        return scrollArea
+
 
 def test_fileviewer():
     import sys
@@ -2798,7 +3058,7 @@ def test_fileviewer():
         clipboard=app.clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         logo="system/fileviewer/logo.svg",
-        font_color="#fff",
+        font_color="#fff", parentless=True,
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
     QFontDatabase.addApplicationFont(

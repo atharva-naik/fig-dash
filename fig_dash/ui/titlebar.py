@@ -363,16 +363,6 @@ class TitleBar(QToolBar):
             tip="open ubuntu's bluetooth panel.",
             # callback=self.callback if parent is None else parent.tabs.save
         )
-        self.sysUtilsBtn = self.initTitleBtn(
-            "titlebar/sysutils.svg", 
-            tip="open system utilites menu.",
-            callback=self.callback if parent is None else parent.sysutilsbar.toggle, 
-        )
-        self.tabToggleBtn = self.initTitleBtn(
-            "titlebar/tabs.png", 
-            tip="toggle visibility of tab bar.",
-            callback=self.callback if parent is None else parent.tabs.toggleTabBar, 
-        )
         self.bluetoothBtn.setFixedSize(QSize(17,17))
         self.fullscreenBtn.connectTitleBar(self)
         # self.onScreenKeyboard = self.initTitleBtn(
@@ -449,9 +439,6 @@ class TitleBar(QToolBar):
         self.addWidget(self.zoomLabel)
         self.addWidget(self.zoomSlider)
         self.addWidget(self.zoomOutBtn)
-        self.addWidget(self.sysUtilsBtn)
-        # self.addWidget(self.wordCountBtn)
-        self.addWidget(self.tabToggleBtn)
         self.addWidget(self.initSpacer(30))
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
@@ -488,6 +475,12 @@ class TitleBar(QToolBar):
         self.bluetoothBtn.hide()
         self.battery.pluggedIcon.hide()
         self.battery.hide()
+        self.isInfoVisible = False
+
+    def toggleInfo(self):
+        if self.isInfoVisible:
+            self.hideInfo()
+        else: self.showInfo()
 
     def showInfo(self):
         # print("\x1b[33;1mshowing info\x1b[0m")
@@ -498,6 +491,7 @@ class TitleBar(QToolBar):
         self.bluetoothBtn.show()
         self.battery.pluggedIcon.show()
         self.battery.show()
+        self.isInfoVisible = True
 
     def maximize(self):
         parent = self.parent()

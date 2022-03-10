@@ -7,4 +7,5 @@ pillow
 pyttsx3
 requests
 pyautogui
+PyQtChart
 PyQtWebEngine

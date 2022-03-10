@@ -5,10 +5,10 @@ import jinja2
 import getpass
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent
+from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent, QPalette
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject
 from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem, QWebEnginePage
-from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog, QSizePolicy
+from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog, QSizePolicy, QApplication
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
@@ -41,6 +41,7 @@ class TabsSearchDropdown(QWidget):
         
         self.setObjectName("TabsSearchDropdown")
         self.searchbar = self.initSearchBar()
+        # self.setFixedWidth(200)
         layout.addWidget(self.searchbar)
         layout.addWidget(QLabel("this is something"))
         self.setLayout(layout)
@@ -227,6 +228,10 @@ class DashTabWidget(QTabWidget):
         # QWidget {
         #     background: red;
         # }""")
+        self.dropdown = tabCornerWidget.dropdown
+        self.dropdown.setParent(self)
+        self.dropdown.move(self.x()-100, 30)
+
         tabCornerWidget.splitHBtn.clicked.connect(self.HSplitCurrentTab)
         tabCornerWidget.splitVBtn.clicked.connect(self.VSplitCurrentTab)
         self.dropdownBtn = tabCornerWidget.dropdownBtn
@@ -279,8 +284,7 @@ class DashTabWidget(QTabWidget):
         clickedItem = -1
         for i in range(count):
             if self.tabBar().tabRect(i).contains(pos):
-                clickedItem = i
-                break
+                clickedItem = i; break
         # just in case.
         if clickedItem == -1:
             return super(DashTabWidget, self).eventFilter(obj, event)
@@ -366,8 +370,8 @@ class DashTabWidget(QTabWidget):
             print(f"\x1b[31;1mtab.triggerFind:\x1b[0m {e}")
 
     def connectDropdown(self, splitter):
-        splitter.addWidget(self.dropdown)
-        self.splitter = splitter
+        # splitter.addWidget(self.dropdown)
+        # self.splitter = splitter
         self.dropdown.hide()
 
     def setupTabForBrowser(self, i: int, browser, 
@@ -379,6 +383,8 @@ class DashTabWidget(QTabWidget):
         browser.page().printRequested.connect(
             browser.onPrintRequest
         )
+        navbar = dash_window.navbar
+        navbar.reloadBtn.setStopMode(False)
         browser.loadDevTools()
         browser.setSpellCheck(lang)
         self.setTabText(i, "  "+browser.page().title())
@@ -683,6 +689,15 @@ class DashTabWidget(QTabWidget):
             print(f"\x1b[31;1mtab.reloadUrl:\x1b[0m {e}")
             print(f"tab-{i} is not a browser instance") 
 
+    def stopLoading(self, i: int):
+        try:
+            browser = self.currentWidget().browser
+            browser.stop()
+        except AttributeError as e: 
+            i = self.currentIndex()
+            print(f"\x1b[31;1mtab.stopLoading:\x1b[0m {e}")
+            print(f"tab-{i} is not a browser instance") 
+
     def goToItem(self, item: QWebEngineHistoryItem) -> None:
         """[summary]
 
@@ -764,9 +779,24 @@ class TabBar(QTabBar):
     #     width = sizeHint.width()
     #     height = sizeHint.height()
     #     return QSize(width+50, height)
-    def dragEnterEvent(self, event):
-        if event.mimeData():
-            print("tab.TabBar.dragEnterEvent", event.mimeData.formats())
+    def dropEvent(self, event: QEvent):
+        self.setText(event.mimeData().text())
+
+    def dragEnterEvent(self, event: QEvent):
+        if "text/uri-list" in event.mimeData().formats():
+            pos = event.pos()
+            print(event.mimeData().text())
+            count = self.count()
+            clickedItem = -1
+            for i in range(count):
+                if self.tabRect(i).contains(pos):
+                    clickedItem = i
+                    break
+            self.tabs.loadUrlForIndex(
+                clickedItem, 
+                event.mimeData().text()
+            )
+            # print("tab.TabBar.dragEnterEvent", event.mimeData().formats())
         else:
             event.ignore()
 
@@ -787,13 +817,15 @@ class TabBar(QTabBar):
         newTabToRight = contextMenu.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab to the right")
         addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
         addToGroup = contextMenu.addAction("Add tab to group")
-        moveTab = contextMenu.addAction("Move tab to new window")
-        renameTab = contextMenu.addAction("Rename tab")
+        moveTab = contextMenu.addAction(FigD.Icon("tabbar/move.svg"), "Move tab to new window")
+        renameTab = contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename tab")
         contextMenu.addSeparator()
         reloadAct = contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
         duplicate = contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
         pin = contextMenu.addAction(FigD.Icon("tabbar/pin.svg"), "Pin")
         mute = contextMenu.addAction(FigD.Icon("tabbar/mute.svg"), "Mute site")
+        contextMenu.addSeparator()
+        shareToDevice = contextMenu.addAction(FigD.Icon("tabbar/devices.svg"), "Send to device")
         contextMenu.addSeparator()
         close = contextMenu.addAction(FigD.Icon("tabbar/close-tab.png"), "Close")
         closeOther = contextMenu.addAction("Close other tabs")
@@ -803,29 +835,50 @@ class TabBar(QTabBar):
         glow_effect.setOffset(0,0)
         glow_effect.setColor(QColor(235, 95, 52))
         # contextMenu.setGraphicsEffect(glow_effect)
-        contextMenu.setWindowOpacity(0.9)
-        contextMenu.setStyleSheet('''
-        QMenu {
-            color: #fff;
-            font-family: 'Be Vietnam Pro', sans-serif;
-            /* background: rgba(29,29,29,0.8); */
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(0,0,0,0.9), stop : 0.6 rgba(29,29,29,0.9));
-        }
-        QMenu:selected  {
-            color: #292929;
-            font-weight: bold;
-            background: #eb5f34; /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
-        }
-        QMenu::separator {
-            background: #484848;
-        }''')
+        # contextMenu.setWindowOpacity(0.9)
+        # contextMenu.setStyleSheet('''
+        # QMenu {
+        #     color: #fff;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     /* background: rgba(29,29,29,0.8); */
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(0,0,0,0.9), stop : 0.6 rgba(29,29,29,0.9));
+        # }
+        # QMenu:selected  {
+        #     color: #292929;
+        #     font-weight: bold;
+        #     background: #808080;
+        #     /* background: #eb5f34; qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+        # }
+        # QMenu::separator {
+        #     background: #484848;
+        # }''')
+        palette = contextMenu.palette()
+        palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
+        palette.setColor(QPalette.Base, QColor(29,29,29,255))
+        palette.setColor(QPalette.Text, QColor(255,255,255))
+        palette.setColor(QPalette.Window, QColor(29,29,29,255))
+        palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
+        # gradient = QLinearGradient(QPointF(0,0), QPointF(50,100))
+        # gradient = QGradient(QGradient.YoungPassion)
+        # gradient.setColorAt(0, QColor(161,31,83))
+        # gradient.setColorAt(1, QColor(91,54,54))
+        # gradient.setColorAt(2, QColor(235,95,52))
+        palette.setColor(QPalette.Highlight, QColor(235,95,52,90))
+        # palette.setColor(QPalette.HighlightedText, QColor(29,29,29,255))
+        contextMenu.setPalette(palette)
         action = contextMenu.exec_(self.mapToGlobal(event.pos()))
         if action == renameTab:
             # print(event.x(), event.y())
             try: self.tabs.renameDialog(clickedItem)
             except Exception as e: 
                 print("\x1b[31;1mtab.contextMenuEvent\x1b[0m", e)
+        elif action == moveTab:
+            app = QApplication.instance()
+            currentWidget = self.tabs.currentWidget()
+            url = currentWidget.browser.url()
+            window = app.newMainWindow(url=url)
+            window.show()
 
     def resizeEvent(self, event):
         """Resize the widget and make sure the plus button is in the correct location."""

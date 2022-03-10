@@ -6,7 +6,7 @@ import jinja2
 from typing import Union, List
 # Qt5 imports.
 from PyQt5.QtGui import QPixmap, QIcon, QMovie, QColor
-from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal, QThread
+from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal, QThread, QPoint
 from PyQt5.QtWidgets import QLabel, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QToolBar, QSizePolicy, QApplication, QGraphicsDropShadowEffect
 # fig-dash imports.
 from fig_dash.assets import FigD
@@ -313,6 +313,17 @@ class WeatherWidget(QWidget):
         self.population = population
 
         return area
+
+    def mousePressEvent(self, event):
+        self.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        try:
+            delta = QPoint(event.globalPos() - self.oldPos)
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.oldPos = event.globalPos()
+        except Exception as e:
+            print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
 
     def reportProgress(self, weather: str, area: str):
         area = json.loads(area)

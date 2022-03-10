@@ -13,6 +13,8 @@ class AssetManager:
     def __init__(self, resource_dir: str="~/GUI/fig-dash/resources"):
         resource_dir = os.path.expanduser(resource_dir)
         # print(f"reading resources from: {resource_dir}")
+        self.ResourcePath = resource_dir
+        self.ResourceUrl = QUrl.fromLocalFile(self.ResourcePath)
         self.dir = resource_dir
         self.reset(resource_dir)
 

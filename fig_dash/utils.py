@@ -1,7 +1,9 @@
 import os
+from re import T
 from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QT_VERSION_STR
+from typing import Union, Tuple, List
 
 
 def collapseuser(path: str):
@@ -70,3 +72,55 @@ def QFetchIcon(url: str, is_svg=True) -> QIcon:
     icon = QIcon(path)
     # os.remove(path)
     return icon
+
+def sampleRGB() -> Tuple[int,int,int]:
+    import random
+    r = random.randint(0,255)
+    g = random.randint(0,255)
+    b = random.randint(0,255)
+    # a = random.randint(125,255)
+    return (r,g,b)
+
+def sampleRGBA() -> Tuple[int,int,int,int]:
+    import random
+    r = random.randint(0,255)
+    g = random.randint(0,255)
+    b = random.randint(0,255)
+    a = random.randint(125,255)
+    
+    return (r,g,b,a)
+
+def sampleRGBSeries(n: int, center: Union[Tuple[int,int,int],None]=None,
+                    width: Union[Tuple[int,int,int],int]=25) -> List[Tuple[int,int,int]]:
+    import random
+    series = []
+    if center is None:
+        center = sampleRGB()
+    if isinstance(width, int):
+        width = (width, width, width)
+    for i in range(n):
+        rW = min(max(random.randint(-width[0]//2, width[0]//2),0),255)
+        gW = min(max(random.randint(-width[1]//2, width[1]//2),0),255)
+        bW = min(max(random.randint(-width[2]//2, width[2]//2),0),255)
+        series.append((
+            center[0] - rW,
+            center[1] - gW,
+            center[2] - bW,
+        ))
+
+    return series
+
+def brightenRGB(rgb: Tuple[int,int,int], ratio: float) -> Tuple[int,int,int]:
+    """Transform RGB triple, by making it brighter or dimmer.
+
+    Args:
+        rgb (Tuple[int, int, int]): (R,G,B) color triple.
+        ratio (float): If the ratio is x, the returned tuple is n times brighter.
+
+    Returns:
+        Tuple[int, int, int]: transformed RGB triple"""
+    r = rgb[0]
+    g = rgb[1]
+    b = rgb[2]
+
+    return rgb 

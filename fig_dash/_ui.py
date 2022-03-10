@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from ast import Not
 import os
 import jinja2
 import getpass
@@ -17,6 +18,7 @@ from fig_dash.ui.browser import PageInfo
 from fig_dash.ui.tab import DashTabWidget
 from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
+from fig_dash.ui.dock import DashDockWidget
 from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
@@ -81,21 +83,19 @@ QTabBar::tab:selected {
 # #eb5f34, #ebcc34
 # #a11f53, #eb5f34
 # all the splitters.
-class DatetimeNotifsSplitter(QSplitter):
+class DatetimeSplitter(QSplitter):
     '''Date, time and notifs panel contained in the splitter'''
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(DatetimeNotifsSplitter, self).__init__(
+        super(DatetimeSplitter, self).__init__(
             Qt.Vertical,
             parent=parent
         )
         self.clockWidget = DashClock(self)
         self.calendarWidget = DashCalendar(self)
-        self.notifsPanel = NotifsPanel(self)
         # add all widgets.
         self.addWidget(self.clockWidget)
         self.addWidget(self.calendarWidget)
-        self.addWidget(self.notifsPanel)
-
+        # self.addWidget(self.notifsPanel)
     def toggle(self):
         '''toggle visibility of the combined clock, calendar and notifs panel.'''
         if self.isVisible():
@@ -130,7 +130,6 @@ class DashWindow(QMainWindow):
         # print(kwargs.get('icon'))
         self.logo = QIcon(kwargs.get('icon'))
         # self.setWindowIcon(self.logo)
-
         maximize_by_default = kwargs.get("maximize_by_default", True)
         if maximize_by_default:
             self.showMaximized()
@@ -146,6 +145,13 @@ class DashWindow(QMainWindow):
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.app_launcher)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.utils_launcher)
+
+        self.dock = DashDockWidget(self)
+        self.dock.move(50, self.height()+80)
+        # self.dock.setGeometry(100, 100, 500, 70)
+        self.dock.setFixedWidth(500)
+        self.dock.setFixedHeight(70)
+        # self.dock.move(100, 100)
         self.shortcutbar.utils_launcher.connectWindow(self)
         # install event filter.
         self.installEventFilter(self)
@@ -224,7 +230,7 @@ class DashWindow(QMainWindow):
         # tabs.openUrl("https://google.com")
         # tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         return tabs
-
+        # if self.titlebar
     def initCentralWidget(self, **kwargs):
         self.menu = DashMenu(self, **kwargs)
         layout = QVBoxLayout()
@@ -264,7 +270,8 @@ class DashWindow(QMainWindow):
         # add tabwidget
         self.h_split.addWidget(self.tabs)
         # add notifications and datetime splitter.
-        self.datetime_notifs_splitter = self.initDatetimeNotif()
+        self.datetime_notifs_splitter = self.initDatetime()
+        self.notifsPanel = self.initNotifs(self.tabs)
         self.h_split.addWidget(self.datetime_notifs_splitter)
         self.h_split.setSizes([800,200,200])
         self.tabs.connectDropdown(self.h_split)
@@ -303,13 +310,11 @@ class DashWindow(QMainWindow):
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Resize:
-            self.page_info.move(self.width()-270, 50)
             self.ideas.move(80, self.height()-470)
+            self.page_info.move(self.width()-270, 50)
+            self.notifsPanel.move(self.tabs.width()-self.notifsPanel.width()-100, self.tabs.height()-self.notifsPanel.height()-5)
             self.sysutilsbar.move(self.tabs.width()-100, 50)
-            # if self.firstResizeOver:
-            #     width = self.width() 
-            #     self.tabs.dropdown.rePos(width=width, offset=170)
-            # TODO: really ugly jugaad. Fix this.
+            # if self.firstResizeOver: width = self.width() self.tabs.dropdown.rePos(width=width, offset=170)
         return super(DashWindow, self).eventFilter(obj, event)
     # def moveEvent(self, event):
     #     super(DashWindow, self).moveEvent(event)
@@ -330,18 +335,26 @@ class DashWindow(QMainWindow):
             print(f"\x1b[31;1m_ui.resizeEvent:\x1b[0m {e}")
         super(DashWindow, self).resizeEvent(event)
 
-    def initDatetimeNotif(self):
-        datetime_notifs_splitter = DatetimeNotifsSplitter(self)
-        datetime_notifs_splitter.hide()
-        datetime_notifs_splitter.notifsPanel.pushNotif(
+    def initNotifs(self, tabWidget: QWidget=None):
+        # notifs panel.
+        notifsPanel = NotifsPanel(tabWidget)
+        notifsPanel.move(100, 20)
+        # notifsPanel.hide()
+        notifsPanel.pushNotif(
             name="fig-dash",
             icon=FigD.icon("logo.svg"),
             msg=f"Hi <b>{getpass.getuser()}</b>! Click <a href='https://github.com/atharva-naik/fig-dash' style='color: #269e92;'>here</a> to get started with <b>fig-dash</b>."
         )
-        datetime_notifs_splitter.notifsPanel.pushNotif(
+        notifsPanel.pushNotif(
             name="Hire Me?",
             icon=FigD.icon("me.jpeg"),
             msg=f"If you like what you see, and want to hire me, check out my <a href='https://www.linkedin.com/in/atharva-naik-112888190/' style='color: #269e92;'>LinkedIn profile</a>."
         )
 
-        return datetime_notifs_splitter
+        return notifsPanel
+
+    def initDatetime(self):
+        datetime_splitter = DatetimeSplitter(self)
+        datetime_splitter.hide()
+
+        return datetime_splitter

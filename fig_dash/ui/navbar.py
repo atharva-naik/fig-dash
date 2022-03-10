@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import json
 import jinja2
+import requests
+import urllib.parse
 from typing import Union
 from functools import partial
+from json.decoder import JSONDecodeError
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor
-from PyQt5.QtCore import Qt, QSize, QPoint, QUrl, QEvent
+from PyQt5.QtCore import Qt, QSize, QPoint, QUrl, QEvent, QStringListModel, QObject, pyqtSignal, pyqtSlot, QThread
 from PyQt5.QtWidgets import QWidget, QToolBar, QMenu, QLabel, QToolButton, QMainWindow, QTabWidget, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
@@ -29,27 +33,45 @@ QLineEdit {
 QLabel {
     font-size: 16px;
 }''')
-def getGoogleAutoCompletion(query: str) -> list:
-    """[summary]
-    ## Google AutoCompletion querying function 
-    very rudimentary version of Google's autocompletion feature. (missing error handling/not tested for edge cases)
-    Args:
-        query (str): [The query for which autcompletion results need to be retrieved]
-
-    Returns:
-        list: [suggestions returned by the API]
-    """
-    import json
-    import requests
-    import urllib.parse
-
-    query_enc = urllib.parse.quote_plus(query)
-    url = f"http://suggestqueries.google.com/complete/search?client=firefox&q={query_enc}"
-    response = json.loads(requests.get(url).text)
-
-    return response[1]
+class GoogleAutoCompleteThread(QThread):
+    searched = pyqtSignal(str)
+    def __init__(self):
+        super(GoogleAutoCompleteThread, self).__init__()
 
 
+class GoogleAutoCompleteWorker(QObject):
+    finished = pyqtSignal(str)
+    progress = pyqtSignal(str)
+    def __init__(self):
+        super(GoogleAutoCompleteWorker, self).__init__()
+        self.query_format = "http://suggestqueries.google.com/complete/search?client=firefox&q={}"
+        
+    @pyqtSlot()
+    def completeQuery(self, query: str=""): 
+        query_enc = urllib.parse.quote_plus(query)
+        url = self.query_format.format(query_enc)
+        response = requests.get(url).text
+        self.progress.emit(response)
+        # self.finished.emit(response)
+# def getGoogleAutoCompletion(query: str) -> list:
+#     """[summary]
+#     ## Google AutoCompletion querying function 
+#     very rudimentary version of Google's autocompletion feature. (missing error handling/not tested for edge cases)
+#     Args:
+#         query (str): [The query for which autcompletion results need to be retrieved]
+
+#     Returns:
+#         list: [suggestions returned by the API]
+#     """
+#     import json
+#     import requests
+#     import urllib.parse
+
+#     query_enc = urllib.parse.quote_plus(query)
+#     url = f"http://suggestqueries.google.com/complete/search?client=firefox&q={query_enc}"
+#     response = json.loads(requests.get(url).text)
+#     # return requests.get(url).text
+#     return response[1]
 class DashSearchBar(QLineEdit):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(DashSearchBar, self).__init__(parent)
@@ -118,7 +140,28 @@ class DashSearchBar(QLineEdit):
         self.textEdited.connect(self.updateCompleter)
         self.returnPressed.connect(self.search)
         # completion for search.
-        self.suggestions = ["Apple", "Alps", "Berry", "Cherry"]
+        self.suggestions = []
+        self.autoCompleteThread = GoogleAutoCompleteThread()
+        self.autoCompleteWorker = GoogleAutoCompleteWorker()
+        self.autoCompleteWorker.moveToThread(
+            self.autoCompleteThread
+        )
+        self.autoCompleteWorker.progress.connect(
+            self.onAutoCompletion
+        )
+        self.autoCompleteWorker.finished.connect(
+            self.autoCompleteThread.quit
+        )
+        self.autoCompleteWorker.finished.connect(
+            self.autoCompleteWorker.deleteLater
+        )
+        self.autoCompleteThread.finished.connect(
+            self.autoCompleteThread.deleteLater
+        )
+        self.autoCompleteThread.start()
+        self.autoCompleteThread.searched.connect(
+            self.autoCompleteWorker.completeQuery
+        )
         self.completer = QCompleter(self.suggestions)
         # self.completer.setStyleSheet("""font-family: 'Be Vietnam Pro', sans-serif; color: #fff; background: #000;""")
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
@@ -127,6 +170,20 @@ class DashSearchBar(QLineEdit):
         self.searchHistory = []
         self.setCompleter(self.completer)
 
+    def updateCompleter(self):
+        # self.autoCompleteThread.started.connect(
+        #     lambda: self.autoCompleteWorker.completeQuery(
+        #         self.text()
+        #     )
+        # )
+        import time
+        s = time.time()
+        self.autoCompleteThread.searched.emit(
+            self.text()
+        )
+        t = time.time()-s
+        print(f"issued autcomplete request for {self.text()} in {t}s")
+# https://developer.mozilla.org/en-US/docs/Web/OpenSearch
     def setText(self, text: str):
         super(DashSearchBar, self).setText(text)
         self.setCursorPosition(0)
@@ -193,8 +250,7 @@ class DashSearchBar(QLineEdit):
     def focusOutEvent(self, event):
         super(DashSearchBar, self).focusOutEvent(event)
         self.unglow()
-        self.setCursorPosition(0)
-
+        # self.setCursorPosition(0)
     def setUrl(self, url: Union[QUrl, str]):
         if isinstance(url, QUrl):
             url = url.toString(QUrl.FullyEncoded)
@@ -232,8 +288,15 @@ class DashSearchBar(QLineEdit):
             self.searchHistory.append(qurl.toString())
             tabs.loadUrlForIndex(i, qurl)
         # self.completer = QCompleter(self.searchHistory)
-    def updateCompleter(self):
-        pass
+    def onAutoCompletion(self, json_str: str):
+        try:
+            self.suggestions += json.loads(json_str)[1]
+        except JSONDecodeError: 
+            return # self.suggestions  = [] 
+        # ["abc", "bcd", "cde", "def"]
+        self.model = QStringListModel()
+        self.model.setStringList(self.suggestions)
+        self.completer.setModel(self.model)
         # print("autocompleting")
         # self.completer.setModel(QStringListModel())
     # def formatQueryOrUrl(self, query_or_url: str):
@@ -308,13 +371,36 @@ class ReloadBtn(DashNavBarBtn):
     def __init__(self, *args, **kwargs):
         super(ReloadBtn, self).__init__(*args, **kwargs)
         self.menu = QMenu(self)
+        self.mode = "reload"
         self.hardReload = self.menu.addAction(
             FigD.Icon("navbar/reload.svg"), 
             "hard refresh"
         )
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.onContextMenu)
-        
+
+    def connectTabWidget(self, tabWidget: QWidget):
+        self.tabWidget = tabWidget
+        self.clicked.connect(self.response)
+
+    def response(self) -> None:
+        """_summary_
+        The default response is to stop loading the page if the page is currently loading or reload the page if it has already been loaded.
+        """
+        i = self.tabWidget.currentIndex()
+        if self.mode == "reload":
+            self.tabWidget.reloadUrl(i)
+        else:
+            self.tabWidget.stopLoading(i)
+
+    def setStopMode(self, value: bool=True):
+        if value:
+            self.mode = "stop"
+            self.setIcon(FigD.Icon("navbar/stop.svg"))
+        else: 
+            self.mode = "reload"
+            self.setIcon(FigD.Icon("navbar/reload.svg"))
+
     def onContextMenu(self, point):
         self.menu.exec_(self.mapToGlobal(point))
 
@@ -488,7 +574,7 @@ class DashNavBar(QWidget):
     def connectTabWidget(self, tabWidget):
         self.tabWidget = tabWidget
         self.searchbar.tabWidget = tabWidget
-        self.reloadBtn.clicked.connect(tabWidget.reloadUrl)
+        self.reloadBtn.connectTabWidget(tabWidget)
         self.nextBtn.clicked.connect(tabWidget.nextUrl)
         self.prevBtn.clicked.connect(tabWidget.prevUrl)
         self.homeBtn.clicked.connect(tabWidget.home)

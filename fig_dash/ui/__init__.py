@@ -147,7 +147,7 @@ class DashWidgetGroup(QWidget):
             border: 0px;
             border-right: 1px;
             padding: 6px;
-            color: #eb5f34;
+            color: #6e6e6e; /* #eb5f34; */
             font-size: 16px;
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;

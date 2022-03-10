@@ -4,7 +4,6 @@
 import os
 import sys
 import copy
-from fig_dash.ui import DashWidgetGroup
 import jinja2
 import socket
 import getpass
@@ -14,12 +13,13 @@ from typing import Union, Tuple, List
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings
-from PyQt5.QtGui import QColor, QKeySequence, QIcon, QPixmap
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QObject
+from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
+from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QPixmap, QGradient, QLinearGradient
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QObject
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
+from fig_dash.ui import DashWidgetGroup
 from fig_dash.utils import QFetchIcon, collapseuser
 from fig_dash.api.system.translate import DashTranslator
 from fig_dash.api.browser.extensions import ExtensionManager
@@ -751,13 +751,23 @@ class DebugWebView(QWebEngineView):
         self.Esc.activated.connect(self.searchPanel.closePanel)
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
         self.CtrlF.activated.connect(self.reactToCtrlF)
-        self.CtrlR = QShortcut(QKeySequence("Ctrl+R"), self)
-        self.CtrlR.activated.connect(self.reactToCtrlR)
+        self.RefreshShortcut = QShortcut(QKeySequence.Refresh, self)
+        self.RefreshShortcut.activated.connect(self.reload)
+        self.ForwardShortcut = QShortcut(QKeySequence.Forward, self)
+        self.ForwardShortcut.activated.connect(self.forward)
+        self.BackShortcut = QShortcut(QKeySequence.Back, self)
+        self.BackShortcut.activated.connect(self.back)
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
 
         self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+
+    def prevInHistory(self):
+        self.back()
+
+    def nextInHistory(self):
+        self.forward()
 
     def onPrintRequest(self):
         print("\x1b[34mprint requested\x1b[0m")
@@ -779,11 +789,8 @@ class DebugWebView(QWebEngineView):
             QMessageBox.warning(self, 'Print failed', 
                 'Printing has failed!', QMessageBox.Ok)
             # self.onPrintRequest()
-        del self._printer
-
-    def reactToCtrlR(self):
-        self.reload()
-
+        del self._printer    
+    
     def setSpellCheck(self, lang: str="en-US") -> None:
         """[summary]
         set the dictionary for spellchecking.
@@ -1204,6 +1211,15 @@ class Browser(DebugWebView):
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
         data = self.page().contextMenuData()
+        # print(QWebEngineContextMenuData.CanCopy) 
+        
+        print("None:", data.mediaType() == data.MediaTypeNone)
+        print("Image:", data.mediaType() == data.MediaTypeImage)
+        print("Video:", data.mediaType() == data.MediaTypeVideo)
+        print("Audio:", data.mediaType() == data.MediaTypeAudio)
+        print("Canvas:", data.mediaType() == data.MediaTypeCanvas)
+        print("Plugin:", data.mediaType() == data.MediaTypePlugin)
+        print(data.selectedText())
         # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
         transToEnglish = None
         # openLinkInNewTab = None
@@ -1218,12 +1234,137 @@ class Browser(DebugWebView):
         #     openLinkInNewTab.triggered.connect(
         #         lambda: self.tabs.openUrl(url=qurl)
         #     )
+        # edit actions.
+        for action in self.menu.actions():
+            # print(action.text())
+            if action.text() == "Back":
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("navbar/prev.svg"))
+                else:
+                    action.setIcon(FigD.Icon("navbar/prev_disabled.svg"))
+                action.setShortcut(QKeySequence.Back)
+            elif action.text() == "Undo":
+                action.setShortcut(QKeySequence.Undo)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/undo.svg"))
+                else:
+                    action.setIcon(FigD.Icon("browser/undo_disabled.svg"))                
+            elif action.text() == "Redo":
+                action.setShortcut(QKeySequence.Redo)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/redo.svg"))
+                else:
+                    action.setIcon(FigD.Icon("browser/redo_disabled.svg"))  
+            elif action.text() == "Forward":
+                action.setShortcut(QKeySequence.Forward)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("navbar/next.svg"))
+                else:
+                    action.setIcon(FigD.Icon("navbar/next_disabled.svg"))
+            elif action.text() == "Reload":
+                action.setShortcut(QKeySequence.Refresh)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("navbar/reload.svg"))
+                else:
+                    action.setIcon(FigD.Icon("navbar/reload_disabled.svg"))
+            elif action.text() == "Cut":
+                action.setShortcut(QKeySequence.Cut)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/cut.svg"))
+                else:
+                    action.setIcon(FigD.Icon("browser/cut_disabled.svg"))
+            elif action.text() == "Select all":
+                action.setShortcut(QKeySequence.SelectAll)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/select_all.png"))
+                else:
+                    action.setIcon(FigD.Icon("browser/select_all_disabled.png"))
+            elif action.text() == "Paste":
+                action.setShortcut(QKeySequence.Paste)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/paste.svg"))
+                else:
+                    action.setIcon(FigD.Icon("browser/paste_disabled.svg"))
+            elif action.text() == "Paste and match style":
+                action.setShortcut(QKeySequence("Ctrl+Shift+V"))
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("browser/paste_and_match_style.png"))
+                else:
+                    action.setIcon(FigD.Icon("browser/paste_and_match_style_disabled.png"))
+            elif action.text() == "Copy":
+                action.setShortcut(QKeySequence.Copy)
+                action.setIcon(FigD.Icon("browser/copy.svg"))
+                copyLinkToHighlight = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Copy link to highlight")
+                self.menu.insertAction(action, copyLinkToHighlight)
+                def truncateText(text, thresh=30, num_dots=3):
+                    if len(text) > 30:
+                        text = text[:(30-num_dots)]+"."*num_dots
+                    else: text = text
+                    return text.strip()
+                searchGoogleFor = self.menu.addAction(FigD.Icon("browser/google.svg"), f'Search Google for "{truncateText(data.selectedText())}"')
+                self.menu.insertAction(action, searchGoogleFor)
+                copyLowerCase = self.menu.addAction("Copy lower case")
+                self.menu.insertAction(action, copyLowerCase)
+                copyUpperCase = self.menu.addAction("Copy upper case") 
+                self.menu.insertAction(action, copyUpperCase)
+                copyTitleCase = self.menu.addAction("Copy title case")
+                self.menu.insertAction(action, copyTitleCase)
+            elif action.text() == "Save page":
+                action.setShortcut(QKeySequence.Save)
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("titlebar/save.svg"))
+                else:
+                    action.setIcon(FigD.Icon("titlebar/save.svg"))
+            elif action.text() == "View page source":
+                action.setShortcut(QKeySequence("Ctrl+U"))
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("titlebar/source.svg"))
+                else:
+                    action.setIcon(FigD.Icon("titlebar/source.svg"))
+        # insert actions.
+        for action in self.menu.actions():
+            if action.text() == "Save page":
+                # print("adding print action")
+                printAction = self.menu.addAction(FigD.Icon("titlebar/print.svg"), "Print", print, shortcut=QKeySequence("Ctrl+P"))
+                self.menu.insertAction(action, printAction)
+                break
+        for action in self.menu.actions():
+            if data.mediaType() == data.MediaTypeImage:
+                if action.text() in ["Back", "Forward", "Reload", "Print", "Save page"]:
+                    action.setVisible(False)
+            # elif data.mediaType() == data.MediaTypeNone:
+            else:
+                if action.text() in ["Back", "Forward", "Reload", "Print", "Save page"]:
+                    action.setVisible(True)
+        # open link in new tab, window, incognito window for image media type.
+        if data.mediaType() == data.MediaTypeImage:
+            for action in self.menu.actions():
+                if action.text() == "Save image": break
+            openLinkInNewTab = self.menu.addAction("Open link in new  tab")
+            openLinkInNewWindow = self.menu.addAction("Open link in new window")
+            openLinkInIncognitoWindow = self.menu.addAction("Open link in incognito window")
+            self.menu.insertAction(action, openLinkInIncognitoWindow)
+            self.menu.insertAction(openLinkInIncognitoWindow, openLinkInNewWindow)
+            self.menu.insertAction(openLinkInNewWindow, openLinkInNewTab)
+            self.menu.insertSeparator(action)
+            copyLinkAddress = self.menu.addAction("Copy link address")
+            saveLinkAs = self.menu.addAction("Save link as...")
+            self.menu.insertAction(action, copyLinkAddress)
+            self.menu.insertAction(copyLinkAddress, saveLinkAs)
+            self.menu.insertSeparator(action)
+            action.setText("Save image as...")
+            # self.menu.addSeparator(action)
         # get the inspect action
         inspectAction = self.menu.actions()[-1]
         # verify that it is in fact the Inspect action.
         if inspectAction.text() == "Inspect":
             # create a new action that trigger the Inspect action after opening dev tools if not opened.
             wrappedInspectAction = self.menu.addAction("Inspect")
+            wrappedInspectAction.setShortcut(QKeySequence("Ctrl+Shift+I"))
+            if wrappedInspectAction.isEnabled():
+                wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
+            else:
+                wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
             wrappedInspectAction.triggered.connect(
                 lambda: inspectTriggerd(
                     browser=self,
@@ -1232,15 +1373,50 @@ class Browser(DebugWebView):
             )
             # hide original inspect action.
             inspectAction.setVisible(False)
-        
-        self.menu.setStyleSheet("background: #292929; color: #fff;")
-        self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
-        highlightAction = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Highlight selected text")
+        palette = self.menu.palette()
+        palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
+        palette.setColor(QPalette.Base, QColor(29,29,29,255))
+        palette.setColor(QPalette.Text, QColor(255,255,255))
+        palette.setColor(QPalette.Window, QColor(29,29,29,255))
+        palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
+        # gradient = QLinearGradient(QPointF(0,0), QPointF(50,100))
+        # gradient = QGradient(QGradient.YoungPassion)
+        # gradient.setColorAt(0, QColor(161,31,83))
+        # gradient.setColorAt(1, QColor(91,54,54))
+        # gradient.setColorAt(2, QColor(235,95,52))
+        palette.setColor(QPalette.Highlight, QColor(235,95,52,90))
+        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # palette.setColor(QPalette.HighlightedText, QColor(29,29,29,255))
+        self.menu.setPalette(palette)
+        # self.menu.palette().setBackground(
+        #     QColor(29,29,29)
+        # )
+        # self.menu.setStyleSheet("background: #292929; color: #fff;")
+        font = QFont("Be Vietnam Pro", 10)
+        self.menu.setFont(font)
         self.menu.addSeparator()
-        transToEnglish = self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
-        transToEnglish.triggered.connect(
-            lambda: self.page().translate(target_lang="en")
-        )
+        if data.mediaType() == data.MediaTypeNone:  
+            shareToDevice = self.menu.addAction(FigD.Icon("system/fileviewer/devices.svg"), "Send to your devices")
+            self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
+        elif data.mediaType() == data.MediaTypeImage:
+            self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
+            shareToDevice = self.menu.addAction(FigD.Icon("system/fileviewer/devices.svg"), "Send link to your devices")
+        # browser/copy_link_to_highlight.svg
+        if data.mediaType() == data.MediaTypeNone:
+            # highighting features.
+            highlightAction = self.menu.addAction(FigD.Icon("browser/copy_link_to_highlight.svg"), "Highlight selected text")
+            self.menu.addSeparator()
+            highlightAction.triggered.connect(self.highlightSelectedText)
+            # translate webpage to English.
+            transToEnglish = self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
+            transToEnglish.triggered.connect(
+                lambda: self.page().translate(target_lang="en")
+            )
+        if data.mediaType() == data.MediaTypeNone:  
+            searchImageGoogleLens = self.menu.addAction(FigD.Icon("browser/google_lens.png"), "Search images with Google Lens") 
+            castToTv = self.menu.addAction(FigD.Icon("browser/cast.svg"), "Cast")  
+        elif data.mediaType() == data.MediaTypeImage:
+            searchImageGoogleLens = self.menu.addAction(FigD.Icon("browser/google_lens.png"), "Search image with Google Lens") 
         # profile = self.page().profile()
         # languages = profile.spellCheckLanguages()
         # menu = self.page().createStandardContextMenu()
@@ -1265,7 +1441,6 @@ class Browser(DebugWebView):
         # print(f"context menu has {len(self.menu.actions())} actions")
         # self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
         # highlight action.
-        highlightAction.triggered.connect(self.highlightSelectedText)
         self.menu.popup(event.globalPos())
    
     def prevInHistory(self):
@@ -1346,6 +1521,8 @@ class Browser(DebugWebView):
             if self != currentWidget.browser: return
             i = self.tabWidget.currentIndex()
             if i < 0: return
+            navbar = self.dash_window.navbar
+            navbar.reloadBtn.setStopMode(True)
             # print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
             self.page().loadFinished.connect(
                 lambda: self.tabWidget.setupTabForBrowser(
