@@ -4,7 +4,7 @@ import os
 import sys
 # Qt imports.
 from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
-from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR
+from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR, QEvent
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMainWindow, QGraphicsBlurEffect
 # fig-dash imports.
 # try:
@@ -100,16 +100,20 @@ class DashUI(QApplication):
         # self.window.setWindowIcon(QIcon(kwargs.get("icon")))
     def setWindowFlags(self, *flags):
         self.window.setFlags(*flags)
-    # def notify(self, obj, event):
-    #     if event.type() == QEvent.WindowDeactivate:
-    #         currentWidget = self.window.tabs.currentWidget()
-    #         currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=5))
-    #         # print("bluring background")
-    #     if event.type() == QEvent.WindowActivate:
-    #         currentWidget = self.window.tabs.currentWidget()
-    #         currentWidget.setGraphicsEffect(None)
-    #         # print("unbluring background")
-    #     return super().notify(obj, event)
+    
+    def notify(self, obj, event):
+        if event.type() == QEvent.WindowDeactivate:
+            self.window.titlebar.deactivate()
+            # currentWidget = self.window.tabs.currentWidget()
+            # currentWidget.setGraphicsEffect(QGraphicsBlurEffect(blurRadius=5))
+            # print("bluring background")
+        if event.type() == QEvent.WindowActivate:
+            self.window.titlebar.activate()
+            # currentWidget = self.window.tabs.currentWidget()
+            # currentWidget.setGraphicsEffect(None)
+            # print("unbluring background")
+        return super().notify(obj, event)
+
     def newMainWindow(self, **kwargs) -> QMainWindow:
         window = DashWindow(open_home=False, **self.window_args)
         windowFlags = kwargs.get("windowFlags", ["frameless", "ontop"])

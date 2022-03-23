@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from ast import Not
 import os
+from fig_dash.ui import shortcutbar
 import jinja2
 import getpass
 from typing import Union, Tuple, List
@@ -39,7 +40,8 @@ QMainWindow {
 dash_tabbar_style = jinja2.Template('''
 QTabBar {
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220));
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220)); */
 }
 QTabBar::close-button {
     background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
@@ -65,12 +67,14 @@ QTabBar::tab {
     max-width: 300px;
 }
 QTabBar::tab:hover {
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220));
+    color: #fff;
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
 }
 QTabBar::tab:selected {
     color: #fff;
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220));
+    background: #000;
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;
     padding-left: 9px;
     padding-right: 5px;
@@ -83,6 +87,25 @@ QTabBar::tab:selected {
 # #eb5f34, #ebcc34
 # #a11f53, #eb5f34
 # all the splitters.
+class AppCloseButton(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(AppCloseButton, self).__init__(parent)
+        self.setIcon(FigD.Icon("close.png"))
+        self.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            background: transparent;
+        }""")
+
+    def enterEvent(self, event):
+        self.setIcon(FigD.Icon("close-active.png"))
+        super(AppCloseButton, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.setIcon(FigD.Icon("close.png"))
+        super(AppCloseButton, self).leaveEvent(event)
+
+
 class DatetimeSplitter(QSplitter):
     '''Date, time and notifs panel contained in the splitter'''
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -108,7 +131,7 @@ class DashWindow(QMainWindow):
     def __init__(self, **kwargs):
         super(DashWindow, self).__init__()
         self.browsingHistory = []
-
+        # self.setAttribute(Qt.WA_TranslucentBackground)
         x = kwargs.get("x", 0)
         y = kwargs.get("y", 0)
         w = kwargs.get("w", 100)
@@ -149,7 +172,7 @@ class DashWindow(QMainWindow):
         self.dock = DashDockWidget(self)
         self.dock.move(50, self.height()+80)
         # self.dock.setGeometry(100, 100, 500, 70)
-        self.dock.setFixedWidth(500)
+        self.dock.setFixedWidth(800)
         self.dock.setFixedHeight(70)
         # self.dock.move(100, 100)
         self.shortcutbar.utils_launcher.connectWindow(self)
@@ -169,6 +192,7 @@ class DashWindow(QMainWindow):
         spacer2 = QWidget()
         spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.menu.connectWindow(self)
+        # connect close button of the first tab with application close.
         self.statusBar().addWidget(spacer1)
         self.statusBar().addWidget(self.menu.fileviewer.statusbar)
         self.statusBar().addWidget(self.menu.cm_editor.statusbar)
@@ -216,13 +240,19 @@ class DashWindow(QMainWindow):
         tabs.partialConnectWindow(self)
         if open_home:
             tabs.openHome()
-            dummyBtn = QToolButton(self)
-            dummyBtn.setStyleSheet("""
-            QToolButton {
-                border: 0px;
-                background: transparent;
-            }""")
-            tabs.tabBar().setTabButton(0, QTabBar.RightSide, dummyBtn)
+            tabs.tabBar().tabButton(
+                0, QTabBar.RightSide
+            ).clicked.connect(
+                self.close
+            )
+            # dummyBtn = AppCloseButton(self)
+            # dummyBtn.clicked.connect(
+            #     self.close
+            # )
+            # tabs.tabBar().setTabButton(
+            #     0, QTabBar.RightSide, 
+            #     dummyBtn
+            # )
         else: print("\x1b[32;1mopen_home=False\x1b[0m")
         # for i in range(5):
         #     tabs.openUrl("https://google.com")
@@ -248,6 +278,9 @@ class DashWindow(QMainWindow):
         topLayout.setSpacing(0)
         topLayout.setContentsMargins(0, 0, 0, 0)
         self.topbar.setLayout(topLayout)
+        self.topbar.setStyleSheet("""
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e47f2c, stop : 0.286 #e57a2d, stop : 0.429 #e5742d, stop : 0.571 #e56e2e, stop : 0.714 #e56830, stop : 0.857 #e46231, stop : 1.0 #e45c33);
+        """)
         # self.topbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.topbar.setFixedHeight(35)
         # tabbar.
@@ -264,6 +297,7 @@ class DashWindow(QMainWindow):
         # topLayout.addWidget(self.tabs.dropdownBtn)
         # add search bar.
         self.navbar.setFixedHeight(40)
+        self.navbar.setStyleSheet("background: #000;")
         self.navbar.connectTabWidget(self.tabs)
         # main horizontal splitter.
         self.h_split = QSplitter(Qt.Horizontal)
@@ -296,8 +330,8 @@ class DashWindow(QMainWindow):
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
         layout.insertWidget(0, self.navbar)
-        layout.insertWidget(0, self.menu)
         layout.insertWidget(0, self.topbar)
+        layout.insertWidget(0, self.menu)        
         # self.floatmenu.connectWindow(self)
         # layout.addStretch(1)
         return centralWidget
@@ -329,7 +363,10 @@ class DashWindow(QMainWindow):
         self.shortcutbar.morePagesBtn.setPos()
         self.shortcutbar.moreSocialBtn.setPos()
         self.shortcutbar.moreSystemBtn.setPos()
+        dock_width = (self.width() - self.shortcutbar.width())//2
+        dock_height = self.height()-120
         try: 
+            self.dock.move(dock_width, dock_height)
             self.tabs.currentWidget().browser.searchPanel.setPos()
         except Exception as e: 
             print(f"\x1b[31;1m_ui.resizeEvent:\x1b[0m {e}")

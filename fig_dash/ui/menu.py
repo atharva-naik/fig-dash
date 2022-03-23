@@ -17,7 +17,7 @@ from fig_dash.ui.widget.codemirror import CodeMirrorEditor
 from fig_dash.ui.system.fileviewer import FileViewerWidget
 
 
-menu_background = "transparent" 
+menu_background = "#000" 
 menu_style = '''
 QWidget#DashMenuTab {
     border: 0px;
@@ -37,7 +37,7 @@ QTabWidget::pane {
     background: transparent;
 }
 QTabBar {
-    background: transparent;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e45c33, stop : 0.143 #e46231, stop : 0.286 #e56830, stop : 0.429 #e56e2e, stop : 0.571 #e5742d, stop : 0.714 #e57a2d, stop : 0.857 #e47f2c, stop : 1.0 #e4852c);
     border: 0px;
     padding: 2px;
     border: 0px;
@@ -48,19 +48,20 @@ QTabBar::tab {
     font-size: 17px;
     font-weight: bold;
     font-family: 'Be Vietnam Pro', sans-serif;
-    padding-top: 2px;
+    padding-top: 4px;
     padding-left: 10px;
-    padding-right: 10px;
-    padding-bottom: 5px;
-    margin-left: 10px;
-    margin-right: 10px;
-    margin-top: 3px;
-    margin-bottom: 3px;
+    padding-right: 20px;
+    padding-bottom: 4px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    background: transparent;
     border-bottom: 2px solid transparent;
     /* border-bottom: 4px solid #bf3636; */
 }
 QTabBar::tab:hover {
-    color: #bf3636;
+    color: #292929;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34); */
 }
 QTabBar::tab:selected {
@@ -68,15 +69,16 @@ QTabBar::tab:selected {
     color: #eb5f34;
     font-size: 17px;
     font-weight: bold;
-    padding-top: 2px;
+    padding-top: 4px;
     padding-left: 10px;
-    padding-right: 10px;
-    padding-bottom: 5px;
-    margin-top: 3px;
-    margin-left: 10px;
-    margin-right: 10px;
-    margin-bottom: 3px;
-    border-bottom: 2px solid #eb5f34;
+    padding-right: 20px;
+    padding-bottom: 4px;
+    margin-top: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    margin-bottom: 0px;
+    background: #000;
+    border-bottom: 2px solid #ff9e28;
     /* border-bottom: 4px solid #bf3636; */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
@@ -225,6 +227,7 @@ class DashMenu(QTabWidget):
         self.imagemenu = self.initImageMenu(**args)
         self.videomenu = self.initVideoMenu(**args)
         self.musicmenu = self.initMusicMenu(**args)
+        self.insertmenu = self.initInsertMenu(**args)
         self.devicemenu = self.initDeviceMenu(**args)
         self.formatmenu = self.initFormatMenu(**args)
         self.browsermenu = self.initBrowserMenu(**args)
@@ -234,31 +237,32 @@ class DashMenu(QTabWidget):
         self.paymentmenu = self.initPaymentMenu(**args)
         self.entertainmentmenu = self.initEntertainmentMenu(**args)
 
-        self.addTab(self.filemenu, "File")        
-        self.addTab(self.editmenu, "Edit")
-        self.addTab(self.formatmenu, "Format")
-        self.addTab(self.viewmenu, "View")
-        self.addTab(self.codemenu, "Code") 
-        self.addTab(self.browsermenu, "Browser") 
-        self.addTab(self.mailmenu, "Mail")    
-        self.addTab(self.musicmenu, "Music")
-        self.addTab(self.imagemenu, "Images")
-        self.addTab(self.videomenu, "Videos")
-        self.addTab(self.formmenu, "Forms")
-        self.addTab(self.eventmenu, "Events")
-        self.addTab(self.terminalmenu, "Terminal")
-        self.addTab(self.devicemenu, "Devices")
-        self.addTab(self.createmenu, "Create")
-        self.addTab(self.paymentmenu, "Payments")
-        self.addTab(self.entertainmentmenu, "Entertainment")
-        # self.currentChanged.connect(self.onTabChange)
+        self.addTab(self.filemenu, FigD.Icon("menu/file.svg"), "File")        
+        self.addTab(self.editmenu, FigD.Icon("menu/edit.svg"), "Edit")
+        self.addTab(self.insertmenu, FigD.Icon("menu/insert.svg"), "Insert")
+        self.addTab(self.formatmenu, FigD.Icon("menu/format.svg"), "Format")
+        self.addTab(self.viewmenu, FigD.Icon("menu/view.svg"), "View")
+        self.addTab(self.codemenu, FigD.Icon("menu/code.svg"), "Code") 
+        self.addTab(self.browsermenu, FigD.Icon("menu/browser.svg"), "Browser") 
+        self.addTab(self.mailmenu, FigD.Icon("menu/mail.svg"), "Mail")    
+        self.addTab(self.musicmenu, FigD.Icon("menu/music.svg"), "Music")
+        self.addTab(self.imagemenu, FigD.Icon("menu/image.svg"), "Images")
+        self.addTab(self.videomenu, FigD.Icon("menu/video.svg"), "Videos")
+        self.addTab(self.formmenu, FigD.Icon("menu/form.svg"), "Forms")
+        self.addTab(self.eventmenu, FigD.Icon("menu/event.svg"), "Events")
+        self.addTab(self.terminalmenu, FigD.Icon("menu/terminal.svg"), "Terminal")
+        self.addTab(self.devicemenu, FigD.Icon("menu/device.svg"), "Devices")
+        self.addTab(self.createmenu, FigD.Icon("menu/create.svg"), "Create")
+        self.addTab(self.paymentmenu, FigD.Icon("menu/payment.svg"), "Payments")
+        self.addTab(self.entertainmentmenu, FigD.Icon("menu/entertainment.svg"), "Entertainment")
+        self.currentChanged.connect(self.onTabChange)
         self.browser_statusbar = BrowserStatusBar()
         self.browser_statusbar.hide()
         self.tabBarClicked.connect(self.tabToggle)
         self.setStyleSheet(menu_style)
         self.setCornerWidget(self.toggleBtn)
         # set browser index.
-        self.setCurrentIndex(6-1)
+        self.setCurrentIndex(7-1)
         self.collapse()
 
     def updateStatusBar(self, i: int):
@@ -266,16 +270,21 @@ class DashMenu(QTabWidget):
             self.fileviewer.statusbar.show()
         else:
             self.fileviewer.statusbar.hide()
-        if i == 5-1:
+        if i == 6-1:
             self.cm_editor.statusbar.show()
         else:
             self.cm_editor.statusbar.hide()
-        if i == 6-1:
+        if i == 7-1:
             self.browser_statusbar.show()
         else:
             self.browser_statusbar.hide()
 
+    def onTabChange(self, i: int):
+        print(i)
+
     def setCurrentIndex(self, i: int):
+        # i = self.currentIndex()
+        # print(f"i: {i}")
         self.updateStatusBar(i)
         super(DashMenu, self).setCurrentIndex(i)
 
@@ -331,7 +340,7 @@ class DashMenu(QTabWidget):
     def collapse(self):
         self._collapsed = True
         self.toggleBtn.setIcon(FigD.Icon("menu/expand.svg"))
-        self.setFixedHeight(35)
+        self.setFixedHeight(30)
 
     def toggle(self):
         # print(self.collapsed)
@@ -401,6 +410,12 @@ class DashMenu(QTabWidget):
         entertainmentmenu.setObjectName("DashMenuTab")
 
         return entertainmentmenu
+
+    def initInsertMenu(self, **args):
+        insertmenu = QWidget()
+        insertmenu.setObjectName("DashMenuTab")
+
+        return insertmenu
 
     def initMailMenu(self, **args):
         mailmenu = QWidget()

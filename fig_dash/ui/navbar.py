@@ -75,9 +75,9 @@ class GoogleAutoCompleteWorker(QObject):
 class DashSearchBar(QLineEdit):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(DashSearchBar, self).__init__(parent)
-        self.label = QLabel("")
-        self.label.setParent(self)
-        self.label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        # self.label = QLabel("")
+        # self.label.setParent(self)
+        # self.label.setAttribute(Qt.WA_TransparentForMouseEvents)
         # view site info.
         self.siteInfoAction = QAction()
         self.siteInfoAction.setIcon(FigD.Icon("navbar/lock.svg"))
@@ -135,8 +135,8 @@ class DashSearchBar(QLineEdit):
             BORDER_RADIUS=16,
         ))
         self.setFixedHeight(28)
-        self.label.move(30, 0)
-        self.label.hide()
+        # self.label.move(30, 0)
+        # self.label.hide()
         self.textEdited.connect(self.updateCompleter)
         self.returnPressed.connect(self.search)
         # completion for search.
@@ -312,8 +312,8 @@ class DashSearchBar(QLineEdit):
         #     self.label.hide()
         # self.label.setText(str(qou))
     def resizeEvent(self, event):
-        self.label.setFixedHeight(self.height())
-        self.label.setFixedWidth(self.width())
+        # self.label.setFixedHeight(self.height())
+        # self.label.setFixedWidth(self.width())
         super(DashSearchBar, self).resizeEvent(event)
 
 

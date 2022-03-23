@@ -10,7 +10,7 @@ from fig_dash import FigD
 from fig_dash.api.system.battery import Battery
 from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout
 # title_bar_style = '''
@@ -51,8 +51,10 @@ QToolBar {
     margin: 0px; 
     border: 0px; 
     color: #fff;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #c24e2b, stop : 0.143 #c7502c, stop : 0.286 #cc522d, stop : 0.429 #d0542e, stop : 0.571 #d55630, stop : 0.714 #da5831, stop : 0.857 #df5a32, stop : 1.0 #e45c33);
+
     /* background: #000; */
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
     /* background: url({{ TITLEBAR_BACKGROUND_URL }}) */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
     border-top-left-radius: 10px;
@@ -172,7 +174,7 @@ class WifiBtn(QToolButton):
         self.netName = QLabel(name)
         self.netName.setStyleSheet('''
         QLabel {
-            color: #6e6e6e;
+            color: #292929;
             font-size: 16px;
             background: transparent;
             padding-left: 0px;
@@ -221,7 +223,7 @@ class VolumeLabel(QWidget):
         self.label.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
         self.label.setStyleSheet("""
         QLabel {
-            color: #6e6e6e;
+            color: #292929;
             margin: 0px;
             padding: 0px;
             font-size: 16px;
@@ -385,11 +387,16 @@ class TitleBar(QToolBar):
         self.zoomLabel.setText("125")
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
-            color: #39a4e7;
+            color: #292929; /* #39a4e7; */
             font-size: 16px;
+            font-weight: bold;
             background: transparent;
         }""")
         self.zoomSlider.connectLabel(self.zoomLabel)
+        palette = QPalette()
+        palette.setColor(QPalette.Highlight, QColor(29, 29, 29))
+        self.zoomSlider.setPalette(palette)
+        # self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
 
         self.wifi = WifiBtn()
@@ -435,10 +442,10 @@ class TitleBar(QToolBar):
         self.addWidget(self.devToolsBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.printBtn)
-        self.addWidget(self.zoomInBtn)
+        self.addWidget(self.zoomOutBtn)
         self.addWidget(self.zoomLabel)
         self.addWidget(self.zoomSlider)
-        self.addWidget(self.zoomOutBtn)
+        self.addWidget(self.zoomInBtn)
         self.addWidget(self.initSpacer(30))
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
@@ -476,6 +483,17 @@ class TitleBar(QToolBar):
         self.battery.pluggedIcon.hide()
         self.battery.hide()
         self.isInfoVisible = False
+
+    def activate(self):
+        self.closeBtn.setIcon(FigD.Icon("titlebar/close.svg"))
+        self.maximizeBtn.setIcon(FigD.Icon("titlebar/maximize.svg"))
+        self.minimizeBtn.setIcon(FigD.Icon("titlebar/minimize.svg"))
+
+    def deactivate(self):
+        icon = "titlebar/disabled.svg"
+        self.closeBtn.setIcon(FigD.Icon(icon))
+        self.maximizeBtn.setIcon(FigD.Icon(icon))
+        self.minimizeBtn.setIcon(FigD.Icon(icon))
 
     def toggleInfo(self):
         if self.isInfoVisible:

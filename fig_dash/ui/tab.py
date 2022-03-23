@@ -143,14 +143,13 @@ class TabCornerWidget(QWidget):
         self.plusBtn = TabPlusBtn(self)
         self.splitHBtn = TabSplitHBtn(self)
         self.splitVBtn = TabSplitVBtn(self)
-        self.taskViewBtn = TaskViewBtn(self)
-
+        # self.taskViewBtn = TaskViewBtn(self)
         self.layout.addWidget(self.initBlank())
         self.layout.addWidget(self.plusBtn)
         self.layout.addStretch(1)
         self.layout.addWidget(self.splitHBtn)
         self.layout.addWidget(self.splitVBtn)
-        self.layout.addWidget(self.taskViewBtn)
+        # self.layout.addWidget(self.taskViewBtn)
         self.layout.addWidget(self.dropdownBtn)
         self.layout.addWidget(self.initBlank())
         # self.layout.addStretch(1)
@@ -812,7 +811,7 @@ class TabBar(QTabBar):
             if self.tabRect(i).contains(pos):
                 clickedItem = i
                 break
-        print(clickedItem)
+        # print(clickedItem)
         # contextMenu.setIconSize(QSize(30,30))
         newTabToRight = contextMenu.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab to the right")
         addToReadingList = contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
@@ -853,6 +852,7 @@ class TabBar(QTabBar):
         # QMenu::separator {
         #     background: #484848;
         # }''')
+        # self.setStyleSheet("")
         palette = contextMenu.palette()
         palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
         palette.setColor(QPalette.Base, QColor(29,29,29,255))

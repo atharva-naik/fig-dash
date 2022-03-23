@@ -747,12 +747,12 @@ QLineEdit {
 QLabel {
     font-size: 16px;
 }''')
-class FileViewerSearchBar(QLineEdit):
+class FileViewerFolderSearchBar(QLineEdit):
     def __init__(self, parent: Union[QWidget, None]=None):
-        super(FileViewerSearchBar, self).__init__(parent)
+        super(FileViewerFolderSearchBar, self).__init__(parent)
         # search action.
         self.searchAction = QAction()
-        self.searchAction.setIcon(FigD.Icon("system/fileviewer/search.svg"))
+        self.searchAction.setIcon(FigD.Icon("system/fileviewer/folder_search.svg"))
         self.addAction(self.searchAction, self.LeadingPosition)
         # match case.
         self.caseAction = QAction()
@@ -1004,6 +1004,41 @@ selectedItemSpan.addEventListener('keypress', handleItemRename);
         self.page().runJavaScript(code)
 
 #eb5f34
+file_viewer_btn_style = jinja2.Template('''
+QToolButton {
+    color: #fff;
+    border: 0px;
+    font-size: 14px;
+    text-align: center;
+    background: {{ background }};
+}
+QToolButton:hover {
+    color: #292929;
+    border: 1px solid #0a4c70;
+    border-radius: 2px;
+    background: rgba(105, 191, 238, 150);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0); */
+}
+QToolTip {
+    color: #fff;
+    border: 0px;
+    background: #000;
+}''')
+file_viewer_responsive_btn_style = '''
+QToolButton {
+    color: #fff;
+    border: 0px;
+    font-size: 14px;
+    background: transparent;
+}
+QToolButton:hover {
+    color: #69bfee;
+}
+QToolTip {
+    color: #fff;
+    border: 0px;
+    background: #000;
+}'''
 class FileViewerBtn(QToolButton):
     '''File viewer button'''
     def __init__(self, parent: Union[None, QWidget]=None, **args):
@@ -1031,44 +1066,13 @@ class FileViewerBtn(QToolButton):
         background = args.get("background", "transparent")
         # print(font_size)
         if self.hover_response == "background":
-            self.setStyleSheet(jinja2.Template('''
-            QToolButton {
-                color: #fff;
-                border: 0px;
-                font-size: 14px;
-                background: {{ background }};
-            }
-            QToolButton:hover {
-                color: #292929;
-                border: 1px solid #0a4c70;
-                border-radius: 2px;
-                background: rgba(105, 191, 238, 150);
-                /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0); */
-            }
-            QToolTip {
-                color: #fff;
-                border: 0px;
-                background: #000;
-            }''').render(
+            self.setStyleSheet(
+                file_viewer_btn_style.render(
                     background=background,
                 )
             )
         else:
-            self.setStyleSheet('''
-            QToolButton {
-                color: #fff;
-                border: 0px;
-                font-size: 14px;
-                background: transparent;
-            }
-            QToolButton:hover {
-                color: #69bfee;
-            }
-            QToolTip {
-                color: #fff;
-                border: 0px;
-                background: #000;
-            }''')
+            self.setStyleSheet(file_viewer_responsive_btn_style)
 
     def leaveEvent(self, event):
         if self.hover_response == "foreground":
@@ -1298,25 +1302,31 @@ class FileViewerFileGroup(FileViewerGroup):
         self.newFileBtn =  self.initBtn(
             icon="file.ico",#"new_file.svg",
             size=(30,30),
+            text="New\nFile",
             tip="create a new file",
+            style=Qt.ToolButtonTextBesideIcon,
         )
         self.newFolderBtn =  self.initBtn(
             icon="folder.ico",#"new_folder.svg",
-            size=(40,40),
+            size=(30,30),
+            text="New\nFolder",
             tip="create a new folder",
+            style=Qt.ToolButtonTextBesideIcon,
         )
-        self.creationLayout.addWidget(self.newFileBtn)
-        self.creationLayout.addWidget(self.newFolderBtn)
+        self.creationLayout.addWidget(self.newFileBtn, 0, Qt.AlignLeft)
+        self.creationLayout.addWidget(self.newFolderBtn, 0, Qt.AlignLeft)
         self.creationLayout.addStretch(1)
         # connect to server.
         self.connectToServerBtn = self.initBtn(
             icon="connect_to_server.ico",
+            text="connect\nto server",
             size=(40,40),
             tip="connect to a server",
+            style=Qt.ToolButtonTextBesideIcon,
         )
         self.linkGroup = self.initBtnGroup([
-            {"icon": "link.svg", "size": (20,20)},
-            {"icon": "unlink.svg", "size": (20,20), "tip": "move selected item(s) to trash"},
+            {"icon": "link.svg", "size": (20,20), "text": "link", "style": Qt.ToolButtonTextBesideIcon},
+            {"icon": "unlink.svg", "size": (20,20), "text": "unlink", "tip": "move selected item(s) to trash", "style": Qt.ToolButtonTextBesideIcon},
         ], spacing=0)
         
         # copied from path widget.
@@ -1341,17 +1351,23 @@ class FileViewerFileGroup(FileViewerGroup):
         self.copyPathBtn =  self.initBtn(
             icon="copy_filepath.png",
             size=(25,25),
+            text="copy path",
             tip="copy filepath",
+            style=Qt.ToolButtonTextBesideIcon,
         )
         self.copyNameBtn = self.initBtn(
             icon="copy_filename.svg",
             size=(25,25),
+            text="copy name",
             tip="copy filename",
+            style=Qt.ToolButtonTextBesideIcon,
         )
         self.copyUrlBtn =  self.initBtn(
             icon="copy_as_url.svg",
+            text="copy as url",
             size=(25,25),
             tip="copy file path as url",
+            style=Qt.ToolButtonTextBesideIcon,
         )
         self.stemBtn = self.initBtn(
             text="stem", size=(25,25),
@@ -1501,7 +1517,7 @@ class FileViewerEditGroup(FileViewerGroup):
         # make link, release link, move to trash
         self.linkGroup = self.initBtnGroup([
             {"stretch": True},
-            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash"},
+            {"icon": "trash.svg", "size": (40,40), "tip": "move selected item(s) to trash", "text": "trash", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "invert_selection.ico", "size": (30,30), "tip": "invert selected items", "icon_size": (30,30)},
         ], orient="vertical", spacing=0)
 
@@ -1546,6 +1562,16 @@ class FileViewerViewGroup(FileViewerGroup):
             {"icon": "treelistview.svg", "size": (20,20), "tip": "tree view", "text": "tree", "style": Qt.ToolButtonTextUnderIcon},
             {"icon": "toggle_hidden_files.ico", "size": (23,23), "tip": "toggle visibility of hidden files"},
         ], spacing=0)
+        # sort by / show options.
+        self.sortOptionsGroup = self.initBtnGroup([
+            {"icon": "options.ico", "size": (40,40), "tip": "show options in file list"},
+            {"icon": "sort_by.ico", "size": (30,30), "tip": "sort by attribute", "text": "sort by", "style": Qt.ToolButtonTextUnderIcon},
+        ], spacing=0, orient="vertical")
+        # column add/fit
+        self.columnsGroup = self.initBtnGroup([
+            {"icon": "add_columns.ico", "size": (35,35), "tip": "add columns to file list", "text": "add", "style": Qt.ToolButtonTextBesideIcon},
+            {"icon": "fit_columns.ico", "size": (35,35), "tip": "fit columns into view", "text": " fit", "style": Qt.ToolButtonTextBesideIcon},
+        ], spacing=0, orient="vertical", alignment_flag=Qt.AlignLeft)
         # hidden files, folder bar visibility, side bar visibility, search bar visibility.
         self.visibilityGroup = self.initBtnGroup([
             {"icon": "toggle_folderbar.svg", "size": (35,35), "tip": "toggle visibility of folder bar"},
@@ -1567,6 +1593,8 @@ class FileViewerViewGroup(FileViewerGroup):
         self.viewWidget.setLayout(self.viewLayout)
         # self.layout.addStretch(1)
         self.layout.addWidget(self.viewWidget)
+        self.layout.addWidget(self.sortOptionsGroup)
+        self.layout.addWidget(self.columnsGroup)
         self.layout.addWidget(self.arrangeGroup)
         # self.layout.addStretch(1)    
     def connectWidget(self, widget):
@@ -1575,14 +1603,14 @@ class FileViewerViewGroup(FileViewerGroup):
             widget.folderbar.toggle
         )
         self.sidebarBtn.clicked.connect(
-            widget.sidebar.toggle
+            widget.sideArea.toggle
         )
 
         self.hiddenFilesBtn.clicked.connect(
             widget.toggleHiddenFiles
         )
         self.searchbarBtn.clicked.connect(
-            widget.searchbar.toggle
+            widget.foldersearchbar.toggle
         )
 
 
@@ -1655,7 +1683,6 @@ class XdgOpenDropdown(QComboBox):
         '''do a gtk launch of a specific application with or without a specific file.'''
         # os.system(f"gtk-launch {app} '{file}'")
         # print(f"gtk-launch {app} '{file}'")
-
     def open(self, file):
         i = self.currentIndex()
         self.gtkLaunch(self.apps[i], file)
@@ -1732,18 +1759,9 @@ class FileViewerOpenGroup(FileViewerGroup):
         self.mimeBtn.setText("text/plain")
         self.mimeBtn.setIcon(FigD.Icon(icon))
         self.mimeBtn.setIconSize(QSize(35,35))
-        self.mimeBtn.setStyleSheet('''
-        QToolButton {
-            color: #fff;
-            border: 0px;
-            font-size: 14px;
-            font-family: 'Be Vietnam Pro', sans-serif;
-            background: transparent;
-        }
-        QToolButton:hover {
-            color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-        }''')
+        self.mimeBtn.setStyleSheet(file_viewer_btn_style.render(
+            background="transparent"
+        ))
         self.mimeBtn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         # app selection dropdown.
         self.appDropdown = XdgOpenDropdown("text/plain")
@@ -1866,10 +1884,10 @@ class FileViewerMiscGroup(FileViewerGroup):
         # self.bookmarksGroup = self.initBtnGroup()
         # self.fileconvertGroup = self.initBtnGroup()
         self.cloudStorageGroup = self.initBtnGroup([
-            {"icon": "favourite.ico", "size": (30,30), "tip": "favourite location"},
-            {"icon": "favourite_folder.ico", "size": (30,30), "tip": "open favourited locations"},
-            {"label": True, "text": "cloud"},
-        ], orient="vertical", spacing=0)
+            {"icon": "gdrive.png", "size": (30,30), "tip": "open google drive UI"},
+            {"icon": "dropbox.png", "size": (30,30), "tip": "open dropbox UI"},
+            # {"label": True, "text": "cloud"},
+        ], orient="horizontal", spacing=0)
         self.ratingsGroup = self.initBtnGroup([
             {"icon": "rate.ico", "size": (30,30), "tip": "open ratings panel for selected item"},
             {"icon": "show_rating.ico", "size": (30,30), "tip": "show ratings for all items"},
@@ -1887,6 +1905,11 @@ class FileViewerMiscGroup(FileViewerGroup):
         self.miscLayout1 = QVBoxLayout()
         self.miscLayout1.setSpacing(0)
         self.miscLayout1.setContentsMargins(0, 0, 0, 0)
+
+        self.miscWidget2 = QWidget()
+        self.miscLayout2 = QVBoxLayout()
+        self.miscLayout2.setSpacing(0)
+        self.miscLayout2.setContentsMargins(0, 0, 0, 0)
         
         self.miscLayout1.addStretch(1)
         self.miscLayout1.addWidget(self.encryptionGroup, 0, Qt.AlignLeft)
@@ -1894,10 +1917,17 @@ class FileViewerMiscGroup(FileViewerGroup):
         self.miscLayout1.addWidget(self.ratingsGroup, 0, Qt.AlignLeft)
         self.miscLayout1.addWidget(self.initLabel("rate"), 0, Qt.AlignCenter)
         self.miscWidget1.setLayout(self.miscLayout1)
+
+        self.miscLayout2.addStretch(1)
+        self.miscLayout2.addWidget(self.cloudStorageGroup, 0, Qt.AlignLeft)
+        self.miscLayout2.addWidget(self.initLabel("cloud"), 0, Qt.AlignCenter)
+        # self.miscLayout2.addWidget(self.ratingsGroup, 0, Qt.AlignLeft)
+        # self.miscLayout2.addWidget(self.initLabel("rate"), 0, Qt.AlignCenter)
+        self.miscWidget2.setLayout(self.miscLayout2)
         # add widgets to layout.
         self.layout.addWidget(self.compressionGroup)
         self.layout.addWidget(self.miscWidget1)
-        self.layout.addWidget(self.cloudStorageGroup, 0, Qt.AlignBottom)
+        self.layout.addWidget(self.miscWidget2)
         # self.coversionGroup # file conversion (for images, videos, document formats etc.)
     def connectWidget(self, widget):
         self.widget = widget
@@ -2054,6 +2084,7 @@ class FileViewerAppearanceGroup(FileViewerGroup):
             color: #fff;
             border: 0px;
             font-size: 12px;
+            text-align: center;
             background: transparent;
         }
         QToolButton:hover {
@@ -2134,6 +2165,22 @@ class FileViewerMenu(QWidget):
         # self.pathgroup.connectWidget(widget)
         # self.opengroup.connectWidget(widget)
         # self.appearancegroup.connectWidget(widget)
+class ToggleScrollArea(QScrollArea):
+    def __init__(self):
+        super(ToggleScrollArea, self).__init__()
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+def wrapInScrollArea(widget):
+    scrollArea = ToggleScrollArea()
+    scrollArea.setWidget(widget)
+    scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+    return scrollArea
+
 class FileViewerFolderBar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerFolderBar, self).__init__(parent)
@@ -2141,6 +2188,7 @@ class FileViewerFolderBar(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(5)
         self.path = ""
+        
         self.setLayout(self.layout)
         self.setObjectName("FileViewerFolderBar")
         self.selectedIndex = 0 
@@ -2154,6 +2202,10 @@ class FileViewerFolderBar(QWidget):
             font-family: 'Be Vietnam Pro', sans-serif;
             padding-top: 2px;
             padding-bottom: 2px;
+            border-radius: 3px;
+            background: #484848;
+            margin-left: 1px;
+            margin-right: 1px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
         }
         QToolButton:hover {
@@ -2175,6 +2227,9 @@ class FileViewerFolderBar(QWidget):
             font-family: 'Be Vietnam Pro', sans-serif;
             padding-top: 2px;
             padding-bottom: 2px;
+            border-radius: 3px;
+            margin-left: 1px;
+            margin-right: 1px;
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
         }
@@ -2199,7 +2254,15 @@ class FileViewerFolderBar(QWidget):
         else: self.show()
 
     def __len__(self):
-        return len(self.folderBtns)+2
+        return len(self.folderBtns)+3
+
+    def addSpacer(self):
+        widget = QWidget()
+        # widget.setAttribute(Qt.WA_TranslucentBackground)
+        widget.setStyleSheet("background: transparent;")
+        # widget.setStyleSheet("background: red;")
+        widget.setFixedWidth(10)
+        self.layout.insertWidget(0, widget)
 
     def clear(self):
         '''clear all the folder buttons on the folder bar.'''
@@ -2247,6 +2310,7 @@ class FileViewerFolderBar(QWidget):
         self.folderBtns = self.folderBtns[::-1]
         self.folderBtns[-1].setStyleSheet(self.folderBtnSelStyle)
         self.layout.addStretch(1)
+        self.addSpacer()
         self.layout.insertWidget(0, self.forwardBtn)
         self.layout.insertWidget(0, self.backBtn)
 
@@ -2274,7 +2338,11 @@ class FileViewerFolderBar(QWidget):
         btn = QToolButton(self)
         tip = f"got to {full_path}"
         btn.setToolTip(tip)
-        btn.setText(name)
+        if name == "/":
+            btn.setIcon(FigD.Icon(
+                "system/fileviewer/harddrive.png"
+            ))
+        else: btn.setText(name)
         if self.widget:
             btn.clicked.connect(
                 lambda: self.widget.open(full_path)
@@ -2298,9 +2366,11 @@ class FileViewerShortcutBtn(QToolButton):
             font-size: 16px;
             font-weight: bold;
             text-align: center;
-            padding-top: 0px;
-            padding-bottom: 0px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+            padding-top: 5px;
+            padding-left: 10px;
+            padding-bottom: 5px;
+            background: transparent;
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
         }
         QToolButton:hover {
             color: #292929;
@@ -2326,8 +2396,8 @@ class FileViewerShortcutBtn(QToolButton):
         self.setToolTip(tip)
         self.setStatusTip(tip)
         self.path = path
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-        
+        self.setFixedWidth(300)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
     def connectWidget(self, widget):
         self.widget = widget
         self.clicked.connect(self.onClick)
@@ -2346,7 +2416,7 @@ class FileViewerSideBar(QWidget):
         # bookmarks.
         self.bookmarkBtns = []
         home = os.path.expanduser("~")
-        self.layout.setSpacing(5)
+        self.layout.setSpacing(0)
         self.recentBtn = self.initShortcutBtn(
             path=os.path.join(home, "Recent"),
             icon="recent.svg",
@@ -2506,18 +2576,17 @@ class FileViewerWidget(QMainWindow):
         
         self.folderbar = FileViewerFolderBar()
         self.folderbar.setFixedHeight(34)
-        self.folderbar.hide()
-
+        # self.folderbar.hide()
         self.sidebar = FileViewerSideBar()
-        self.sidebar.hide()
+        self.sideArea = wrapInScrollArea(self.sidebar)
+        self.sideArea.hide()
         # searchbar.
-        self.searchbar = FileViewerSearchBar()
-        self.searchbar.hide()
+        self.foldersearchbar = FileViewerFolderSearchBar()
+        self.foldersearchbar.hide()
         # self.searchbar.setParent(self.webview)
-        self.searchbar.setMinimumWidth(800)
-        self.searchbar.setFixedHeight(34)
-        # self.searchbar.setMaximumHeight(20)
-        self.searchbar.move(0,0)
+        self.foldersearchbar.setMinimumWidth(800)
+        self.foldersearchbar.setFixedHeight(34)
+        self.foldersearchbar.move(0,0)
         # statusbar.
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
@@ -2539,7 +2608,7 @@ class FileViewerWidget(QMainWindow):
         # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
         self.layout.insertWidget(0, self.webview.splitter, 0)
-        self.layout.insertWidget(0, self.searchbar, 0, Qt.AlignCenter)
+        self.layout.insertWidget(0, self.foldersearchbar, 0, Qt.AlignCenter)
         self.layout.insertWidget(0, self.folderbar, 0)
         if args.get("parentless", False):
             self.menuArea = self.wrapInScrollArea(self.menu)
@@ -2549,7 +2618,7 @@ class FileViewerWidget(QMainWindow):
             self.layout.insertWidget(0, self.menu)
         # self.layout.addStretch(1)
 
-        self.webview.splitter.insertWidget(0, self.sidebar)
+        self.webview.splitter.insertWidget(0, self.sideArea)
         self.webview.splitter.setSizes([200, 600, 200])
         self.webview.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.keypress_search = FileViewerKeyPressSearch()
