@@ -2,7 +2,7 @@ import os
 from re import T
 from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QT_VERSION_STR
+from PyQt5.QtCore import Qt, QEventLoop, QTimer, QT_VERSION_STR
 from typing import Union, Tuple, List
 
 

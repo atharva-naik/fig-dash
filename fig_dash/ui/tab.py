@@ -431,7 +431,7 @@ class DashTabWidget(QTabWidget):
         encoded = buffer.data().toBase64()
         # create the tooltip
         tabToolTip = f"""
-        <div style='text-align: center'>
+        <div style='text-align: center;'>
             <h3 style='font-weight: bold;'>{browser.page().title()}</h3> 
             <br>
             <span style='color: #6e6e6e;'>{browser.url().host()}</span>

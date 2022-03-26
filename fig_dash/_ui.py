@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from ast import Not
 import os
 from fig_dash.ui import shortcutbar
 import jinja2
@@ -73,6 +72,7 @@ QTabBar::tab:hover {
 QTabBar::tab:selected {
     color: #fff;
     border: 0px;
+    border-top-right-radius: 10px;
     background: #000;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;

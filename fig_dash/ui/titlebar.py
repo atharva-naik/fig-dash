@@ -11,8 +11,8 @@ from fig_dash.api.system.battery import Battery
 from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette
-from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QSlider, QWidget, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout
+from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel
+from PyQt5.QtWidgets import QSlider, QWidget, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter
 # title_bar_style = '''
 # QToolBar {
 #     margin: 0px; 
@@ -71,6 +71,72 @@ QToolButton:hover {
     /* background: rgba(255, 223, 97, 0.5); */
 }   
 '''
+class TabSearchBar(QLineEdit):
+    """need to connect to QTabWidget, will be added to the TitleBar."""
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(TabSearchBar, self).__init__(parent)
+        # self.label = QLabel("")
+        # self.label.setParent(self)
+        # self.label.setAttribute(Qt.WA_TransparentForMouseEvents)
+        # view site info.
+        self.searchAction = QAction()
+        self.searchAction.setIcon(FigD.Icon("titlebar/search_tabs.svg"))
+        self.addAction(self.searchAction, self.LeadingPosition)
+        self.setPlaceholderText("search tabs")
+        # set size of tab search bar.
+        self.setFixedHeight(22)
+        self.setMaximumWidth(300)
+        # connections.
+        self.returnPressed.connect(self.switchTab)
+        # suggestions based on current list of tabs,
+        self.completer = QCompleter([])
+        self.completer.setCaseSensitivity(Qt.CaseInsensitive)
+        # set palette for completer.
+        palette = self.completer.popup().palette()
+        # palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
+        palette.setColor(QPalette.Base, QColor(29,29,29))
+        palette.setColor(QPalette.Text, QColor(255,255,255))
+        palette.setColor(QPalette.Highlight, QColor(235, 95, 52))
+        palette.setColor(QPalette.AlternateBase, QColor(29,29,29))
+        # palette.setColor(QPalette.Window, QColor(29,29,29,255))
+        # palette.setColor(QPalette.WindowText, QColor(255,255,255,255)) 
+        self.completer.popup().setPalette(palette)
+        # self.completer.popup().setFont()
+        self.setCompleter(self.completer)
+        # set style sheet.
+        self.setStyleSheet("""background: #292929; color: #fff; font-size: 17px; selection-background-color: #eb5f34;""")
+
+    def switchTab(self):
+        text = self.text()
+        try: 
+            i = self.tab_list.index(text)
+            self.tabs.setCurrentIndex(i)
+        except ValueError as e:
+            print(e) 
+        
+    def focusInEvent(self, event):
+        super(TabSearchBar, self).focusInEvent(event)
+        self.refreshTabList()
+        
+    def connectTabWidget(self, tabWidget):
+        self.tabs = tabWidget
+
+    def setText(self, text: str):
+        super(TabSearchBar, self).setText(text)
+        self.setCursorPosition(0)
+
+    def refreshTabList(self):
+        self.model = QStringListModel()
+        tab_list = []
+        for i in range(self.tabs.count()):
+            text = self.tabs.tabText(i)
+            tab_list.append(text.strip()+f" ({i})")
+        # print(tab_list)
+        self.tab_list = tab_list
+        self.model.setStringList(tab_list)
+        self.completer.setModel(self.model)
+
+
 class BatteryIndicator(QToolButton):
     def __init__(self, parent: Union[QWidget, None]=None):
         super(BatteryIndicator, self).__init__(parent)
@@ -289,6 +355,7 @@ class TitleBar(QToolBar):
         self.setStyleSheet(title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
+        self.tab_searchbar = TabSearchBar()
         self.setIconSize(QSize(22,22))
         self.setMovable(False)
         # close window
@@ -415,7 +482,7 @@ class TitleBar(QToolBar):
         self.battery.pluggedIcon.setFixedSize(QSize(17,17))
         # window title
         self.title = QLabel()
-        self.title.setText("fig-dash: a dashboard for Python developers")
+        # self.title.setText("fig-dash: a dashboard for Python developers")
         self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
         # self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
@@ -467,6 +534,7 @@ class TitleBar(QToolBar):
         # self.addWidget(self.onScreenKeyboard)
         # self.addWidget(self.transBtn)
         # self.addWidget(self.ttsBtn)
+        self.addWidget(self.tab_searchbar)
         self.addWidget(self.initBlank())
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
@@ -538,6 +606,7 @@ class TitleBar(QToolBar):
         self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
         self.CtrlS.activated.connect(self.tabs.saveAs)
         self.zoomSlider.connectTabWidget(self.tabs)
+        self.tab_searchbar.connectTabWidget(self.tabs)
 
     def initBlank(self):
         btn = QToolButton(self)

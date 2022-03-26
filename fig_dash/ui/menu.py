@@ -44,21 +44,27 @@ QTabBar {
 }
 QTabBar::tab {
     border: 0px;
+    border-top-left-radius: 7px;
+    border-top-right-radius: 7px;
+
     color: #fff;
+    background: transparent;
+
     font-size: 17px;
     font-weight: bold;
     font-family: 'Be Vietnam Pro', sans-serif;
+    
     padding-top: 4px;
     padding-left: 10px;
     padding-right: 20px;
     padding-bottom: 4px;
+    
     margin-left: 0px;
     margin-right: 0px;
     margin-top: 0px;
     margin-bottom: 0px;
-    background: transparent;
-    border-bottom: 2px solid transparent;
-    /* border-bottom: 4px solid #bf3636; */
+    /* border-bottom: 2px solid transparent;
+       border-bottom: 4px solid #bf3636; */
 }
 QTabBar::tab:hover {
     color: #292929;
@@ -78,10 +84,22 @@ QTabBar::tab:selected {
     margin-right: 0px;
     margin-bottom: 0px;
     background: #000;
-    border-bottom: 2px solid #ff9e28;
-    /* border-bottom: 4px solid #bf3636; */
-    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+    /* border-bottom: 2px solid #ff9e28;
+       border-bottom: 4px solid #bf3636;
+       background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
+menu_icon_set = [
+    {
+        "inactive": FigD.Icon(f"menu/{name}.svg"), 
+        "active": FigD.Icon(f"menu/{name}_active.svg")
+    } for name in [
+        "file", "edit", "insert", "format",
+        "view", "code", "browser", "mail",
+        "music", "image", "video", "form",
+        "event", "terminal", "device", 
+        "create", "payment", "entertainment",
+    ]
+]
 class BrowserStatusBar(QWidget):
     def __init__(self) -> None:
         super(BrowserStatusBar, self).__init__()
@@ -285,6 +303,11 @@ class DashMenu(QTabWidget):
     def setCurrentIndex(self, i: int):
         # i = self.currentIndex()
         # print(f"i: {i}")
+        j = self.currentIndex()
+        # print(menu_icon_set[j]["inactive"])
+        # print(menu_icon_set[i]["active"])
+        self.setTabIcon(j, menu_icon_set[j]["inactive"])
+        self.setTabIcon(i, menu_icon_set[i]["active"])
         self.updateStatusBar(i)
         super(DashMenu, self).setCurrentIndex(i)
 
@@ -305,9 +328,13 @@ class DashMenu(QTabWidget):
     def tabToggle(self, i):
         '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
         # print(self.currentIndex(), i)
-        if i == self.currentIndex(): 
+        j = self.currentIndex()
+        self.setTabIcon(j, menu_icon_set[j]["inactive"])
+        self.setTabIcon(i, menu_icon_set[i]["active"])
+        if i == j: 
             self.toggle()
-        else: self.expand()
+        else: 
+            self.expand()
         self.updateStatusBar(i)
 
     def initToggleBtn(self):
@@ -340,7 +367,7 @@ class DashMenu(QTabWidget):
     def collapse(self):
         self._collapsed = True
         self.toggleBtn.setIcon(FigD.Icon("menu/expand.svg"))
-        self.setFixedHeight(30)
+        self.setFixedHeight(28)
 
     def toggle(self):
         # print(self.collapsed)
