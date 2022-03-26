@@ -13,16 +13,17 @@ from fig_dash.utils import *
 from fig_dash.assets import FigD
 
 
-class ScreenShot(QWidget):
+class ScreenShotSelection(QWidget):
     """overlay this widget on the entire screen to allow for selections"""
     def __init__(self, app):
-        super(ScreenShot, self).__init__()
+        super(ScreenShotSelection, self).__init__()
         screen_rect = app.desktop().screenGeometry()
         width, height = screen_rect.width()*2, screen_rect.height()
         self.setGeometry(0, 0, width, height)
-        self.setWindowFlags(Qt.AlwaysOnTopHint | Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCursor(Qt.CrossCursor)
-        self.setWindowOpacity(0.1)
+        self.setWindowOpacity(0.05)
+        self.rubberband = QRubberBand(QRubberBand.Rectangle, self)
         self.ui = None
 
     def mousePressEvent(self, event):
@@ -31,7 +32,7 @@ class ScreenShot(QWidget):
             self.origin, QSize()
         ))
         self.rubberband.show()
-        super(ScreenShot, self).mousePressEvent(event)
+        super(ScreenShotSelection, self).mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         if self.rubberband.isVisible():
@@ -39,9 +40,9 @@ class ScreenShot(QWidget):
                 self.origin, 
                 event.pos()
             ).normalized())
-        super(ScreenShot, self).mouseMoveEvent(event)
+        super(ScreenShotSelection, self).mouseMoveEvent(event)
 
-    def conenctScreenshotUI(self, ui):
+    def connectScreenshotUI(self, ui):
         self.ui = ui
 
     def mouseReleaseEvent(self, event):
@@ -49,11 +50,15 @@ class ScreenShot(QWidget):
             self.rubberband.hide()
             rect = self.rubberband.geometry()
             if self.ui: 
-                self.ui = (
-                    rect.x(), rect.y(), 
-                    rect.width(), rect.height()
-                )
-        super(ScreenShot, self).mouseReleaseEvent(self, event)
+                x1 = rect.x() 
+                y1 = rect.y()
+                x2 = x1 + rect.width()
+                y2 = y1 + rect.height()
+                region = (x1, y1, x2, y2)
+                img = pyautogui.screenshot(region=region)
+            self.ui.saveScreenshot(img)
+            self.hide()
+        super(ScreenShotSelection, self).mouseReleaseEvent(event)
 
 
 class RecordingScopeSelector(QWidget):
@@ -288,6 +293,8 @@ class DashScreenshotUI(QMainWindow):
         self.recordBtn.clicked.connect(
             self.takeScreenshot
         )
+        self.screen_shot_selection = ScreenShotSelection(self.app)
+        self.screen_shot_selection.connectScreenshotUI(self)
         # add shadow effect.
         shadow_effect = QGraphicsDropShadowEffect()
         shadow_effect.setBlurRadius(500)
@@ -306,23 +313,7 @@ class DashScreenshotUI(QMainWindow):
         except Exception as e:
             print("\x1b[31;1mui.apps.screenshot.DashScreenShotUI.mouseMoveEvent\x1b[0m", e)
 
-    def takeScreenshot(self):
-        """take screenshot."""
-        # hide screenshot UI.
-        self.hide()
-        pyqtSleep(200)
-        # entire screen.
-        if self.scopeSelector.index() == 0:
-            img = pyautogui.screenshot(region=(0, 0, 300, 400))
-        elif self.scopeSelector.index() == 1:
-            img = pyautogui.screenshot()
-        elif self.scopeSelector.index() == 3:
-            img_list = []
-            for i in range(5):
-                pyautogui.scroll(10)
-                pyqtSleep(200)
-                img_list.append(pyautogui.screenshot())
-            print(img_list)
+    def saveScreenshot(self, img):
         # handle save mode.
         if self.saveModeSelector.index() == 1:
             pictures = os.path.expanduser("~/Pictures")
@@ -342,15 +333,31 @@ class DashScreenshotUI(QMainWindow):
             self.qim = ImageQt(img)
             self.pixmap = QPixmap.fromImage(self.qim)
             if self.app is not None:
-                # app.clipboard().clear(mode=app.clipboard().Clipboard)
                 self.app.clipboard().setPixmap(self.pixmap)
                 print("copied image to clipboard.")
             self.show()
-            # memory = io.BytesIO()
-            # img.save(memory, format="png")
-            # klembord.set({"image/png": memory.getvalue()})
-            # print("copied image to clipboard")
-        # print(f"not implemented for {}")
+
+    def takeScreenshot(self):
+        """take screenshot."""
+        # hide screenshot UI.
+        self.hide()
+        pyqtSleep(200)
+        # entire screen.
+        if self.scopeSelector.index() == 0:
+            self.screen_shot_selection.show()
+            return
+            # img = pyautogui.screenshot(region=(0, 0, 300, 400))
+        elif self.scopeSelector.index() == 1:
+            img = pyautogui.screenshot()
+        elif self.scopeSelector.index() == 3:
+            img_list = []
+            for i in range(5):
+                pyautogui.scroll(10)
+                pyqtSleep(200)
+                img_list.append(pyautogui.screenshot())
+            print(img_list)
+        self.saveScreenshot(img)
+
     def initCentralWidget(self):
         centralWidget = QWidget()
         centralWidget.setStyleSheet("""
@@ -414,3 +421,7 @@ def test_screenshot_ui():
 
 if __name__ == "__main__":
     test_screenshot_ui()
+    # memory = io.BytesIO()
+    # img.save(memory, format="png")
+    # klembord.set({"image/png": memory.getvalue()})
+    # print("copied image to clipboard")
