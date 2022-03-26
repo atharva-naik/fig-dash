@@ -5,7 +5,7 @@ import datetime
 import pyautogui
 from PIL.ImageQt import ImageQt
 # Qt5 imports.
-from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
+from PyQt5.QtGui import QPixmap, QIcon, QKeySequence, QPalette, QBrush
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QRect, QPoint
 from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut, QFileDialog, QRubberBand, QGraphicsDropShadowEffect
 # fig-dash imports.
@@ -18,12 +18,11 @@ class ScreenShotSelection(QWidget):
     def __init__(self, app):
         super(ScreenShotSelection, self).__init__()
         screen_rect = app.desktop().screenGeometry()
-        width, height = screen_rect.width()*2, screen_rect.height()
+        width, height = screen_rect.width(), screen_rect.height()
         self.setGeometry(0, 0, width, height)
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCursor(Qt.CrossCursor)
-        self.setWindowOpacity(0.05)
-        self.rubberband = QRubberBand(QRubberBand.Rectangle, self)
+        self.setWindowOpacity(0.5)
         self.ui = None
 
     def mousePressEvent(self, event):
@@ -44,20 +43,33 @@ class ScreenShotSelection(QWidget):
 
     def connectScreenshotUI(self, ui):
         self.ui = ui
+        self.rubberband = QRubberBand(QRubberBand.Rectangle, self)
 
     def mouseReleaseEvent(self, event):
         if self.rubberband.isVisible():
             self.rubberband.hide()
             rect = self.rubberband.geometry()
             if self.ui: 
-                x1 = rect.x() 
-                y1 = rect.y()
-                x2 = x1 + rect.width()
-                y2 = y1 + rect.height()
-                region = (x1, y1, x2, y2)
-                img = pyautogui.screenshot(region=region)
-            self.ui.saveScreenshot(img)
-            self.hide()
+                # x = rect.x()
+                # y = rect.y()
+                # w = rect.width()
+                # h = rect.height()
+                # x1 = x
+                # y1 = y
+                # x2 = x + w
+                # y2 = y + h
+                # region = (x1, y1, x2, y2)
+                self.hide()
+                pyqtSleep(200)
+                # img = pyautogui.screenshot(region=region)
+                screen = QApplication.instance().primaryScreen()
+                desktop = QApplication.instance().desktop()
+                imgmap = screen.grabWindow(
+                    desktop.winId(), rect.x()+10, rect.y()+5, 
+                    rect.width(), rect.height()
+                )
+                # print(imgmap)
+            self.ui.savePixmap(imgmap)
         super(ScreenShotSelection, self).mouseReleaseEvent(event)
 
 
@@ -312,6 +324,29 @@ class DashScreenshotUI(QMainWindow):
             self.oldPos = event.globalPos()
         except Exception as e:
             print("\x1b[31;1mui.apps.screenshot.DashScreenShotUI.mouseMoveEvent\x1b[0m", e)
+
+    def savePixmap(self, pixmap):
+        # handle save mode.
+        if self.saveModeSelector.index() == 1:
+            pictures = os.path.expanduser("~/Pictures")
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S")
+            default_path = os.path.join(pictures, f"Screenshot from {timestamp}.png")
+            path, _ = QFileDialog.getSaveFileName(
+                self, "Save Screenshot as", 
+                default_path, 'Images (*.png)'
+            )
+            # print("path:", path)
+            if path != "": 
+                print(f"\x1b[32;1m saved to path: {path} \x1b[0m")
+                pixmap.save(path)
+            self.close()
+        # handle copy to clipboard mode.
+        else:
+            self.pixmap = pixmap
+            if self.app is not None:
+                self.app.clipboard().setPixmap(self.pixmap)
+                print("copied image to clipboard.")
+            self.show()
 
     def saveScreenshot(self, img):
         # handle save mode.
