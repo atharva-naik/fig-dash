@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # the fig-dash fileviewer is known as the "orchard".
-from genericpath import isfile
 import os
-from sys import meta_path
 import jinja2
 import socket
 import getpass

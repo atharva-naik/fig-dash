@@ -14,7 +14,7 @@ from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor
 from PyQt5.QtCore import Qt, QSize, QPoint, QUrl, QEvent, QStringListModel, QObject, pyqtSignal, pyqtSlot, QThread
-from PyQt5.QtWidgets import QWidget, QToolBar, QMenu, QLabel, QToolButton, QMainWindow, QTabWidget, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QToolBar, QMenu, QLabel, QToolButton, QMainWindow, QVBoxLayout, QTabWidget, QSizePolicy, QLineEdit, QCompleter, QHBoxLayout, QAction, QGraphicsDropShadowEffect
 
 
 dash_searchbar_style = jinja2.Template('''
@@ -33,6 +33,170 @@ QLineEdit {
 QLabel {
     font-size: 16px;
 }''')
+class SearchEngineListDropdown(QMainWindow):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(SearchEngineListDropdown, self).__init__(parent)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        # create vertical box layout.
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(0)
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        # add buttons.
+        self.googleBtn = self.initSearchEngineBtn(
+            icon="google.svg", text="Google", 
+            tip="switch to Google search"
+        )
+        self.yahooBtn = self.initSearchEngineBtn(
+            icon="yahoo.png", text="Yahoo", 
+            tip="switch to Yahoo"
+        )
+        self.bingBtn = self.initSearchEngineBtn(
+            icon="bing.png", text="Bing", 
+            tip="switch to Bing"
+        )
+        self.duckDuckGoBtn = self.initSearchEngineBtn(
+            icon="duckduckgo.png", text="Duck Duck Go", 
+            tip="switch to Duck Duck Go"
+        )
+        # build the layout.
+        self.layout.addWidget(self.googleBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.yahooBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.bingBtn, 0, Qt.AlignCenter)
+        self.layout.addWidget(self.duckDuckGoBtn, 0, Qt.AlignCenter)
+        # create central widget.
+        widget = QWidget()
+        widget.setLayout(self.layout)
+        widget.setStyleSheet(""" 
+        QWidget {
+            border-radius: 20px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+        }""""")
+        # set as central widget.
+        self.setCentralWidget(widget)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+
+    def initSearchEngineBtn(self, **args):
+        btn = QToolButton()
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setFixedWidth(200)
+        # set text.
+        btn.setText("    "+args.get("text", "text"))
+        # btn.setAlignment(Qt.AlignCenter)
+        # set icon.
+        icon = args.get("icon")
+        icon = FigD.Icon(os.path.join("browser", icon))
+        btn.setIcon(icon)
+        # set tool/status tip.
+        btn.setToolTip(args.get("tip", "a tip"))
+        btn.setStatusTip(args.get("tip", "a tip"))
+        # set style.
+        btn.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            padding: 5px;
+            font-size: 18px;
+            text-align: center;
+            border-radius: 10px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 100);
+        }""")
+        
+        return btn
+
+
+class SearchEngineBar(QLineEdit):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(SearchEngineBar, self).__init__(parent)
+        self.searchEngineAction = QAction()
+        self.searchEngineAction.setIcon(FigD.Icon("browser/google.svg"))
+        self.addAction(self.searchEngineAction, self.LeadingPosition)
+        self.setPlaceholderText("Search on Google")
+        # create the switcher dropdown
+        self.dropdown = SearchEngineListDropdown()
+        # self.dropdown.setParent(self)
+        self.dropdown.bingBtn.clicked.connect(
+            lambda: self.switchState("bing")
+        )
+        self.dropdown.yahooBtn.clicked.connect(
+            lambda: self.switchState("yahoo")
+        )
+        self.dropdown.googleBtn.clicked.connect(
+            lambda: self.switchState("google")
+        )
+        self.dropdown.duckDuckGoBtn.clicked.connect(
+            lambda: self.switchState("duckduckgo")
+        )
+        self.state = "google"
+        self.setStyleSheet(
+            dash_searchbar_style.render(
+                BORDER_RADIUS=10
+            )
+        )
+        # connect slots to signals.
+        self.returnPressed.connect(self.search)
+        self.searchEngineAction.triggered.connect(self.showDropdown)
+
+    def showDropdown(self):
+        x = self.x()
+        y = self.y()
+        h0 = self.height()
+        h1 = self.dropdown.height()
+        self.dropdown.move(x, y+h0+h1+5)
+        self.dropdown.show()
+
+    def glow(self):
+        '''apply glow effect.'''
+        glow_effect = QGraphicsDropShadowEffect()
+        glow_effect.setBlurRadius(30)
+        glow_effect.setOffset(0,0)
+        glow_effect.setColor(QColor(235, 95, 52))
+        # glow_effect.setColor(QColor(235, 156, 52))
+        self.setGraphicsEffect(glow_effect)
+
+    def unglow(self):
+        '''remove glow effect'''
+        self.setGraphicsEffect(None)
+
+    def focusInEvent(self, event):
+        super(SearchEngineBar, self).focusInEvent(event)
+        self.glow()
+
+    def focusOutEvent(self, event):
+        super(SearchEngineBar, self).focusOutEvent(event)
+        self.unglow()
+
+    def search(self):
+        query = self.text().strip()
+        # need to encode the query.
+        if self.state == "google":
+            print(f"https://www.google.com/search?q={query}&sourceid=chrome&ie=UTF-8")
+
+    def switchState(self, state: str):
+        self.state = state
+        mapping = {
+            "duckduckgo": "duckduckgo.png",
+            "google": "google.svg",
+            "yahoo": "yahoo.png",
+            "bing": "bing.png",
+        }
+        placeholder_map = {
+            "duckduckgo": "Duck Duck Go",
+            "google": "Google",
+            "yahoo": "Yahoo",
+            "bing": "Bing",
+        }
+        icon = FigD.Icon(os.path.join(
+            "browser", 
+            mapping[state],
+        ))
+        text = placeholder_map[state]
+        self.setPlaceholderText(f"Search on {text}")
+        self.searchEngineAction.setIcon(icon)
+        self.dropdown.hide()
+
+
 class GoogleAutoCompleteThread(QThread):
     searched = pyqtSignal(str)
     def __init__(self):
@@ -132,7 +296,7 @@ class DashSearchBar(QLineEdit):
         self.terminalAction.triggered.connect(self.toggleTerminal)
 
         self.setStyleSheet(dash_searchbar_style.render(
-            BORDER_RADIUS=16,
+            BORDER_RADIUS=10,
         ))
         self.setFixedHeight(28)
         # self.label.move(30, 0)
@@ -522,6 +686,12 @@ class DashNavBar(QWidget):
         self.searchbar = DashSearchBar(self)
         self.searchbar.setFixedHeight(33)
         layout.addWidget(self.searchbar)
+        # add search engine bar
+        self.searchEngineBar = SearchEngineBar(self)
+        self.searchEngineBar.setFixedHeight(33)
+        self.searchEngineBar.setMaximumWidth(300)
+        layout.addWidget(self.searchEngineBar) 
+
         self.setStyleSheet(dash_navbar_style.render())
         # extensions.
         self.extensionsBtn = DashNavBarBtn(

@@ -71,6 +71,17 @@ QToolButton:hover {
     /* background: rgba(255, 223, 97, 0.5); */
 }   
 '''
+window_title_bar_style = jinja2.Template('''
+QToolBar {
+    margin: 0px; 
+    border: 0px; 
+    color: #fff;
+    /* background: background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+    background: transparent;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+}
+''')
 class TabSearchBar(QLineEdit):
     """need to connect to QTabWidget, will be added to the TitleBar."""
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -330,7 +341,8 @@ class ZoomSlider(QSlider):
     def setTabZoom(self):
         zoom = self.value()
         self.label.setText(f"{zoom}")
-        self.tabWidget.setTabZoom(zoom)
+        try: self.tabWidget.setTabZoom(zoom)
+        except: print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoom:\x1b[0m 'not connected to tabWidget'")
 
     def setTabZoomFromLabel(self):
         zoom = self.label.text()
@@ -346,7 +358,195 @@ class ZoomSlider(QSlider):
         elif zoom > 500:
             zoom = 500
             self.label.setText("500")
-        self.tabWidget.setTabZoom(zoom)
+        try: self.tabWidget.setTabZoom(zoom)
+        except: print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoomFromLabel:\x1b[0m 'not connected to tabWidget'")
+
+
+class WindowTitleBar(QToolBar):
+    def __init__(self, parent: Union[QWidget, None]=None):
+        super(WindowTitleBar, self).__init__("Titlebar", parent)
+        self.setStyleSheet(window_title_bar_style.render(
+            TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
+        ))
+        self.setIconSize(QSize(22,22))
+        self.setMovable(False)
+        # close window
+        self.closeBtn = self.initTitleBtn(
+            "titlebar/close.svg", 
+            tip="close window",
+            callback=self.callback if parent is None else parent.hide
+        )
+        # minimize window
+        self.minimizeBtn = self.initTitleBtn(
+            "titlebar/minimize.svg", 
+            tip="minimize window",
+            callback=self.callback if parent is None else parent.showMinimized
+        )
+        # maximize button
+        self.maximizeBtn = self.initTitleBtn(
+            "titlebar/maximize.svg", 
+            tip="maximize window",
+            callback=self.maximize
+        )
+        self.printBtn = self.initTitleBtn(
+            "titlebar/print.svg", 
+            tip="print the webpage (as PDF).",
+            callback=self.callback if parent is None else parent.tabs.printPage
+        ) 
+        self.viewSourceBtn = self.initTitleBtn(
+            "titlebar/source.svg", 
+            tip="view the source of the webpage.",
+            callback=self.callback if parent is None else parent.tabs.viewSource
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.saveSourceBtn = self.initTitleBtn(
+            "titlebar/save.svg", 
+            tip="save the source of the webpage.",
+            callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.zoomInBtn = self.initTitleBtn(
+            "titlebar/zoom_in.svg", 
+            tip="zoom in",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.findBtn = self.initTitleBtn(
+            "titlebar/find_in_page.svg", 
+            tip="find in page",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.devToolsBtn = self.initTitleBtn(
+            "titlebar/dev_tools.svg", 
+            tip="toggle dev tools sidebar.",
+            callback=self.callback if parent is None else parent.tabs.toggleDevTools
+        )
+        self.zoomOutBtn = self.initTitleBtn(
+            "titlebar/zoom_out.svg", 
+            tip="zoom out",
+            # callback=self.callback if parent is None else parent.tabs.save
+        )
+        self.fullscreenBtn = FullScreenBtn(
+            fs_icon="titlebar/fullscreen.svg", 
+            efs_icon="titlebar/exit_fullscreen.svg", 
+        )
+
+        self.zoomSlider = ZoomSlider()
+        self.zoomLabel = QLineEdit()
+        self.zoomLabel.setText("125")
+        self.zoomLabel.setStyleSheet("""
+        QLineEdit {
+            color: #292929; /* #39a4e7; */
+            font-size: 16px;
+            font-weight: bold;
+            background: transparent;
+        }""")
+        self.zoomSlider.connectLabel(self.zoomLabel)
+        palette = QPalette()
+        palette.setColor(QPalette.Highlight, QColor(29, 29, 29))
+        self.zoomSlider.setPalette(palette)
+        # self.zoomSlider.setAutoFillBackground(True)
+        self.zoomLabel.setMaximumWidth(35)
+
+        # window title
+        self.title = QLabel()
+        # self.title.setText("fig-dash: a dashboard for Python developers")
+        self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
+        # self.title.setAlignment(Qt.AlignCenter)
+        self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+        self.addWidget(self.closeBtn)
+        self.addWidget(self.minimizeBtn)
+        self.addWidget(self.maximizeBtn)
+        self.addWidget(self.initBlank())
+        self.addWidget(self.viewSourceBtn)
+        self.addWidget(self.saveSourceBtn)
+        self.addWidget(self.devToolsBtn)
+        self.addWidget(self.findBtn)
+        self.addWidget(self.printBtn)
+        self.addWidget(self.zoomOutBtn)
+        self.addWidget(self.zoomLabel)
+        self.addWidget(self.zoomSlider)
+        self.addWidget(self.zoomInBtn)
+        self.addWidget(self.initSpacer(30))
+        self.addWidget(self.title)
+        self.addWidget(self.initSpacer())
+        self.addWidget(self.fullscreenBtn)
+        self.addWidget(self.initBlank())
+        self.setMaximumHeight(30)
+
+    def activate(self):
+        self.closeBtn.setIcon(FigD.Icon("titlebar/close.svg"))
+        self.maximizeBtn.setIcon(FigD.Icon("titlebar/maximize.svg"))
+        self.minimizeBtn.setIcon(FigD.Icon("titlebar/minimize.svg"))
+
+    def deactivate(self):
+        icon = "titlebar/disabled.svg"
+        self.closeBtn.setIcon(FigD.Icon(icon))
+        self.maximizeBtn.setIcon(FigD.Icon(icon))
+        self.minimizeBtn.setIcon(FigD.Icon(icon))
+
+    def maximize(self):
+        parent = self.window
+        if isinstance(parent, QMainWindow):
+            if parent.isMaximized():
+                parent.showNormal()
+            else:
+                parent.showMaximized()
+
+    def initSpacer(self, width=None):
+        spacer = QWidget()
+        if width:
+            spacer.setMinimumWidth(width)
+            spacer.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+        else:
+            spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        return spacer
+
+    def connectWindow(self, window):
+        self.window = window
+        self.closeBtn.clicked.connect(window.close)
+        self.minimizeBtn.clicked.connect(window.showMinimized)
+        # self.findBtn.clicked.connect(self.tabs.triggerFind)
+        # self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
+        # self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
+        # self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
+        # self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
+        # self.CtrlS.activated.connect(self.tabs.saveAs)
+        # self.zoomSlider.connectTabWidget(self.tabs)
+    def initBlank(self):
+        btn = QToolButton(self)
+        btn.setIcon(QIcon(None))
+        btn.setStyleSheet("border: 0px;")
+        return btn
+
+    def initTitleBtn(self, icon, **kwargs):
+        btn = QToolButton(self)
+        btn.setToolTip(kwargs.get("tip", "a tip"))
+        btn.setIcon(FigD.Icon(icon))
+        size = kwargs.get("size", (22,22))
+        btn.setIconSize(QSize(*size))
+        btn.clicked.connect(kwargs.get("callback", self.callback))
+        btn.setStyleSheet(title_btn_style)
+
+        return btn
+
+    def callback(self):
+        pass
+
+    def mousePressEvent(self, event):
+        parent = self.window
+        if parent is None: return
+        parent.oldPos = event.globalPos()
+
+    def mouseMoveEvent(self, event):
+        parent = self.window
+        if parent is None: return
+        try:
+            delta = QPoint(event.globalPos() - parent.oldPos)
+            parent.move(parent.x() + delta.x(), parent.y() + delta.y())
+            parent.oldPos = event.globalPos()
+        except Exception as e:
+            print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
 
 
 class TitleBar(QToolBar):

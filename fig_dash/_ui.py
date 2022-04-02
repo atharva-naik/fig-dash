@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
-from fig_dash.ui import shortcutbar
 import jinja2
 import getpass
 from typing import Union, Tuple, List
@@ -10,7 +9,7 @@ from typing import Union, Tuple, List
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize 
-from PyQt5.QtWidgets import QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut
+from PyQt5.QtWidgets import QApplication, QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.menu import DashMenu
@@ -23,10 +22,13 @@ from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
 from fig_dash.ui.widget.weather import WeatherWidget
-from fig_dash.ui.widget.floatmenu import FloatMenu
+# from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.datetime import DashClock, DashCalendar
-from fig_dash.ui.widget.richtexteditor import richtexteditor_style
+
+# imports for installed apps.
+from fig_dash.ui.apps.screenshot import DashScreenshotUI 
+
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
 # from PyQt5.QtWidgets import QAction, QWidget, QTabWidget, QToolBar, QTabBar, QLabel, QSplitter, QVBoxLayout, QHBoxLayout, QToolButton, QPushButton, QGraphicsView, QGraphicsEffect, QScrollArea, QLineEdit, QFrame, QSizePolicy, QMessageBox, QTreeView, QRubberBand,  QFileSystemModel, QGraphicsDropShadowEffect, QTextEdit
@@ -39,7 +41,7 @@ QMainWindow {
 dash_tabbar_style = jinja2.Template('''
 QTabBar {
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336);
+    background: #000;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220)); */
 }
 QTabBar::close-button {
@@ -64,6 +66,7 @@ QTabBar::tab {
     font-size: 17px;
     font-family: 'Be Vietnam Pro', sans-serif;
     max-width: 300px;
+    background: #000;
 }
 QTabBar::tab:hover {
     color: #fff;
@@ -73,7 +76,7 @@ QTabBar::tab:selected {
     color: #fff;
     border: 0px;
     border-top-right-radius: 10px;
-    background: #000;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336);
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;
     padding-left: 9px;
@@ -186,6 +189,15 @@ class DashWindow(QMainWindow):
         self.FnF2.activated.connect(self.decVolSlider)
         self.FnF3 = QShortcut(Qt.Key_F3, self)
         self.FnF3.activated.connect(self.incVolSlider)
+        # connect the screenshotting UI.
+        app = QApplication.instance()
+        screen_rect = app.desktop().screenGeometry()
+        w, h = screen_rect.width()//2, screen_rect.height()//2
+        self.screenshot_ui = DashScreenshotUI(app=app)
+        self.screenshot_ui.move(w, h)
+        # connect a screenshot Win+S for launching the screenshot UI.
+        self.WinS = QShortcut(QKeySequence("Ctrl+Shift+P"), self)
+        self.WinS.activated.connect(self.screenshot_ui.show)
         # add spacers.
         spacer1 = QWidget()
         spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

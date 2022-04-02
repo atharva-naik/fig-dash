@@ -65,7 +65,7 @@ class ScreenShotSelection(QWidget):
                 screen = QApplication.instance().primaryScreen()
                 desktop = QApplication.instance().desktop()
                 imgmap = screen.grabWindow(
-                    desktop.winId(), rect.x()+10, rect.y()+5, 
+                    desktop.winId(), rect.x()+80, rect.y()+25, 
                     rect.width(), rect.height()
                 )
                 # print(imgmap)

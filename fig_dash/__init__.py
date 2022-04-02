@@ -57,7 +57,7 @@ class DashUI(QApplication):
             FigD.font("BeVietnamPro-Regular.ttf")
         )
         print(QFontDatabase.applicationFontFamilies(ID))
-        self.desktop = self.desktop()
+        # self.desktop = self.desktop()
         self.window = DashWindow(**kwargs)
         self.window_args = kwargs
         # actions for tray icon context menu.
