@@ -78,7 +78,8 @@ class TabsSearchDropdown(QWidget):
 tab_btn_style = jinja2.Template('''
 QToolButton {
     border: 0px;
-    border-radius: 15px;
+    padding: {{ PADDING }}px;
+    border-radius: {{ BORDER_RADIUS }}px;
 }
 QToolButton:hover {
     background: rgba(125, 125, 125, 0.7);
@@ -90,7 +91,7 @@ class TabsSearchBtn(QToolButton):
         self.dropdown = TabsSearchDropdown(btn=self)
         self.clicked.connect(self.dropdown.toggle)
         self.setIcon(FigD.Icon("tabbar/dropdown.svg"))
-        self.setStyleSheet(tab_btn_style.render())
+        self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=15, PADDING=4))
     #     contextMenu = self.initDropdown()
     #     contextMenu.exec_(self.mapToGlobal(event.pos()))        
     # def contextMenuEvent(self, event):
@@ -104,15 +105,25 @@ class TabPlusBtn(QToolButton):
         super(TabPlusBtn, self).__init__(parent)
         self.setObjectName("TabPlusBtn")
         self.setIcon(FigD.Icon("tabbar/new_tab.svg"))
-        self.setStyleSheet(tab_btn_style.render()) 
+        self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=15, PADDING=4)) 
 
 
 class TabSplitVBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]):
         super(TabSplitVBtn, self).__init__(parent)
         self.setObjectName("TabSplitVBtn")
-        self.setIcon(FigD.Icon("tabbar/tab_split_v.svg"))
-        self.setStyleSheet(tab_btn_style.render())    
+        self.setIcon(FigD.Icon("tabbar/tab-split_v.svg"))
+        self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=13, PADDING=0))    
+        self.setIconSize(QSize(30,30))
+
+
+class TabSplitHBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]):
+        super(TabSplitHBtn, self).__init__(parent)
+        self.setObjectName("TabSplitHtn")
+        self.setIcon(FigD.Icon("tabbar/tab-split_h.svg"))
+        self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=13, PADDING=0))
+        self.setIconSize(QSize(30,30))   
 
 
 class TaskViewBtn(QToolButton):
@@ -120,33 +131,25 @@ class TaskViewBtn(QToolButton):
         super(TaskViewBtn, self).__init__(parent)
         self.setObjectName("TaskViewBtn")
         self.setIcon(FigD.Icon("tabbar/task-view.svg"))
-        self.setStyleSheet(tab_btn_style.render())    
-
-
-class TabSplitHBtn(QToolButton):
-    def __init__(self, parent: Union[None, QWidget]):
-        super(TabSplitHBtn, self).__init__(parent)
-        self.setObjectName("TabSplitHtn")
-        self.setIcon(FigD.Icon("tabbar/tab_split_h.svg"))
-        self.setStyleSheet(tab_btn_style.render())    
+        self.setStyleSheet(tab_btn_style.render())     
 
 
 class TabCornerWidget(QWidget):
-    def __init__(self, parent: Union[None, QWidget]):
+    def __init__(self, parent: Union[None, QWidget]=None):
         super(TabCornerWidget, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0,0,0,0)
+        self.layout.setSpacing(5)
         # self.layout.setSpacing(0)
         # self.layout.addStretch(1)
         self.dropdownBtn = TabsSearchBtn(self)
         self.dropdown = self.dropdownBtn.dropdown
-        self.plusBtn = TabPlusBtn(self)
         self.splitHBtn = TabSplitHBtn(self)
         self.splitVBtn = TabSplitVBtn(self)
         # self.taskViewBtn = TaskViewBtn(self)
         self.layout.addWidget(self.initBlank())
-        self.layout.addWidget(self.plusBtn)
-        self.layout.addStretch(1)
+        # self.layout.addWidget(self.plusBtn)
+        # self.layout.addStretch(1)
         self.layout.addWidget(self.splitHBtn)
         self.layout.addWidget(self.splitVBtn)
         # self.layout.addWidget(self.taskViewBtn)
@@ -154,7 +157,7 @@ class TabCornerWidget(QWidget):
         self.layout.addWidget(self.initBlank())
         # self.layout.addStretch(1)
         self.setLayout(self.layout)
-
+        # self.setStyleSheet("background: #000;")
     def initBlank(self):
         btn = QToolButton(self)
         btn.setStyleSheet('''
@@ -222,7 +225,8 @@ class DashTabWidget(QTabWidget):
         self.mimetype_db = QMimeDatabase()
         super(DashTabWidget, self).__init__(parent)
         # tab corner widget.
-        tabCornerWidget = TabCornerWidget(self)
+        tabCornerWidget = TabCornerWidget()
+        self.tabCornerWidget = tabCornerWidget
         # tabCornerWidget.setStyleSheet("""
         # QWidget {
         #     background: red;
@@ -235,7 +239,8 @@ class DashTabWidget(QTabWidget):
         tabCornerWidget.splitVBtn.clicked.connect(self.VSplitCurrentTab)
         self.dropdownBtn = tabCornerWidget.dropdownBtn
         self.dropdown = tabCornerWidget.dropdown
-        self.plusBtn = tabCornerWidget.plusBtn
+
+        self.plusBtn = TabPlusBtn(self)
         self.plusBtn.clicked.connect(lambda: self.openUrl())
         self.icon_provider = QFileIconProvider()
         # list of zoom factors.
@@ -251,7 +256,7 @@ class DashTabWidget(QTabWidget):
         self.currentChanged.connect(self.onTabChange)
         self.tabCloseRequested.connect(self.removeTab)
         self.setMovable(True)
-        self.setCornerWidget(tabCornerWidget)
+        # self.setCornerWidget(tabCornerWidget)
         self.setObjectName("DashTabWidget")
         self.setStyleSheet(dash_tab_widget_style.render())
         self.tabIcons = []

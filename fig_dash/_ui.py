@@ -38,11 +38,11 @@ QMainWindow {
     border-top-right-radius: 10px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 2, stop : 0.1 #000, stop : 0.2 #292929, stop : 0.7 #917459, stop : 0.8 #cf6400);
 }''')
+# qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220));
 dash_tabbar_style = jinja2.Template('''
 QTabBar {
     border: 0px;
-    background: #000;
-    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220)); */
+    background: transparent;
 }
 QTabBar::close-button {
     background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
@@ -56,13 +56,16 @@ QTabBar::close-button:hover {
 }
 QTabBar::tab {
     border: 0px;
-    color: #292929;
+    color: #fff;
+
+    margin-left: 1px;
+    margin-right: 1px;
+
     padding-top: 5px;
     padding-left: 9px;
     padding-right: 5px;
     padding-bottom: 5px;
-    margin-left: 1px;
-    margin-right: 1px;
+
     font-size: 17px;
     font-family: 'Be Vietnam Pro', sans-serif;
     max-width: 300px;
@@ -70,13 +73,16 @@ QTabBar::tab {
 }
 QTabBar::tab:hover {
     color: #fff;
+    background: #484848;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
 }
 QTabBar::tab:selected {
-    color: #fff;
+    color: #eee;
     border: 0px;
+    background: #484848;
+    font-weight: bold;
     border-top-right-radius: 10px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;
     padding-left: 9px;
@@ -144,7 +150,6 @@ class DashWindow(QMainWindow):
         QStatusBar {
             color: #eb5f34;
             font-size: 16px;
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
             background: #000;
         }""")
         self.statusBar().setMaximumHeight(30)
@@ -287,11 +292,11 @@ class DashWindow(QMainWindow):
         # top bar.
         self.topbar = QWidget()
         topLayout = QHBoxLayout()
-        topLayout.setSpacing(0)
+        topLayout.setSpacing(5)
         topLayout.setContentsMargins(0, 0, 0, 0)
         self.topbar.setLayout(topLayout)
         self.topbar.setStyleSheet("""
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e47f2c, stop : 0.286 #e57a2d, stop : 0.429 #e5742d, stop : 0.571 #e56e2e, stop : 0.714 #e56830, stop : 0.857 #e46231, stop : 1.0 #e45c33);
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e47f2c, stop : 0.286 #e57a2d, stop : 0.429 #e5742d, stop : 0.571 #e56e2e, stop : 0.714 #e56830, stop : 0.857 #e46231, stop : 1.0 #e45c33); */
         """)
         # self.topbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.topbar.setFixedHeight(35)
@@ -300,15 +305,18 @@ class DashWindow(QMainWindow):
         self.tabbar.setStyleSheet(dash_tabbar_style.render())
         topLayout.addWidget(self.tabbar)
         # corner widget.
-        self.tabs.cornerWidget(            
-        ).setSizePolicy(
-            QSizePolicy.Expanding, 
-            QSizePolicy.Fixed
-        )
-        topLayout.addWidget(self.tabs.cornerWidget())
-        # topLayout.addWidget(self.tabs.dropdownBtn)
+        # self.tabs.cornerWidget(            
+        # ).setSizePolicy(
+        #     QSizePolicy.Expanding, 
+        #     QSizePolicy.Fixed
+        # )
+        cornerWidget = self.tabs.tabCornerWidget
+        plusBtn = self.tabs.plusBtn
+        topLayout.addWidget(plusBtn, 0, Qt.AlignVCenter)
+        topLayout.addStretch(1)
+        topLayout.addWidget(cornerWidget, 0, Qt.AlignVCenter)
         # add search bar.
-        self.navbar.setFixedHeight(40)
+        self.navbar.setFixedHeight(38)
         self.navbar.setStyleSheet("background: #000;")
         self.navbar.connectTabWidget(self.tabs)
         # main horizontal splitter.

@@ -14,8 +14,8 @@ from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
-from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QPixmap, QGradient, QLinearGradient
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QObject
+from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
 from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
@@ -889,8 +889,25 @@ class DebugWebView(QWebEngineView):
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
         # print(dir(self.menu))
-        self.menu.setStyleSheet("background: #292929; color: #fff;")
+        # self.menu.setStyleSheet("background: #292929; color: #fff; border-radius: 20px;")
+        
+        # update palette.
+        palette = self.menu.palette()
+        palette.setColor(QPalette.Base, QColor(0,0,0))
+        palette.setColor(QPalette.Text, QColor(125,125,125))
+        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+        print(vars(QPalette))
+        palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+        palette.setColor(QPalette.Window, QColor(48,48,48))
+        palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
+        self.menu.setPalette(palette)
+        # apply rounding mask.
+        roundingPath = QPainterPath()
         self.menu.popup(event.globalPos())
+        roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
+        mask = QRegion(roundingPath.toFillPolygon().toPolygon())
+        self.menu.setMask(mask)
 
     def alert(self, msg: str):
         self.page().runJavaScript(f"alert(`{msg}`);")

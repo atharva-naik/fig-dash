@@ -20,7 +20,8 @@ QToolButton {
     margin-right: 5px;
     margin-bottom: 5px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-    border-radius: 34px;
+    border-raidus: 0px;
+    /* border-radius: 34px; */
 }
 QToolButton:hover {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 0.8), stop : 0.6 rgba(235, 204, 52, 0.9));

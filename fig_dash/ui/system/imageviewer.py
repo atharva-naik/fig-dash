@@ -6,7 +6,8 @@ import jinja2
 from typing import Union
 from pathlib import Path
 # fig-dash imports.
-from fig_dash import FigD
+from fig_dash.assets import FigD
+from fig_dash.ui import DashWidgetGroup
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
@@ -3739,9 +3740,10 @@ class ImageViewerFileTree(QWidget):
         # file system model.
         self.fileModel = QFileSystemModel()
         self.fileModel.setRootPath(os.path.expanduser("~/Pictures"))
-        # create poxy filter sort model.
+        # # create poxy filter sort model.
         # self.proxyModel = QSortFilterProxyModel()
         # self.proxyModel.setSourceModel(self.fileModel)
+        # self.proxyModel.setFilterKeyColumn(1)
         # file tree view.
         self.fileTree = QTreeView()
         self.fileTree.setModel(self.fileModel)
@@ -3987,7 +3989,7 @@ def test_imageviewer():
     imageviewer.titlebar = titlebar
     titlebar.connectWindow(imageviewer)
     imageviewer.layout.insertWidget(0, titlebar)
-    imageviewer.setStyleSheet("background: tranparent; border: 0px;")
+    imageviewer.setStyleSheet("background: transparent; border: 0px;")
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
     )
