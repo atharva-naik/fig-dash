@@ -13,7 +13,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTreeView, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTreeView, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -3722,11 +3722,40 @@ QScrollBar::sub-line:vertical {
     subcontrol-origin: margin;
 }
 '''
-
+class ImageViewerViewGroup(DashWidgetGroup):
+	def __init__(self, parent: Union[None, QWidget]=None):
+		super(ImageViewerViewGroup, self).__init__(parent, "View")
+		toggleWidget = QWidget()
+		toggleWidget.setStyleSheet("background: transparent; color: #fff;")
+		toggleLayout = QVBoxLayout()
+		toggleLayout.setContentsMargins(0, 0, 0, 0)
+		toggleLayout.setSpacing(0)
+		toggleWidget.setLayout(toggleLayout)
+		# add widgets to widget group.
+		self.addWidget(toggleWidget)
+		# self.layout.addWidget()
 
 class ImageViewerMenu(QWidget):
-    def __init__(self):
-        pass
+	def __init__(self, parent: Union[None, QWidget]=None):
+		super(ImageViewerMenu, self).__init__(parent)
+		# create layout.
+		self.layout = QHBoxLayout()
+		self.layout.setSpacing(0)
+		self.setFixedHeight(120)
+		self.layout.setContentsMargins(0, 0, 0, 0)
+		# create widget groups.
+		self.viewgroup = ImageViewerViewGroup()
+		# build layout.
+		self.layout.addWidget(self.viewgroup)
+		self.layout.addStretch()
+		# set layout.
+		self.setLayout(self.layout)
+
+	def toggle(self):
+		"""toggle the visibility of the ribbon menu."""
+		if self.isVisible():
+			self.hide()
+		else: self.show()
 
 
 class ImageViewerFileTree(QWidget):
@@ -3805,6 +3834,25 @@ class ImageViewerFileTree(QWidget):
             icon = "hide.svg"
         # if parent:
         # parent.fileBrowserVisBtn.setIcon(FigD.Icon(icon))
+class ImageViewerSVGTree(QWidget):
+	pass
+
+
+class ImageViewerLayers(QWidget):
+	pass
+
+
+class ImageViewerSidePanel(QTabWidget):
+	def __init__(self, parent: Union[None, QWidget]=None):
+		super(ImageViewerSidePanel, self).__init__()
+		self.filetree = ImageViewerFileTree()
+		self.svgtree = ImageViewerSVGTree()
+		self.layers = ImageViewerLayers()
+		self.addTab(self.filetree, "Folders")
+		self.addTab(self.svgtree, "Elements")
+		self.addTab(self.layers, "Layers")
+		self.setStyleSheet("""color: #fff;""")
+
 
 class ImageViewerWebView(DebugWebView):
     def contextMenuEvent(self, event):
@@ -3912,10 +3960,11 @@ class ImageViewerWidget(QMainWindow):
         #     color: gray;
         #     background: #000;
         # }""")
-        self.filetree = ImageViewerFileTree()
+        self.side_panel = ImageViewerSidePanel()
+        self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
         # self.filetree.hide()
-        self.browser.splitter.insertWidget(0, self.filetree)
+        self.browser.splitter.insertWidget(0, self.side_panel)
         layout.addWidget(self.browser.splitter)
         # set layout.
         centralWidget.setLayout(layout)
@@ -3962,6 +4011,17 @@ class ImageViewerWidget(QMainWindow):
             self.setWindowTitle(filename_without_ext)
         render_url = FigD.createTempUrl(html)
         self.browser.load(render_url)
+
+    def connectMenu(self, menu: ImageViewerMenu):
+        self.menu = menu
+
+    def connectTitlebar(self, titlebar: WindowTitleBar):
+        self.titlebar = titlebar
+        self.titlebar.findBtn.setParent(None)
+        self.titlebar.connectWindow(self)
+        rcb = self.titlebar.ribbonCollapseBtn
+        try: rcb.clicked.connect(self.menu.toggle)
+        except AttributeError as e: print(e)
 
     def open(self, path: str):
         path = os.path.expanduser(path)
@@ -4027,16 +4087,17 @@ def test_imageviewer():
         font-weight: bold;
         background: transparent;
     }""")
-
+    menu = ImageViewerMenu()
     imageviewer = ImageViewerWidget(
         logo="system/imageviewer/logo.svg",
         parentless=True,
     )
-
     imageviewer.setAttribute(Qt.WA_TranslucentBackground)
     # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
     imageviewer.titlebar = titlebar
-    titlebar.connectWindow(imageviewer)
+    imageviewer.connectMenu(menu)
+    imageviewer.connectTitlebar(titlebar)
+    imageviewer.layout.insertWidget(0, menu)
     imageviewer.layout.insertWidget(0, titlebar)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
     QFontDatabase.addApplicationFont(

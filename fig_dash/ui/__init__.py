@@ -139,6 +139,9 @@ class DashWidgetGroup(QWidget):
         layout.addWidget(self.Label(name))
         self.setLayout(layout)
 
+    def addWidget(self, *args, **kwargs):
+        self.layout.addWidget(*args, **kwargs)
+
     def Label(self, name):
         name = QLabel(name)
         name.setAlignment(Qt.AlignCenter)

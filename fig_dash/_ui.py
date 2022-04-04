@@ -182,7 +182,8 @@ class DashWindow(QMainWindow):
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.utils_launcher)
 
         self.dock = DashDockWidget()
-        self.dock.setParent(self)
+        self.dock.setParent(self.tabs)
+        self.dock.move(100, 100)
         self.dock.show()
         # self.dock.setGeometry(100, 100, 500, 70)
         # self.dock.move(100, 100)

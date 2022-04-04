@@ -428,6 +428,10 @@ class WindowTitleBar(QToolBar):
             fs_icon="titlebar/fullscreen.svg", 
             efs_icon="titlebar/exit_fullscreen.svg", 
         )
+        self.ribbonCollapseBtn = self.initTitleBtn(
+            "titlebar/widgets_bar.svg", 
+            tip="collapse the ribbon menu",
+        )
 
         self.zoomSlider = ZoomSlider()
         self.zoomLabel = QLineEdit()
@@ -469,6 +473,7 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.initSpacer(30))
         self.addWidget(self.title)
         self.addWidget(self.initSpacer())
+        self.addWidget(self.ribbonCollapseBtn)
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         self.setMaximumHeight(30)

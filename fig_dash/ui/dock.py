@@ -135,7 +135,6 @@ class DashDockWidget(QMainWindow):
             padding-top: 0px;
             padding-bottom: 0px;
             border-radius: 10px;
-            /* background: rgba(29, 29, 29, 220); */
             background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(0, 0, 0, 220), stop : 0.143 rgba(19, 19, 19, 220), stop : 0.286 rgba(32, 32, 32, 220), stop : 0.429 rgba(44, 44, 44, 220), stop : 0.571 rgba(58, 58, 58, 220), stop : 0.714 rgba(71, 71, 71, 220), stop : 0.857 rgba(85, 85, 85, 220), stop : 1.0 rgba(100, 100, 100, 220));
         }""")
         # palette = self.palette()
