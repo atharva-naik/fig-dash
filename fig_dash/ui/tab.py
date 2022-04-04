@@ -5,8 +5,8 @@ import jinja2
 import getpass
 from typing import Union
 # Qt imports.
-from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent, QPalette
-from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject
+from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent, QPalette, QPainterPath, QRegion
+from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject, QRectF
 from PyQt5.QtWebEngineWidgets import QWebEngineHistoryItem, QWebEnginePage
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconProvider, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QTabBar, QPushButton, QShortcut, QGraphicsDropShadowEffect, QInputDialog, QFileDialog, QSizePolicy, QApplication
 # fig-dash imports.
@@ -114,7 +114,7 @@ class TabSplitVBtn(QToolButton):
         self.setObjectName("TabSplitVBtn")
         self.setIcon(FigD.Icon("tabbar/tab-split_v.svg"))
         self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=13, PADDING=0))    
-        self.setIconSize(QSize(30,30))
+        self.setIconSize(QSize(28,28))
 
 
 class TabSplitHBtn(QToolButton):
@@ -123,15 +123,23 @@ class TabSplitHBtn(QToolButton):
         self.setObjectName("TabSplitHtn")
         self.setIcon(FigD.Icon("tabbar/tab-split_h.svg"))
         self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=13, PADDING=0))
-        self.setIconSize(QSize(30,30))   
+        self.setIconSize(QSize(28,28))   
 
 
 class TaskViewBtn(QToolButton):
-    def __init__(self, parent: Union[None, QWidget]):
+    def __init__(self, parent: Union[None, QWidget]=None):
         super(TaskViewBtn, self).__init__(parent)
         self.setObjectName("TaskViewBtn")
         self.setIcon(FigD.Icon("tabbar/task-view.svg"))
         self.setStyleSheet(tab_btn_style.render())     
+
+
+class TabsRecentlyDeletedBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(TabsRecentlyDeletedBtn, self).__init__(parent)
+        self.setObjectName("TabsRecentlyDeletedBtn")
+        self.setIcon(FigD.Icon("tabbar/trash.svg"))
+        self.setStyleSheet(tab_btn_style.render(BORDER_RADIUS=15, PADDING=4))  
 
 
 class TabCornerWidget(QWidget):
@@ -139,17 +147,19 @@ class TabCornerWidget(QWidget):
         super(TabCornerWidget, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0,0,0,0)
-        self.layout.setSpacing(5)
+        self.layout.setSpacing(3)
         # self.layout.setSpacing(0)
         # self.layout.addStretch(1)
         self.dropdownBtn = TabsSearchBtn(self)
         self.dropdown = self.dropdownBtn.dropdown
         self.splitHBtn = TabSplitHBtn(self)
         self.splitVBtn = TabSplitVBtn(self)
+        self.trashBtn = TabsRecentlyDeletedBtn(self)
         # self.taskViewBtn = TaskViewBtn(self)
         self.layout.addWidget(self.initBlank())
         # self.layout.addWidget(self.plusBtn)
         # self.layout.addStretch(1)
+        self.layout.addWidget(self.trashBtn)
         self.layout.addWidget(self.splitHBtn)
         self.layout.addWidget(self.splitVBtn)
         # self.layout.addWidget(self.taskViewBtn)
@@ -436,13 +446,12 @@ class DashTabWidget(QTabWidget):
         encoded = buffer.data().toBase64()
         # create the tooltip
         tabToolTip = f"""
+        <img src="data:image/png;base64,{bytes(encoded).decode()}">
         <div style='text-align: center;'>
-            <h3 style='font-weight: bold;'>{browser.page().title()}</h3> 
-            <br>
+            <h3 style='font-weight: bold;'>{browser.page().title()}</h3>
+            <br> 
             <span style='color: #6e6e6e;'>{browser.url().host()}</span>
         </div>
-        <br>
-        <img src="data:image/png;base64,{bytes(encoded).decode()}">
         """
         # print(tabToolTip)
         self.setTabToolTip(i, tabToolTip)
@@ -872,7 +881,13 @@ class TabBar(QTabBar):
         palette.setColor(QPalette.Highlight, QColor(235,95,52,90))
         # palette.setColor(QPalette.HighlightedText, QColor(29,29,29,255))
         contextMenu.setPalette(palette)
-        action = contextMenu.exec_(self.mapToGlobal(event.pos()))
+        pos = self.mapToGlobal(event.pos())
+        action = contextMenu.exec_(pos)
+        roundingPath = QPainterPath()
+        roundingPath.addRoundedRect(QRectF(contextMenu.rect()), 15, 15)
+        mask = QRegion(roundingPath.toFillPolygon().toPolygon())
+        contextMenu.setMask(mask)
+        
         if action == renameTab:
             # print(event.x(), event.y())
             try: self.tabs.renameDialog(clickedItem)

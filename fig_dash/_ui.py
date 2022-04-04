@@ -73,15 +73,18 @@ QTabBar::tab {
 }
 QTabBar::tab:hover {
     color: #fff;
-    background: #484848;
+    background: #323232;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
 }
 QTabBar::tab:selected {
     color: #eee;
     border: 0px;
-    background: #484848;
+    background: #323232;
     font-weight: bold;
-    border-top-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;
@@ -158,6 +161,7 @@ class DashWindow(QMainWindow):
         self.tabs.connectWindow(self)
         self.setCentralWidget(self.centralWidget)
         self.setWindowTitle("Dash Window")
+        # self.setWindowOpacity(0.92)
         # print(kwargs.get('icon'))
         self.logo = QIcon(kwargs.get('icon'))
         # self.setWindowIcon(self.logo)
@@ -177,11 +181,10 @@ class DashWindow(QMainWindow):
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.app_launcher)
         self.addToolBar(Qt.LeftToolBarArea, self.shortcutbar.utils_launcher)
 
-        self.dock = DashDockWidget(self)
-        self.dock.move(50, self.height()+80)
+        self.dock = DashDockWidget()
+        self.dock.setParent(self)
+        self.dock.show()
         # self.dock.setGeometry(100, 100, 500, 70)
-        self.dock.setFixedWidth(800)
-        self.dock.setFixedHeight(70)
         # self.dock.move(100, 100)
         self.shortcutbar.utils_launcher.connectWindow(self)
         # install event filter.

@@ -134,6 +134,7 @@ class DashUI(QApplication):
             self.window.showMaximized()
         else:
             self.window.show()
+            self.window.dock.move(-200, self.window.height()-20)
         self.window.notifsPanel.hide()
         sys.exit(self.run())
 

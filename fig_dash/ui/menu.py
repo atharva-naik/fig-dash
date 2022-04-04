@@ -56,7 +56,7 @@ QTabBar::tab {
     
     padding-top: 4px;
     padding-left: 10px;
-    padding-right: 20px;
+    padding-right: 10px;
     padding-bottom: 4px;
     
     margin-left: 0px;
@@ -75,14 +75,17 @@ QTabBar::tab:selected {
     color: #eb5f34;
     font-size: 17px;
     font-weight: bold;
+    
     padding-top: 4px;
     padding-left: 10px;
-    padding-right: 20px;
+    padding-right: 10px;
     padding-bottom: 4px;
-    margin-top: 0px;
+    
     margin-left: 0px;
     margin-right: 0px;
+    margin-top: 0px;
     margin-bottom: 0px;
+
     background: #000;
     /* border-bottom: 2px solid #ff9e28;
        border-bottom: 4px solid #bf3636;

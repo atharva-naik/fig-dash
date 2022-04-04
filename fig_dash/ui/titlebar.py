@@ -95,7 +95,7 @@ class TabSearchBar(QLineEdit):
         self.addAction(self.searchAction, self.LeadingPosition)
         self.setPlaceholderText("search tabs")
         # set size of tab search bar.
-        self.setFixedHeight(22)
+        self.setFixedHeight(24)
         self.setMaximumWidth(300)
         # connections.
         self.returnPressed.connect(self.switchTab)
@@ -115,7 +115,7 @@ class TabSearchBar(QLineEdit):
         # self.completer.popup().setFont()
         self.setCompleter(self.completer)
         # set style sheet.
-        self.setStyleSheet("""background: #292929; color: #fff; font-size: 17px; selection-background-color: #eb5f34;""")
+        self.setStyleSheet("""background: #292929; color: #fff; font-size: 17px; selection-background-color: #eb5f34; border-radius: 5px;""")
 
     def switchTab(self):
         text = self.text()
@@ -603,6 +603,12 @@ class TitleBar(QToolBar):
             tip="zoom in",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.accountBtn = self.initTitleBtn(
+            "navbar/account.png",
+            tip="open account settings",
+            # style=dash_bar_btn_style,
+            # size=(24,24)
+        )
         # self.wordCountBtn = self.initTitleBtn(
         #     "titlebar/word_count.svg", 
         #     tip="toggle visibility of word count, time to read display",
@@ -735,6 +741,8 @@ class TitleBar(QToolBar):
         # self.addWidget(self.transBtn)
         # self.addWidget(self.ttsBtn)
         self.addWidget(self.tab_searchbar)
+        self.addWidget(self.initBlank2(5))
+        self.addWidget(self.accountBtn)
         self.addWidget(self.initBlank())
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
@@ -807,6 +815,13 @@ class TitleBar(QToolBar):
         self.CtrlS.activated.connect(self.tabs.saveAs)
         self.zoomSlider.connectTabWidget(self.tabs)
         self.tab_searchbar.connectTabWidget(self.tabs)
+
+    def initBlank2(self, width=10):
+        btn = QWidget()
+        btn.setFixedWidth(width)
+        btn.setStyleSheet("borderL 0px; background: transparent;")
+
+        return btn
 
     def initBlank(self):
         btn = QToolButton(self)

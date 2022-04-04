@@ -8,4 +8,6 @@ pyttsx3
 requests
 pyautogui
 PyQtChart
+qtwidgets
+BlurWindow
 PyQtWebEngine

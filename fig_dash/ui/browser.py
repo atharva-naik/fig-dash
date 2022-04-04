@@ -889,7 +889,6 @@ class DebugWebView(QWebEngineView):
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
         # print(dir(self.menu))
-        # self.menu.setStyleSheet("background: #292929; color: #fff; border-radius: 20px;")
         
         # update palette.
         palette = self.menu.palette()
@@ -1393,9 +1392,10 @@ class Browser(DebugWebView):
         palette = self.menu.palette()
         palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
         palette.setColor(QPalette.Base, QColor(48,48,48,255))
-        palette.setColor(QPalette.Text, QColor(255,255,255))
+        palette.setColor(QPalette.Text, QColor(125,125,125))
         palette.setColor(QPalette.Window, QColor(48,48,48,255))
         palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
+        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
         # gradient = QLinearGradient(QPointF(0,0), QPointF(50,100))
         # gradient = QGradient(QGradient.YoungPassion)
         # gradient.setColorAt(0, QColor(161,31,83))

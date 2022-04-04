@@ -12,7 +12,7 @@ from fig_dash.api.browser.url.parse import UrlOrQuery
 # PyQt5 imports
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QPoint, QUrl, QEvent, QStringListModel, QObject, pyqtSignal, pyqtSlot, QThread
-from PyQt5.QtWidgets import QWidget, QAction, QDockWidget, QToolButton, QLineEdit, QHBoxLayout, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QAction, QMainWindow, QToolButton, QLineEdit, QHBoxLayout, QVBoxLayout #, QDockWidget 
 
 
 class DockWidgetAppBtn(QToolButton):
@@ -93,6 +93,7 @@ class DockWidgetUI(QWidget):
         #     background: black;
         # }""")
         # populate layout.
+        self.addBlank()
         self.layout.addWidget(self.powerBtn)
         self.layout.addWidget(self.searchbar)
         # cortana like AI button.
@@ -104,8 +105,15 @@ class DockWidgetUI(QWidget):
         self.layout.addStretch(1)
         self.layout.addWidget(self.audioStreamsBtn)
         self.layout.addWidget(self.settingsBtn)
+        self.addBlank()
         # add widgets to layout.
         self.setLayout(self.layout)
+
+    def addBlank(self, width=10):
+        widget = QWidget()
+        widget.setStyleSheet("background: transparent;")
+        widget.setFixedWidth(width)
+        self.layout.addWidget(widget)
 
     def initDockBtn(self, **args):
         dockBtn = DockWidgetBtn(**args)
@@ -113,22 +121,26 @@ class DockWidgetUI(QWidget):
         return dockBtn
 
 
-class DashDockWidget(QWidget):
+class DashDockWidget(QMainWindow):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(DashDockWidget, self).__init__(parent)
         self.ui = DockWidgetUI()
-        self.layout = QVBoxLayout()
-        self.layout.setSpacing(0)
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.addWidget(self.ui)
-        self.setLayout(self.layout)
-        # self.setStyleSheet("""
-        # QWidget {
-        #     background: black;
-        # }""")
-        palette = self.palette()
-        palette.setColor(QPalette.Base, QColor(29,29,29,255))
-        palette.setColor(QPalette.Text, QColor(255,255,255))
-        palette.setColor(QPalette.Window, QColor(29,29,29,255))
-        # palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
-        self.setPalette(palette)
+        self.setCentralWidget(self.ui)
+        # self.ui.setFixedHeight(30)
+        self.setFixedWidth(800)
+        self.setFixedHeight(50)
+        self.setWindowOpacity(0.8)
+        self.setStyleSheet("""
+        QMainWindow {
+            padding-top: 0px;
+            padding-bottom: 0px;
+            border-radius: 10px;
+            /* background: rgba(29, 29, 29, 220); */
+            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(0, 0, 0, 220), stop : 0.143 rgba(19, 19, 19, 220), stop : 0.286 rgba(32, 32, 32, 220), stop : 0.429 rgba(44, 44, 44, 220), stop : 0.571 rgba(58, 58, 58, 220), stop : 0.714 rgba(71, 71, 71, 220), stop : 0.857 rgba(85, 85, 85, 220), stop : 1.0 rgba(100, 100, 100, 220));
+        }""")
+        # palette = self.palette()
+        # palette.setColor(QPalette.Base, QColor(29,29,29,255))
+        # palette.setColor(QPalette.Text, QColor(255,255,255))
+        # palette.setColor(QPalette.Window, QColor(29,29,29,255))
+        # # palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
+        # self.setPalette(palette)

@@ -237,7 +237,6 @@ class GShortcutBtn(QToolButton):
             "shortcutbar", 
             self.type+"_active.svg"
         )
-        # self.size = args.get("size", (30,30)) 
         # self.setIconSize(QSize(*self.size))
         self.setIcon(FigD.Icon(self.inactive_icon_path))
         tip = args.get("tip", "a tip")
@@ -298,7 +297,12 @@ class SideToolBar(QToolBar):
                  name: str="", icon_size=(35,35)) -> None:
         super(SideToolBar, self).__init__(name, parent)
         self.metaBtns = {}
-        self.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
+        self.setStyleSheet("""
+            background-color: qlineargradient(x1 : 0.5, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgb(48, 48, 48), stop : 0.6 rgb(0, 0, 0));
+            /* background-color: qlineargradient(x1 : 0, y1 : 0, x2 : 0.7, y2 : 1, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); */
+            color: #fff; 
+            border: 0px;
+        """)
         # set icon size.
         self.setIconSize(QSize(*icon_size))
         self.setMovable(False)
@@ -351,11 +355,14 @@ QWidget {
 }
 QToolButton {
     color: #292929;
-    padding: 10px;
+    /* padding: 10px; */
+    padding: 5px;
     margin-right: 5px;
     margin-bottom: 5px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-    border-radius: 28px;
+    border-top-right-radius: 15px;
+    border-bottom-right-radius: 15px;
+    /* border-radius: 28px; */
 }
 QToolButton:hover {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 0.8), stop : 0.6 rgba(235, 204, 52, 0.9));
@@ -367,57 +374,57 @@ class UtilsLauncher(SideToolBar):
         self.weatherBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/weather.png"),
             tip="View today's weather and weekly forecast.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.calendarBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/calendar.png"),
             tip="Calendar widget.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.clockBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/clock.png"),
             tip="Clock, timer, stopwatch and other widgets.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.whiteboardBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/whiteboard.png"),
             tip="Need to explain something? Present your ideas on a whiteboard.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.kanbanBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/kanban.jpg"),
             tip="Organize your project with a kanban board.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.notesBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/notes.png"),
             tip="Add new notes.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.ideasBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/ideas.png"),
             tip="Have an idea? write it down. Tell me when I should remind you.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.newsBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/news.png"),
             tip="Discover news and tune your feed to suit your interests.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         self.botBtn = self.initUtilsBtn(
             icon=FigD.Icon("widget/floatmenu/bot.png"),
             tip="Bot assistant to help you out with productivity.",
-            size=QSize(45,45),
+            size=QSize(25,25),
         )
         # add buttons.
         self.addSpacer()
         self.addWidget(self.weatherBtn)
         self.addWidget(self.calendarBtn)
         self.addWidget(self.clockBtn)
-        self.addSpacer()
+        # self.addSpacer()
         self.addWidget(self.whiteboardBtn)
         self.addWidget(self.kanbanBtn)
-        self.addSpacer()
+        # self.addSpacer()
         self.addWidget(self.notesBtn)
         self.addWidget(self.ideasBtn)
         self.addWidget(self.newsBtn)

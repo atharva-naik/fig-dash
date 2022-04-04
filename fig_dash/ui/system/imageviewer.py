@@ -11,8 +11,8 @@ from fig_dash.ui import DashWidgetGroup
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QFontDatabase, QPalette
-from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
 from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTreeView, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
@@ -3760,7 +3760,7 @@ class ImageViewerFileTree(QWidget):
         # hide scroll bar.
         self.fileTree.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.fileTree.clicked.connect(self.fileItemClicked)
-        self.fileTree.setColumnWidth(0, 200)
+        self.fileTree.setColumnWidth(0, 300)
         # self.fileTree.setMinimumHeight(400)
         # add file tree to layout.
         self.layout.addWidget(self.fileTree)
@@ -3806,7 +3806,55 @@ class ImageViewerFileTree(QWidget):
         # if parent:
         # parent.fileBrowserVisBtn.setIcon(FigD.Icon(icon))
 
-
+class ImageViewerWebView(DebugWebView):
+    def contextMenuEvent(self, event):
+        self.menu = self.page().createStandardContextMenu()
+        self.menu.setObjectName("ImageViewerContextMenu")
+        data = self.page().contextMenuData()
+        # print("MediaType:", data.mediaType())       
+        # update palette.
+        palette = self.menu.palette()
+        palette.setColor(QPalette.Base, QColor(48,48,48))
+        palette.setColor(QPalette.Text, QColor(125,125,125))
+        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+        # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+        palette.setColor(QPalette.Window, QColor(255,255,255))
+        palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
+        self.menu.setPalette(palette)
+        # apply rounding mask.
+        roundingPath = QPainterPath()
+        self.menu.popup(event.globalPos())
+        roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
+        mask = QRegion(roundingPath.toFillPolygon().toPolygon())
+        self.menu.setMask(mask)
+        # if data.mediaType() == 1:
+        for action in self.menu.actions():
+            if action.text() == "Save page":
+                action.setIcon(FigD.Icon("system/imageviewer/save_page.svg"))
+            elif action.text() == "Back":
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("system/imageviewer/prev.svg"))
+                else:
+                    action.setIcon(FigD.Icon("system/imageviewer/prev_disabled.svg"))
+            elif action.text() == "Forward":
+                if action.isEnabled():
+                    action.setIcon(FigD.Icon("system/imageviewer/next.svg"))
+                else:
+                    action.setIcon(FigD.Icon("system/imageviewer/next_disabled.svg"))
+            elif action.text() == "Reload":
+                action.setIcon(FigD.Icon("system/imageviewer/reload.svg"))
+            elif action.text() == "Save image":
+                action.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
+            elif action.text() == "Copy image":
+                action.setIcon(FigD.Icon("system/imageviewer/copy_image.svg"))
+            elif action.text() == "Copy image address":
+                action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
+            elif action.text() == "Inspect":
+                action.setIcon(FigD.Icon("system/imageviewer/dev_tools.svg"))
+        # elif data.mediaType() == 0:
+        #     for action in self.menu.actions():
+        #         print(action.text())
 class ImageViewerWidget(QMainWindow):
     """
     [summary]
@@ -3857,7 +3905,7 @@ class ImageViewerWidget(QMainWindow):
         layout.setSpacing(0)
         self.layout = layout
         # build layout.
-        self.browser = DebugWebView()
+        self.browser = ImageViewerWebView()
         # self.statusbar = self.statusBar()
         # self.statusbar.setStyleSheet("""
         # QWidget {
@@ -3871,8 +3919,9 @@ class ImageViewerWidget(QMainWindow):
         layout.addWidget(self.browser.splitter)
         # set layout.
         centralWidget.setLayout(layout)
+        centralWidget.setObjectName("ImageViewerCentralWidget")
         centralWidget.setStyleSheet("""
-        QWidget {
+        QWidget#ImageViewerCentralWidget {
             border-radius: 20px;
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
         }""")

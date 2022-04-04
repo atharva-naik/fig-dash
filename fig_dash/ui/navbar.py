@@ -702,14 +702,14 @@ class DashNavBar(QWidget):
         layout.addWidget(self.extensionsBtn)
         self.btns.append(self.extensionsBtn)
         # account.
-        self.accountBtn = DashNavBarBtn(
-            icon="navbar/account.png",
-            tip="open account settings",
-            style=dash_bar_btn_style,
-            size=(24,24)
-        )
-        layout.addWidget(self.accountBtn)
-        self.btns.append(self.accountBtn)
+        # self.accountBtn = DashNavBarBtn(
+        #     icon="navbar/account.png",
+        #     tip="open account settings",
+        #     style=dash_bar_btn_style,
+        #     size=(24,24)
+        # )
+        # layout.addWidget(self.accountBtn)
+        # self.btns.append(self.accountBtn)
         # history.
         self.historyBtn = DashNavBarBtn(
             icon="navbar/history.svg",
