@@ -13,6 +13,7 @@ from typing import Union, Tuple, List
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
+from PyQt5.QtWebEngineCore import QWebEngineFindTextResult
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
 from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
@@ -421,6 +422,7 @@ class BrowserSearchPanel(QWidget):
         super(BrowserSearchPanel, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(5,5,5,5)
+        self.query = ""
         self.entry = QLineEdit()
         self.label = QLabel("0/0")
         self.entry.setStyleSheet("background: #fff; color: #000;")
@@ -505,6 +507,16 @@ class BrowserSearchPanel(QWidget):
         self.entry.returnPressed.connect(self.search)
         self.entry.textChanged.connect(self.search)
         self.setFocusProxy(self.entry)
+        # # Qt compatible flag object.
+        # self.flags = QWebEnginePage.FindFlags()
+        # python boolean flags.
+        self.isCaseSensitive = False
+        # connect slots to signals.
+        self.nextBtn.clicked.connect(self.nextResult)
+        self.prevBtn.clicked.connect(self.prevResult)
+        self.caseAction.triggered.connect(
+            self.toggleCaseFlag
+        )
 
         tip = "search in webpage"
         self.setToolTip(tip)
@@ -524,6 +536,23 @@ class BrowserSearchPanel(QWidget):
         dummy.addWidget(wrapper)
         self.setLayout(dummy)
         
+    def toggleCaseFlag(self):
+        # print("toggling case flag")
+        self.isCaseSensitive = not(self.isCaseSensitive)
+        if self.isCaseSensitive:
+            self.caseAction.setIcon(
+                FigD.Icon("browser/case_active.svg")
+            )
+        else:
+            self.caseAction.setIcon(
+                FigD.Icon("browser/case.svg")
+            )
+
+    def updateMatches(self, findTextResult: QWebEngineFindTextResult):
+        match_idx = findTextResult.activeMatch()
+        tot_matches = findTextResult.numberOfMatches()
+        self.label.setText(f"{match_idx}/{tot_matches}")
+
     def showEvent(self, event):
         super(BrowserSearchPanel, self).showEvent(event)
         self.setFocus(True)
@@ -545,10 +574,31 @@ class BrowserSearchPanel(QWidget):
         self.search("")
         self.hide()
 
+    def callback(self, has_match: str):
+        pass
+        # print("has_match:", has_match)
     def search(self, query=None):
         if query is None:
             query = self.entry.text()
-        self.browser.findText(query)
+        self.query = query
+        if self.isCaseSensitive:
+            self.browser.findText(query, resultCallback=self.callback, 
+                                  options=QWebEnginePage.FindCaseSensitively)
+        else:
+            self.browser.findText(query, resultCallback=self.callback,
+                                  options=QWebEnginePage.FindFlags())
+
+    def nextResult(self):
+        if self.isCaseSensitive:
+            self.browser.findText(self.query, options=QWebEnginePage.FindCaseSensitively)
+        else: 
+            self.browser.findText(self.query)
+
+    def prevResult(self):
+        if self.isCaseSensitive:
+            self.browser.findText(self.query, options=QWebEnginePage.FindBackward | QWebEnginePage.FindCaseSensitively)
+        else:
+            self.browser.findText(self.query, options=QWebEnginePage.FindBackward)
 
     def mousePressEvent(self, event):
         self.oldPos = event.globalPos()
@@ -574,12 +624,18 @@ class BrowserSearchPanel(QWidget):
 class SilentWebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, *args, **kwargs):
         pass
-
-
+# def findTextResultCallback(result):
+#     print(f"{result.activeMatch()}/{result.numberOfMatches()}")
 class CustomWebPage(QWebEnginePage):
     def __init__(self, *args, logging_level=0, 
-                 dash_window=None, **kwargs) -> None:
+                 dash_window=None, search_panel=None, 
+                 **kwargs) -> None:
         super(CustomWebPage, self).__init__(*args, **kwargs)
+        if search_panel is not None:
+            self.search_panel = search_panel
+            self.findTextFinished.connect(
+                self.search_panel.updateMatches
+            )
         self.consoleLoggingLevel = logging_level
         self.translator = DashTranslator()
         self.dash_window = dash_window
@@ -723,8 +779,6 @@ class DebugWebView(QWebEngineView):
                  zoomFactor=1.25, 
                  dev_tools_zoom=1.35):
         super(DebugWebView, self).__init__(parent)
-        custom_page = CustomWebPage(self, logging_level=3)
-        self.setPage(custom_page)
         self.devTools = self.initDevTools()
         self.devCloseBtn.clicked.connect(
             self.devTools.hide
@@ -746,6 +800,12 @@ class DebugWebView(QWebEngineView):
         self.searchPanel = BrowserSearchPanel()
         self.searchPanel.connectBrowser(self)
         self.searchPanel.move(50,50)
+
+        custom_page = CustomWebPage(
+            self, logging_level=3, 
+            search_panel=self.searchPanel,            
+        )
+        self.setPage(custom_page)
         # shortcuts.
         self.Esc = QShortcut(QKeySequence("Esc"), self)
         self.Esc.activated.connect(self.searchPanel.closePanel)
@@ -868,7 +928,10 @@ class DebugWebView(QWebEngineView):
 
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
+        print("triggered \x1b[34;1mui.browser.reactToCtrlF\x1b[0m")
+        print(f"self.searchPanel.isVisible(): {self.searchPanel.isVisible()}")
         self.searchPanel.show()
+        print(self.searchPanel.x(), self.searchPanel.y())
 
     def focusInEvent(self, event):
         print("entering focus")
@@ -879,11 +942,11 @@ class DebugWebView(QWebEngineView):
         self.CtrlF.setEnabled(False)
 
     def setUrl(self, url):
-        self.searchPanel.closePanel()
+        # self.searchPanel.closePanel()
         super(DebugWebView, self).setUrl(url)
 
     def load(self, url):
-        self.searchPanel.closePanel()
+        # self.searchPanel.closePanel()
         super(DebugWebView, self).load(url)
 
     def contextMenuEvent(self, event):
@@ -1077,7 +1140,9 @@ class Browser(DebugWebView):
         self.mime_database = QMimeDatabase()
         self.historyIndex = 0
         self.dash_window = window
-        custom_page = CustomWebPage(self, logging_level=3, dash_window=window)
+        custom_page = CustomWebPage(
+            self, search_panel=self.searchPanel, 
+            logging_level=3, dash_window=window)
         self.setPage(custom_page)
         # if window is not None:
         #     self.page().connectWindow(self.dash_window)
@@ -1524,6 +1589,7 @@ class Browser(DebugWebView):
 
     def updateTabTitle(self):
         try:
+            # self.searchPanel.closePanel()
             self.dash_window.navbar.searchbar.setText(
                 self.url().toString(QUrl.FullyEncoded)
             )
