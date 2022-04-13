@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+from fig_dash.ui import navbar
 import jinja2
 import getpass
 from typing import Union, Tuple, List
@@ -36,7 +37,8 @@ dash_window_style = jinja2.Template('''
 QMainWindow {
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 2, stop : 0.1 #000, stop : 0.2 #292929, stop : 0.7 #917459, stop : 0.8 #cf6400);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 2, stop : 0.1 #000, stop : 0.2 #292929, stop : 0.7 #917459, stop : 0.8 #cf6400); */
+    background: url('''+FigD.wallpaper("macos/apple.jpg")+''');
 }''')
 # qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220));
 dash_tabbar_style = jinja2.Template('''
@@ -74,8 +76,8 @@ QTabBar::tab {
 QTabBar::tab:hover {
     color: #fff;
     background: #323232;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
 }
 QTabBar::tab:selected {
@@ -83,8 +85,8 @@ QTabBar::tab:selected {
     border: 0px;
     background: #323232;
     font-weight: bold;
-    border-bottom-left-radius: 10px;
-    border-bottom-right-radius: 10px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     padding-top: 5px;
@@ -99,6 +101,13 @@ QTabBar::tab:selected {
 # #eb5f34, #ebcc34
 # #a11f53, #eb5f34
 # all the splitters.
+class WrapperWidget(QWidget):
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+
 class AppCloseButton(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(AppCloseButton, self).__init__(parent)
@@ -153,7 +162,7 @@ class DashWindow(QMainWindow):
         QStatusBar {
             color: #eb5f34;
             font-size: 16px;
-            background: #000;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         }""")
         self.statusBar().setMaximumHeight(30)
         # self.firstResizeOver = False
@@ -183,7 +192,7 @@ class DashWindow(QMainWindow):
 
         self.dock = DashDockWidget()
         self.dock.setParent(self.tabs)
-        self.dock.move(100, 100)
+        self.dock.move(300, 300)
         self.dock.show()
         # self.dock.setGeometry(100, 100, 500, 70)
         # self.dock.move(100, 100)
@@ -282,6 +291,7 @@ class DashWindow(QMainWindow):
         # tabs.openFile("/home/atharva/GUI/fig-dash/README.md")
         return tabs
         # if self.titlebar
+
     def initCentralWidget(self, **kwargs):
         self.menu = DashMenu(self, **kwargs)
         layout = QVBoxLayout()
@@ -289,6 +299,7 @@ class DashWindow(QMainWindow):
         layout.setSpacing(0)
         centralWidget = QWidget()
         centralWidget.setLayout(layout)
+        centralWidget.customName = "ui._ui.DashWindow::centralWidget"
         # add tab widget.
         self.navbar = DashNavBar(self)
         self.tabs = self.initTabWidget(**kwargs)
@@ -298,10 +309,13 @@ class DashWindow(QMainWindow):
         topLayout = QHBoxLayout()
         topLayout.setSpacing(5)
         topLayout.setContentsMargins(0, 0, 0, 0)
+        self.topbar.setObjectName("TopBar")
         self.topbar.setLayout(topLayout)
         self.topbar.setStyleSheet("""
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e47f2c, stop : 0.286 #e57a2d, stop : 0.429 #e5742d, stop : 0.571 #e56e2e, stop : 0.714 #e56830, stop : 0.857 #e46231, stop : 1.0 #e45c33); */
-        """)
+        /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e47f2c, stop : 0.286 #e57a2d, stop : 0.429 #e5742d, stop : 0.571 #e56e2e, stop : 0.714 #e56830, stop : 0.857 #e46231, stop : 1.0 #e45c33); */
+        QWidget#TopBar {
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+        }""")
         # self.topbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.topbar.setFixedHeight(35)
         # tabbar.
@@ -320,9 +334,19 @@ class DashWindow(QMainWindow):
         topLayout.addStretch(1)
         topLayout.addWidget(cornerWidget, 0, Qt.AlignVCenter)
         # add search bar.
-        self.navbar.setFixedHeight(38)
-        self.navbar.setStyleSheet("background: #000;")
+        self.navBarWrapper = QWidget()# WrapperWidget()
+        navBarLayout = QHBoxLayout()
+        navBarLayout.setContentsMargins(0, 0, 0, 0)
+        navBarLayout.setSpacing(0)
+        self.navBarWrapper.setObjectName("NavBarWrapper")
+        self.navBarWrapper.setStyleSheet("""
+        QWidget#NavBarWrapper {
+            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+        }""")
+        self.navBarWrapper.setFixedHeight(38)
         self.navbar.connectTabWidget(self.tabs)
+        navBarLayout.addWidget(self.navbar)
+        self.navBarWrapper.setLayout(navBarLayout)
         # main horizontal splitter.
         self.h_split = QSplitter(Qt.Horizontal)
         # add tabwidget
@@ -353,12 +377,18 @@ class DashWindow(QMainWindow):
         # self.h_split.setFixedHeight(500)
         # central vertical splitter.
         layout.insertWidget(0, self.h_split)
-        layout.insertWidget(0, self.navbar)
-        layout.insertWidget(0, self.topbar)
-        layout.insertWidget(0, self.menu)        
+        layout.insertWidget(0, self.menu) 
+        layout.insertWidget(0, self.navBarWrapper)
+        layout.insertWidget(0, self.topbar)       
         # self.floatmenu.connectWindow(self)
         # layout.addStretch(1)
         return centralWidget
+
+    def toggleNavBar(self):
+        # needed to do this because using WrapperWidget instance for navBarWrapper led to background styling being ignored.
+        if self.navBarWrapper.isVisible():
+            self.navBarWrapper.hide()
+        else: self.navBarWrapper.show()
 
     def setFlags(self, *flags):
         flag_map = {"frameless": "Qt.FramelessWindowHint", "ontop": "Qt.WindowStaysOnTopHint"}
@@ -387,8 +417,8 @@ class DashWindow(QMainWindow):
         self.shortcutbar.morePagesBtn.setPos()
         self.shortcutbar.moreSocialBtn.setPos()
         self.shortcutbar.moreSystemBtn.setPos()
-        dock_width = (self.width() - self.shortcutbar.width())//2
-        dock_height = self.height()-120
+        dock_width = 300 #(self.width() - self.shortcutbar.width())//2
+        dock_height = 300 # self.height()-120
         try: 
             self.dock.move(dock_width, dock_height)
             self.tabs.currentWidget().browser.searchPanel.setPos()

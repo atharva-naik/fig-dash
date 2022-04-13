@@ -15,9 +15,9 @@ from requests.exceptions import MissingSchema, InvalidSchema
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
 from PyQt5.QtWebEngineCore import QWebEngineFindTextResult
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
-from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
+from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QMovie, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
-from PyQt5.QtWidgets import QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
+from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.ui import DashWidgetGroup
@@ -460,12 +460,13 @@ class BrowserSearchPanel(QWidget):
             background: transparent;
         }""")
         wrapper = QWidget()
+        wrapper.setObjectName("Wrapper")
         wrapper.setLayout(self.layout)
         wrapper.setStyleSheet("""
-        QWidget {
+        QWidget#Wrapper {
             color: #fff;
             border: 0px;
-            border-radius: 5px;
+            border-radius: 10px;
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
         }""")
         self.entry.setStyleSheet("""
@@ -523,10 +524,10 @@ class BrowserSearchPanel(QWidget):
         self.setStatusTip(tip)
 
         shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(30)
+        shadow.setBlurRadius(20)
         shadow.setOffset(0,0)
-        shadow.setColor(QColor(235, 95, 52, 255))
-    
+        shadow.setColor(QColor(0, 0, 0))
+        # shadow.setColor(QColor(235, 95, 52, 255))
         wrapper.setFixedHeight(60)
         wrapper.setFixedWidth(500)
         wrapper.setGraphicsEffect(shadow)
@@ -1066,6 +1067,7 @@ class PageInfo(QWidget):
         glow_effect.setBlurRadius(5)
         glow_effect.setOffset(3,3)
         glow_effect.setColor(QColor(235, 95, 52))
+        
         wrapper = QWidget()
         wrapper.setObjectName("wrapper")
         wrapper.setStyleSheet('''
@@ -1151,6 +1153,7 @@ class Browser(DebugWebView):
         # self.setZoomFactor(self.currentZoomFactor)
         # self.extension_manager = ExtensionManager()
         # modify settings.
+        self.progress_started = False
         self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
         self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
@@ -1198,11 +1201,30 @@ class Browser(DebugWebView):
 
     def setProgress(self, progress):
         self.progress = progress
-        if self.progress == 100: 
-            # self.pbar = tqdm(range(100))
+        tabBar = self.tabWidget.tabBar()
+        i = self.tabWidget.currentIndex()
+        # when progress is started for the first time.
+        if self.progress_started == False:
+            # set the progress started for first time flag.
+            self.progress_started = True
+            # create animation label if it doesn't exist.
+            animLabel = tabBar.tabButton(i, QTabBar.LeftSide)
+            if animLabel is None: animLabel = QLabel()
+            # create the loading animation/movie/gif object.
+            movie = QMovie(FigD.icon("tabbar/loading.gif"))
+            # set the size.
+            movie.setScaledSize(QSize(20,20))
+            # set the movie for the label.
+            animLabel.setMovie(movie)
+            movie.start() # start showing the animation
+            tabBar.setTabButton(i, QTabBar.LeftSide, animLabel)
+        # when progress is finished.
+        if progress == 100:
+            # set the progress started flag to false.
+            self.progress_started = False
             return 
         try:
-            i = self.tabWidget.currentIndex()
+            pass
             # self.tabWidget.setTabText(i, f"Loading {self.progress}")
             # print(f"Loaded {self.url().toString()} {self.progress}%")
             # self.pbar.update(progress-self.pbar.n)
@@ -1696,8 +1718,19 @@ document.head.appendChild(newSelectStyle);
                 pageIcon = QIcon(icon_path.replace("file://",""))
         else:
             pageIcon = FigD.Icon("browser.svg")
-        self.tabs.setTabIcon(self.i, pageIcon)
-
+        
+        tabBar = self.tabWidget.tabBar()
+        animLabel = tabBar.tabButton(self.i, QTabBar.LeftSide)
+        if animLabel is None: animLabel = QLabel()
+        
+        print("\x1b[34;1msetting pixmap\x1b[0m")
+        self.pagePixmap = pageIcon.pixmap(QSize(20,20))
+        self.pagePixmap.save("DELETE_THIS_BROWSER_PIXMAP.png")
+        # print("pixmap:", animLabel.pixmap())
+        # print("movie:", animLabel.movie())
+        animLabel.setPixmap(self.pagePixmap)
+        tabBar.setTabButton(self.i, QTabBar.LeftSide, animLabel)
+        # self.tabs.setTabIcon(self.i, pageIcon)
     def setIcon(self, tabs, i: int):
         self.i = i
         self.tabs = tabs

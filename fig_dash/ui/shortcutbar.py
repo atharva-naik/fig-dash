@@ -21,7 +21,6 @@ QToolButton {
     padding: 10px;
     border-radius: 29px;
     background: transparent;
-    /* background: transparent; */
 }
 QToolButton:hover {
     border: 0px;
@@ -187,7 +186,7 @@ class MoreBtn(QToolButton):
         self.buttons = buttons
         self.more_toolbar = MoreToolbar()
         self.more_toolbar.connectSideBar(parent)
-        self.more_toolbar.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
+        self.more_toolbar.setStyleSheet("""    background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));""")
         # set icon size.
         self.more_toolbar.setIconSize(QSize(35,35))
         # make unmovable.
@@ -298,7 +297,7 @@ class SideToolBar(QToolBar):
         super(SideToolBar, self).__init__(name, parent)
         self.metaBtns = {}
         self.setStyleSheet("""
-            background-color: qlineargradient(x1 : 0.5, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgb(48, 48, 48), stop : 0.6 rgb(0, 0, 0));
+            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
             /* background-color: qlineargradient(x1 : 0, y1 : 0, x2 : 0.7, y2 : 1, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); */
             color: #fff; 
             border: 0px;
@@ -613,7 +612,7 @@ class ShortcutBar(QToolBar):
         self.addWidget(self.volumeUpBtn)
         self.addWidget(self.moreMediaBtn)
         self.addSpacer()
-        self.setStyleSheet("""background-color: qlineargradient(x1 : 0.7, y1 : 1, x2 : 0, y2 : 0, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); color: #fff; border: 0px;""")
+        self.setStyleSheet("""background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));""")
         # set icon size.
         self.setIconSize(QSize(35,35))
         # make unmovable.

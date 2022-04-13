@@ -16,10 +16,11 @@ dash_clock_style = '''
 QTabWidget {
     color: #fff;
     border: 0px;
-    background: transparent;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+    font-family: "Be Vietnam Pro";
 }
 QTabBar {
-    background: transparent;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
     padding: 2px;
     border: 0px;
 }
@@ -35,16 +36,15 @@ QTabBar::tab {
     margin-right: 10px;
     margin-top: 3px;
     margin-bottom: 3px;
-    /* border-bottom: 4px solid #bf3636; */
+    font-size: 16px;
 }
 QTabBar::tab:hover {
-    color: #bf3636;
+    color: #292929; /*#bf3636;*/
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34); */
 }
 QTabBar::tab:selected {
     border: 0px;
-    color: #eb5f34;
-    font-size: 18px;
+    color: #ff9e28;
     padding-top: 2px;
     padding-left: 10px;
     padding-right: 10px;
@@ -53,8 +53,8 @@ QTabBar::tab:selected {
     margin-right: 10px;
     margin-top: 3px;
     margin-bottom: 3px;
-    border-bottom: 4px solid #eb5f34;
-    /* border-bottom: 4px solid #bf3636; */
+    border-bottom: 2px solid #ff9e28;
+    /* #bf3636; */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
 clock_style = '''
@@ -62,7 +62,6 @@ QWidget {
     color: #fff;
     border: 0px;
     font-size: 60px;
-    background: transparent;
 }
 QToolButton {
     border: 0px;
@@ -167,23 +166,24 @@ class DashClock(QTabWidget):
         self.addTab(self.timer, "Timer")
         self.setCurrentIndex(0)
         self.setStyleSheet(dash_clock_style)
+        self.setAutoFillBackground(True)
 
 
 dash_calendar_style = '''
 QTabWidget {
     color: #fff;
     border: 0px;
-    background: transparent
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
 }
 QTabBar {
-    background: transparent;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
     padding: 2px;
     border: 0px;
 }
 QTabBar::tab {
     color: #fff;    
     border: 0px;
-    font-size: 18px;
+    font-size: 16px;
     
     padding-top: 2px;
     padding-left: 10px;
@@ -194,14 +194,13 @@ QTabBar::tab {
     margin-bottom: 3px;
 }
 QTabBar::tab:hover {
-    color: #bf3636;
+    color: #292929;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34); */
 }
 QTabBar::tab:selected {
     border: 0px;
-    color: #eb5f34;
-    font-size: 18px;
-
+    color: #ff9e28;
+    
     padding-top: 2px;
     padding-left: 10px;
     padding-right: 10px;
@@ -210,8 +209,7 @@ QTabBar::tab:selected {
     margin-top: 3px;
     margin-bottom: 3px;
     
-    border-bottom: 4px solid #eb5f34;
-    /* border-bottom: 4px solid #bf3636; */
+    border-bottom: 2px solid #ff9e28;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
 class Calendar(QWidget):
@@ -366,6 +364,7 @@ class DashCalendar(QTabWidget):
         self.addTab(self.moon_calendar, " "*3+"Moon Calendar"+" "*3)
         self.setCurrentIndex(0)
         self.setStyleSheet(dash_calendar_style)
+        self.setAutoFillBackground(True)
 
 
 def test_dash_clock():

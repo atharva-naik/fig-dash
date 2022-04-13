@@ -17,7 +17,7 @@ from fig_dash.ui.widget.codemirror import CodeMirrorEditor
 from fig_dash.ui.system.fileviewer import FileViewerWidget
 
 
-menu_background = "#000" 
+menu_background = "qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));" 
 menu_style = '''
 QWidget#DashMenuTab {
     border: 0px;
@@ -37,20 +37,23 @@ QTabWidget::pane {
     background: transparent;
 }
 QTabBar {
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e45c33, stop : 0.143 #e46231, stop : 0.286 #e56830, stop : 0.429 #e56e2e, stop : 0.571 #e5742d, stop : 0.714 #e57a2d, stop : 0.857 #e47f2c, stop : 1.0 #e4852c);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e45c33, stop : 0.143 #e46231, stop : 0.286 #e56830, stop : 0.429 #e56e2e, stop : 0.571 #e5742d, stop : 0.714 #e57a2d, stop : 0.857 #e47f2c, stop : 1.0 #e4852c); */
     border: 0px;
     padding: 2px;
     border: 0px;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(238, 238, 238, 0.7), stop : 0.143 rgba(233, 233, 233, 0.7), stop : 0.286 rgba(228, 228, 228, 0.7), stop : 0.429 rgba(223, 223, 223, 0.7), stop : 0.571 rgba(218, 218, 218, 0.7), stop : 0.714 rgba(214, 214, 214, 0.7), stop : 0.857 rgba(209, 209, 209, 0.7), stop : 1.0 rgba(204, 204, 204, 0.7)); */ 
+
 }
 QTabBar::tab {
     border: 0px;
-    border-top-left-radius: 7px;
-    border-top-right-radius: 7px;
+    /* border-top-left-radius: 7px;
+    border-top-right-radius: 7px; */
 
     color: #fff;
     background: transparent;
 
-    font-size: 17px;
+    font-size: 15px;
     font-weight: bold;
     font-family: 'Be Vietnam Pro', sans-serif;
     
@@ -63,17 +66,17 @@ QTabBar::tab {
     margin-right: 0px;
     margin-top: 0px;
     margin-bottom: 0px;
-    /* border-bottom: 2px solid transparent;
-       border-bottom: 4px solid #bf3636; */
+    /* border-bottom: 4px solid #bf3636; */
 }
 QTabBar::tab:hover {
     color: #292929;
+    border-bottom: 2px solid #292929;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop : 0.6 #eb5f34, stop: 0.9 #ebcc34); */
 }
 QTabBar::tab:selected {
     border: 0px;
-    color: #eb5f34;
-    font-size: 17px;
+    color: #ff9e28;
+    font-size: 15px;
     font-weight: bold;
     
     padding-top: 4px;
@@ -86,9 +89,8 @@ QTabBar::tab:selected {
     margin-top: 0px;
     margin-bottom: 0px;
 
-    background: #000;
-    /* border-bottom: 2px solid #ff9e28;
-       border-bottom: 4px solid #bf3636;
+    border-bottom: 2px solid #ff9e28;
+    /* border-bottom: 4px solid #bf3636;
        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 }'''
 menu_icon_set = [
@@ -139,7 +141,7 @@ class BrowserStatusBar(QWidget):
         btn.setStyleSheet("background: #292929; color: #fff;")
         btn.setStyleSheet('''
         QToolButton {
-            color: #6e6e6e;
+            color: #fff;
             border: 0px;
             font-family: 'Be Vietnam Pro', sans-serif;
             font-size: 16px;
@@ -171,12 +173,14 @@ class ViewMenuVisGroup(DashWidgetGroup):
         self.toggleGroup2 = self.initBtnGroup([
             {"icon": "menu/sysutils.svg", "tip": "open system utilites menu"},
             {"icon": "menu/notifications.svg", "tip": "toggle visibility of notifications overlay"},
+            {"icon": "menu/find_url.svg", "tip": "toggle navbar display"}
         ], orient="vertical", spacing=5)
         self.wordCountBtn = self.toggleGroup1.btns[0]
         self.tabToggleBtn = self.toggleGroup1.btns[1]
         self.dockBtn = self.toggleGroup1.btns[2]
         self.sysUtilsBtn = self.toggleGroup2.btns[0]
         self.notifsBtn = self.toggleGroup2.btns[1]
+        self.navbarToggleBtn = self.toggleGroup2.btns[2]
         # add widgets to layout.
         self.layout.addWidget(self.toggleGroup1, 0, Qt.AlignBottom)
         self.layout.addWidget(self.toggleGroup2, 0, Qt.AlignBottom)
@@ -200,6 +204,9 @@ class ViewMenuVisGroup(DashWidgetGroup):
         self.notifsBtn.clicked.connect(
             window.notifsPanel.toggle
         )
+        self.navbarToggleBtn.clicked.connect(
+            window.toggleNavBar
+        )
 
 
 class ViewMenu(QWidget):
@@ -210,6 +217,7 @@ class ViewMenu(QWidget):
         self.layout.setSpacing(0)
         # create groups.
         self.viewgroup = ViewMenuVisGroup()
+        self.viewgroup.setObjectName("DashSubMenu")
         self.notifsBtn = self.viewgroup.notifsBtn
         # create layout.
         self.layout.addWidget(self.viewgroup)
@@ -217,6 +225,7 @@ class ViewMenu(QWidget):
         self.layout.addStretch(1)
         # set layout.
         self.setLayout(self.layout)
+        self.setObjectName("DashMenuTab")
 
     def addSeparator(self):
         sep = QFrame()
@@ -257,25 +266,47 @@ class DashMenu(QTabWidget):
         self.createmenu = self.initCreateMenu(**args)
         self.paymentmenu = self.initPaymentMenu(**args)
         self.entertainmentmenu = self.initEntertainmentMenu(**args)
-
-        self.addTab(self.filemenu, FigD.Icon("menu/file.svg"), "File")        
-        self.addTab(self.editmenu, FigD.Icon("menu/edit.svg"), "Edit")
-        self.addTab(self.insertmenu, FigD.Icon("menu/insert.svg"), "Insert")
-        self.addTab(self.formatmenu, FigD.Icon("menu/format.svg"), "Format")
-        self.addTab(self.viewmenu, FigD.Icon("menu/view.svg"), "View")
-        self.addTab(self.codemenu, FigD.Icon("menu/code.svg"), "Code") 
-        self.addTab(self.browsermenu, FigD.Icon("menu/browser.svg"), "Browser") 
-        self.addTab(self.mailmenu, FigD.Icon("menu/mail.svg"), "Mail")    
-        self.addTab(self.musicmenu, FigD.Icon("menu/music.svg"), "Music")
-        self.addTab(self.imagemenu, FigD.Icon("menu/image.svg"), "Images")
-        self.addTab(self.videomenu, FigD.Icon("menu/video.svg"), "Videos")
-        self.addTab(self.formmenu, FigD.Icon("menu/form.svg"), "Forms")
-        self.addTab(self.eventmenu, FigD.Icon("menu/event.svg"), "Events")
-        self.addTab(self.terminalmenu, FigD.Icon("menu/terminal.svg"), "Terminal")
-        self.addTab(self.devicemenu, FigD.Icon("menu/device.svg"), "Devices")
-        self.addTab(self.createmenu, FigD.Icon("menu/create.svg"), "Create")
-        self.addTab(self.paymentmenu, FigD.Icon("menu/payment.svg"), "Payments")
-        self.addTab(self.entertainmentmenu, FigD.Icon("menu/entertainment.svg"), "Entertainment")
+        # tabBar set width to 100%.
+        # self.addTab(self.filemenu, FigD.Icon("menu/file.svg"), "File")        
+        # self.addTab(self.editmenu, FigD.Icon("menu/edit.svg"), "Edit")
+        # self.addTab(self.insertmenu, FigD.Icon("menu/insert.svg"), "Insert")
+        # self.addTab(self.formatmenu, FigD.Icon("menu/format.svg"), "Format")
+        # self.addTab(self.viewmenu, FigD.Icon("menu/view.svg"), "View")
+        # self.addTab(self.codemenu, FigD.Icon("menu/code.svg"), "Code") 
+        # self.addTab(self.browsermenu, FigD.Icon("menu/browser.svg"), "Browser") 
+        # self.addTab(self.mailmenu, FigD.Icon("menu/mail.svg"), "Mail")    
+        # self.addTab(self.musicmenu, FigD.Icon("menu/music.svg"), "Music")
+        # self.addTab(self.imagemenu, FigD.Icon("menu/image.svg"), "Images")
+        # self.addTab(self.videomenu, FigD.Icon("menu/video.svg"), "Videos")
+        # self.addTab(self.formmenu, FigD.Icon("menu/form.svg"), "Forms")
+        # self.addTab(self.eventmenu, FigD.Icon("menu/event.svg"), "Events")
+        # self.addTab(self.terminalmenu, FigD.Icon("menu/terminal.svg"), "Terminal")
+        # self.addTab(self.devicemenu, FigD.Icon("menu/device.svg"), "Devices")
+        # self.addTab(self.createmenu, FigD.Icon("menu/create.svg"), "Create")
+        # self.addTab(self.paymentmenu, FigD.Icon("menu/payment.svg"), "Payments")
+        # self.addTab(self.entertainmentmenu, FigD.Icon("menu/entertainment.svg"), "Entertainment")
+        self.addTab(self.filemenu, "File")        
+        self.addTab(self.editmenu, "Edit")
+        self.addTab(self.insertmenu, "Insert")
+        self.addTab(self.formatmenu, "Format")
+        self.addTab(self.viewmenu, "View")
+        self.addTab(self.codemenu, "Code") 
+        self.addTab(self.browsermenu, "Browser") 
+        self.addTab(self.mailmenu, "Mail")    
+        self.addTab(self.musicmenu, "Music")
+        self.addTab(self.imagemenu, "Images")
+        self.addTab(self.videomenu, "Videos")
+        self.addTab(self.formmenu, "Forms")
+        self.addTab(self.eventmenu, "Events")
+        self.addTab(self.terminalmenu, "Terminal")
+        self.addTab(self.devicemenu, "Devices")
+        self.addTab(self.createmenu, "Create")
+        self.addTab(self.paymentmenu, "Payments")
+        self.addTab(self.entertainmentmenu, "Entertainment")
+        # self.viewmenu.setStyleSheet("""
+        # QWidget#DashMenuTab {
+        #     background: """+menu_background+""";
+        # }""")
         self.currentChanged.connect(self.onTabChange)
         self.browser_statusbar = BrowserStatusBar()
         self.browser_statusbar.hide()
@@ -309,8 +340,8 @@ class DashMenu(QTabWidget):
         j = self.currentIndex()
         # print(menu_icon_set[j]["inactive"])
         # print(menu_icon_set[i]["active"])
-        self.setTabIcon(j, menu_icon_set[j]["inactive"])
-        self.setTabIcon(i, menu_icon_set[i]["active"])
+        # self.setTabIcon(j, QIcon(""))
+        # self.setTabIcon(i, menu_icon_set[i]["active"])
         self.updateStatusBar(i)
         super(DashMenu, self).setCurrentIndex(i)
 
@@ -332,8 +363,10 @@ class DashMenu(QTabWidget):
         '''check if currently active tab is clicked. If so toggle visibility of menubar.'''
         # print(self.currentIndex(), i)
         j = self.currentIndex()
-        self.setTabIcon(j, menu_icon_set[j]["inactive"])
+        self.setTabIcon(j, QIcon(None))
+        # self.setTabIcon(j, menu_icon_set[j]["inactive"])
         self.setTabIcon(i, menu_icon_set[i]["active"])
+        # self.setTabIcon(i, menu_icon_set[i]["active"])
         if i == j: 
             self.toggle()
         else: 
@@ -370,7 +403,7 @@ class DashMenu(QTabWidget):
     def collapse(self):
         self._collapsed = True
         self.toggleBtn.setIcon(FigD.Icon("menu/expand.svg"))
-        self.setFixedHeight(28)
+        self.setFixedHeight(30)
 
     def toggle(self):
         # print(self.collapsed)
@@ -542,7 +575,7 @@ class DashMenu(QTabWidget):
        
         CMToolbar = QWidget()
         # CMToolbar.setAttribute(Qt.WA_TranslucentBackground)
-        CMToolbar.setObjectName("DashSubMenu")
+        # CMToolbar.setObjectName("DashSubMenu")
         CMLayout = QVBoxLayout()
         CMLayout.setContentsMargins(0, 0, 0, 0)
         CMLayout.setSpacing(0)
@@ -554,7 +587,7 @@ class DashMenu(QTabWidget):
 
         VCSToolbar = QWidget()
         # VCSToolbar.setAttribute(Qt.WA_TranslucentBackground)
-        VCSToolbar.setObjectName("DashSubMenu")
+        # VCSToolbar.setObjectName("DashSubMenu")
         VCSLayout = QVBoxLayout()
         VCSLayout.setContentsMargins(0, 0, 0, 0)
         VCSLayout.setSpacing(0)
@@ -567,7 +600,7 @@ class DashMenu(QTabWidget):
 
         IPyToolbar = QWidget()
         # IPyToolbar.setAttribute(Qt.WA_TranslucentBackground)
-        IPyToolbar.setObjectName("DashSubMenu")
+        # IPyToolbar.setObjectName("DashSubMenu")
         IPyLayout = QVBoxLayout()
         IPyLayout.setContentsMargins(0, 0, 0, 0)
         IPyLayout.setSpacing(0)

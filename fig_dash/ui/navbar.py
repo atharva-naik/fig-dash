@@ -430,10 +430,10 @@ class DashSearchBar(QLineEdit):
         self.setCursorPosition(0)
 
     def search(self):
-        dash_navbar = self.parent()
-        central_widget = dash_navbar.parent()
-        dash_window = central_widget.parent()
-        tabs = dash_window.tabs
+        # dash_navbar = self.tabWidget
+        # central_widget = dash_navbar.parent()
+        # dash_window = central_widget.parent()
+        tabs = self.tabWidget # dash_window.tabs
         i = tabs.currentIndex()
         try:
             browser = tabs.currentWidget().browser
@@ -640,31 +640,31 @@ class NextNavBtn(BackNavBtn):
 
 
 dash_navbar_style = jinja2.Template('''
-QWidget {
-    background: #b1b1b1;
+QWidget#DashNavBar {
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
 }''')
 class DashNavBar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(DashNavBar, self).__init__(parent)
-        layout = QHBoxLayout()
-        layout.setContentsMargins(2, 2, 2, 2)
-        self.setLayout(layout)
+        super(DashNavBar, self).__init__(parent=parent)
+        self.setObjectName("DashNavBar")
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(2, 2, 2, 2)
         # go to previous page in history.
         self.btns = []
-        self.prevBtn = BackNavBtn(
+        self.backBtn = BackNavBtn(
             icon="navbar/prev.svg",
             tip="go to previous page in history",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.prevBtn)
-        self.btns.append(self.prevBtn)
+        self.layout.addWidget(self.backBtn)
+        self.btns.append(self.backBtn)
         # go to next page in history.
         self.nextBtn = NextNavBtn(
             icon="navbar/next.svg",
             tip="go to next page in history",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.nextBtn)
+        self.layout.addWidget(self.nextBtn)
         self.btns.append(self.nextBtn)
         # reload page.
         self.reloadBtn = ReloadBtn(
@@ -672,7 +672,7 @@ class DashNavBar(QWidget):
             tip="reload page",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.reloadBtn)
+        self.layout.addWidget(self.reloadBtn)
         self.btns.append(self.reloadBtn)
         # open homepage.
         self.homeBtn = DashNavBarBtn(
@@ -680,26 +680,25 @@ class DashNavBar(QWidget):
             tip="open homepage",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.homeBtn)
+        self.layout.addWidget(self.homeBtn)
         self.btns.append(self.homeBtn)
         # add search bar.
         self.searchbar = DashSearchBar(self)
         self.searchbar.setFixedHeight(33)
-        layout.addWidget(self.searchbar)
+        self.layout.addWidget(self.searchbar)
         # add search engine bar
         self.searchEngineBar = SearchEngineBar(self)
         self.searchEngineBar.setFixedHeight(33)
         self.searchEngineBar.setMaximumWidth(300)
-        layout.addWidget(self.searchEngineBar) 
+        self.layout.addWidget(self.searchEngineBar) 
 
-        self.setStyleSheet(dash_navbar_style.render())
         # extensions.
         self.extensionsBtn = DashNavBarBtn(
             icon="navbar/extensions.svg",
             tip="open extensions",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.extensionsBtn)
+        self.layout.addWidget(self.extensionsBtn)
         self.btns.append(self.extensionsBtn)
         # account.
         # self.accountBtn = DashNavBarBtn(
@@ -717,7 +716,7 @@ class DashNavBar(QWidget):
             style=dash_bar_btn_style,
             size=(24,24)
         )
-        layout.addWidget(self.historyBtn)
+        self.layout.addWidget(self.historyBtn)
         self.btns.append(self.historyBtn)
         # settings.
         self.settingsBtn = DashNavBarBtn(
@@ -725,13 +724,15 @@ class DashNavBar(QWidget):
             tip="open browser settings",
             style=dash_bar_btn_style
         )
-        layout.addWidget(self.settingsBtn)
+        self.layout.addWidget(self.settingsBtn)
         self.btns.append(self.settingsBtn)
         # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
         # self.setFixedHeight(50)
         # appy glow to all buttons
         for btn in self.btns:
             self.applyGlow(btn, color=(225,225,225))
+        self.setStyleSheet(dash_navbar_style.render())
+        self.setLayout(self.layout)
         # layout.addStretch(1)
     def applyGlow(self, widget, color=(235, 95, 52)):
         '''for applying glow effect to buttons'''
@@ -746,10 +747,10 @@ class DashNavBar(QWidget):
         self.searchbar.tabWidget = tabWidget
         self.reloadBtn.connectTabWidget(tabWidget)
         self.nextBtn.clicked.connect(tabWidget.nextUrl)
-        self.prevBtn.clicked.connect(tabWidget.prevUrl)
+        self.backBtn.clicked.connect(tabWidget.prevUrl)
         self.homeBtn.clicked.connect(tabWidget.home)
         self.nextBtn.connectTabWidget(tabWidget)
-        self.prevBtn.connectTabWidget(tabWidget)
+        self.backBtn.connectTabWidget(tabWidget)
 # class DashSearchBar(QWidget):
 #     def __init__(self, parent: Union[None, QWidget]=None):
 #         super(DashSearchBar, self).__init__(parent)

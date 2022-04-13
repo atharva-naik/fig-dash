@@ -840,7 +840,7 @@ class FileViewerStatus(QWidget):
         self.setObjectName("CodeMirrorStatus")
         self.setStyleSheet('''
         QWidget#CodeMirrorStatus {
-            color: #6e6e6e;
+            color: #fff;
             border: 0px;
             font-family: 'Be Vietnam Pro', sans-serif;
             font-size: 16px;

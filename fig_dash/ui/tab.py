@@ -364,9 +364,9 @@ class DashTabWidget(QTabWidget):
             browser = self.widget(i).browser
             dash_window.navbar.searchbar.setUrl(browser.url())
             if browser.history().canGoBack():
-                dash_window.navbar.prevBtn.setEnabled(True)
+                dash_window.navbar.backBtn.setEnabled(True)
             else: 
-                dash_window.navbar.prevBtn.setEnabled(False)
+                dash_window.navbar.backBtn.setEnabled(False)
             if browser.history().canGoForward():
                 dash_window.navbar.nextBtn.setEnabled(True)
             else: 
@@ -406,9 +406,9 @@ class DashTabWidget(QTabWidget):
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)
         browser.setZoomFactor(browser.currentZoomFactor)
         if browser.history().canGoBack():
-            self.dash_window.navbar.prevBtn.setEnabled(True)
+            self.dash_window.navbar.backBtn.setEnabled(True)
         else:
-            self.dash_window.navbar.prevBtn.setEnabled(False)
+            self.dash_window.navbar.backBtn.setEnabled(False)
         if browser.history().canGoForward():
             self.dash_window.navbar.nextBtn.setEnabled(True)
         else:
@@ -887,7 +887,7 @@ class TabBar(QTabBar):
         roundingPath.addRoundedRect(QRectF(contextMenu.rect()), 15, 15)
         mask = QRegion(roundingPath.toFillPolygon().toPolygon())
         contextMenu.setMask(mask)
-        
+
         if action == renameTab:
             # print(event.x(), event.y())
             try: self.tabs.renameDialog(clickedItem)

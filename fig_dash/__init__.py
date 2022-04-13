@@ -3,7 +3,7 @@
 import os
 import sys
 # Qt imports.
-from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence
+from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence, QGuiApplication
 from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR, QEvent
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMainWindow, QGraphicsBlurEffect
 # fig-dash imports.
@@ -46,7 +46,7 @@ class DashUI(QApplication):
             padding-right: 5px;
             padding-bottom: -1px;
             font-size:  17px;
-            background: #000;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
             font-family: 'Be Vietnam Pro', sans-serif;
         }""")
         ID = QFontDatabase.addApplicationFont(
