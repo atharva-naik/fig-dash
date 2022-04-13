@@ -128,7 +128,7 @@ class DashDockWidget(QMainWindow):
         self.setCentralWidget(self.ui)
         # self.ui.setFixedHeight(30)
         self.w = 800
-        self.h = 50 
+        self.h = 60 
         self.setFixedWidth(self.w)
         self.setFixedHeight(self.h)
         self.setWindowOpacity(0.8)
@@ -162,7 +162,7 @@ class DashDockWidget(QMainWindow):
                 alpha = 0
             else:
                 alpha = int(255*0.7)
-            print(c, c, c, alpha)
+            # print(c, c, c, alpha)
             stop = min(0.143*i, 1)
             lgrad.setColorAt(stop, QColor(c, c, c, alpha))
         # lgrad.setColorAt(0.143, QColor(22, 22, 22, int(255*0.9)))

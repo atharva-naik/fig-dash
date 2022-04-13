@@ -427,9 +427,16 @@ class DashMenu(QTabWidget):
 
     def initViewMenu(self, **args):
         self._viewmenu = ViewMenu()
-        self._viewmenu.setObjectName("DashMenuTab")
+        # self._viewmenu.setObjectName("DashMenuTab")
+        wrapper = QWidget()
+        wrapper.setObjectName("DashMenuTab")
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(self._viewmenu)
+        wrapper.setLayout(layout)
 
-        return self._viewmenu
+        return wrapper# self._viewmenu
 
     def initFormatMenu(self, **args):
         formatmenu = QWidget()
