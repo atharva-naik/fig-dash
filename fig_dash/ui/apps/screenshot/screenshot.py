@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import datetime
+from tkinter.messagebox import NO
 import pyautogui
 from PIL.ImageQt import ImageQt
 # Qt5 imports.
@@ -11,6 +12,7 @@ from PyQt5.QtWidgets import QSplitter, QApplication, QMainWindow, QWidget, QTabB
 # fig-dash imports.
 from fig_dash.utils import *
 from fig_dash.assets import FigD
+from fig_dash.ui.widget.boolean_toggle import BooleanToggleBtn
 
 
 class ScreenShotSelection(QWidget):
@@ -73,6 +75,26 @@ class ScreenShotSelection(QWidget):
         super(ScreenShotSelection, self).mouseReleaseEvent(event)
 
 
+class DelayBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]=None) -> None:
+        super(DelayBtn, self).__init__(parent)
+        self.setText("0s")
+        self.setIcon(FigD.Icon("apps/screenshot/delay.svg"))
+        self.setIconSize(QSize(30,30))
+        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            padding: 5px;
+            font-size: 16px;
+            border-radius: 10px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 100);
+        }""")
+
+
 class RecordingScopeSelector(QWidget):
     '''
     widget container for buttons to select scope of recording:
@@ -86,6 +108,10 @@ class RecordingScopeSelector(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setAttribute(Qt.WA_TranslucentBackground)
         # create buttons.
+        self.freeSelectBtn = self.initScopeBtn(
+            icon="free_selection.svg", text="Free Form",
+            tip="select free form area for screenshot"
+        )
         self.selectBtn = self.initScopeBtn(
             icon="select.svg", text="Select",
             tip="select rectangle on screen for capture"
@@ -104,6 +130,7 @@ class RecordingScopeSelector(QWidget):
         )
         # setup shit.
         self.btn_list = [
+            self.freeSelectBtn,
             self.selectBtn,
             self.screenBtn,
             self.windowBtn,
@@ -113,11 +140,13 @@ class RecordingScopeSelector(QWidget):
         self.state_index = 1
         self.setIndex(1)
         # connect to slots.
+        self.freeSelectBtn.clicked.connect(self.freeSelect)
         self.selectBtn.clicked.connect(self.select)
         self.screenBtn.clicked.connect(self.screen)
         self.windowBtn.clicked.connect(self.window)
         self.scrollBtn.clicked.connect(self.scroll)
         # build layout.
+        self.layout.addWidget(self.freeSelectBtn)
         self.layout.addWidget(self.selectBtn)
         self.layout.addWidget(self.screenBtn)
         self.layout.addWidget(self.windowBtn)
@@ -150,21 +179,25 @@ class RecordingScopeSelector(QWidget):
     def connectScreenshotUI(self, ui):
         self.ui = ui
 
-    def select(self):
+    def freeSelect(self):
         """set recording mode to select rectangle"""
         self.setIndex(0)
 
+    def select(self):
+        """set recording mode to select rectangle"""
+        self.setIndex(1)
+
     def screen(self):
         """set recording mode to whole screen"""
-        self.setIndex(1)
+        self.setIndex(2)
 
     def window(self):
         """set recording mode to a window"""
-        self.setIndex(2)
+        self.setIndex(3)
 
     def scroll(self):
         """set recording mode to scrolling screenshot"""
-        self.setIndex(3)
+        self.setIndex(4)
 
     def initScopeBtn(self, **args):
         btn = QToolButton()
@@ -186,7 +219,77 @@ class RecordingScopeSelector(QWidget):
         QToolButton:hover {
             background: rgba(255, 255, 255, 100);
         }""")
-        btn.setIconSize(QSize(40,40))
+        btn.setIconSize(QSize(35,35))
+        btn.setText(args.get("text","text"))
+        btn.setToolTip(args.get("tip", "a tip"))
+        btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        
+        return btn
+
+
+class MoreOptions(QWidget):
+    """
+    filters, border/outline, settings.
+    """
+    def __init__(self) -> None:
+        super(MoreOptions, self).__init__()
+        self.layout = QHBoxLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        # create buttons.
+        self.filtersBtn = self.initMoreBtn(
+            icon="filters.svg", text="Filters",
+            tip="apply filters on video/screenshot"
+        )
+        # make this a dropdown.
+        self.borderBtn = self.initMoreBtn(
+            icon="border.svg", text="Border",
+            tip="add an outline to screenshot"
+        )
+        self.settingsBtn = self.initMoreBtn(
+            icon="settings.svg", text="Settings",
+            tip="open screenshot settings."
+        )
+        # connect to slots.
+        self.borderBtn.clicked.connect(self.border)
+        self.filtersBtn.clicked.connect(self.filters)
+        self.settingsBtn.clicked.connect(self.settings)
+        # build layout.
+        self.layout.addWidget(self.borderBtn)
+        self.layout.addWidget(self.filtersBtn)
+        self.layout.addWidget(self.settingsBtn)
+        self.setLayout(self.layout)
+
+    def border(self):
+        pass
+
+    def filters(self):
+        pass
+
+    def settings(self):
+        pass
+
+    def initMoreBtn(self, **args):
+        btn = QToolButton()
+        icon = args.get("icon")
+        if icon:
+            icon = FigD.Icon(os.path.join(
+                "apps/screenshot",
+                icon
+            ))
+        btn.setIcon(icon)
+        btn.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            padding: 5px;
+            font-size: 14px;
+            border-radius: 10px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 100);
+        }""")
+        btn.setIconSize(QSize(25,25))
         btn.setText(args.get("text","text"))
         btn.setToolTip(args.get("tip", "a tip"))
         btn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
@@ -204,6 +307,14 @@ class ScreenshotSaveModeSelector(QWidget):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.setAttribute(Qt.WA_TranslucentBackground)
         # create buttons.
+        self.shareBtn = self.initScopeBtn(
+            icon="share.svg", text="Share",
+            tip="share image."
+        )
+        self.editBtn = self.initScopeBtn(
+            icon="edit.svg", text="Edit",
+            tip="open image in editor."
+        )
         self.copyBtn = self.initScopeBtn(
             icon="copy_to_clipboard.svg", text="Clipboard",
             tip="copy screenshot to clipboard."
@@ -217,15 +328,21 @@ class ScreenshotSaveModeSelector(QWidget):
         self.btn_list = [
             self.copyBtn,
             self.saveBtn,
+            self.editBtn,
+            self.shareBtn,
         ]
         self.state_index = 1
         self.setIndex(1)
         # connect to slots.
         self.copyBtn.clicked.connect(self.copyMode)
         self.saveBtn.clicked.connect(self.saveMode)
+        self.editBtn.clicked.connect(self.editMode)
+        self.shareBtn.clicked.connect(self.shareMode)
         # build layout.
         self.layout.addWidget(self.copyBtn)
         self.layout.addWidget(self.saveBtn)
+        self.layout.addWidget(self.editBtn)
+        self.layout.addWidget(self.shareBtn)
         self.setLayout(self.layout)
 
     def setIndex(self, i: int):
@@ -258,6 +375,14 @@ class ScreenshotSaveModeSelector(QWidget):
     def saveMode(self):
         """set recording mode to whole screen"""
         self.setIndex(1)
+
+    def editMode(self):
+        """open screenshot in editor"""
+        self.setIndex(2)
+
+    def shareMode(self):
+        """open screenshot in share mode"""
+        self.setIndex(3)
 
     def initScopeBtn(self, **args):
         btn = QToolButton()
@@ -293,6 +418,7 @@ class DashScreenshotUI(QMainWindow):
         self.setAttribute(Qt.WA_TranslucentBackground)
         centralWidget = self.initCentralWidget()
         self.setCentralWidget(centralWidget)
+        self.setWindowOpacity(0.98)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
         self.app = app
         self.scopeSelector.connectScreenshotUI(self)
@@ -378,13 +504,13 @@ class DashScreenshotUI(QMainWindow):
         self.hide()
         pyqtSleep(200)
         # entire screen.
-        if self.scopeSelector.index() == 0:
+        if self.scopeSelector.index() == 1:
             self.screen_shot_selection.show()
             return
             # img = pyautogui.screenshot(region=(0, 0, 300, 400))
-        elif self.scopeSelector.index() == 1:
+        elif self.scopeSelector.index() == 2:
             img = pyautogui.screenshot()
-        elif self.scopeSelector.index() == 3:
+        elif self.scopeSelector.index() == 4:
             img_list = []
             for i in range(5):
                 pyautogui.scroll(10)
@@ -401,6 +527,11 @@ class DashScreenshotUI(QMainWindow):
             /* background: #292929; */
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
         }""")
+        # delay button.
+        self.delayBtn = DelayBtn()
+        self.videoToggle = DelayBtn()
+        delayBtn = self.delayBtn
+        videoToggle = BooleanToggleBtn()
         # record button.
         recordBtn = self.initRecordBtn()
         self.recordBtn = recordBtn
@@ -410,11 +541,33 @@ class DashScreenshotUI(QMainWindow):
         # save mode selector.
         saveModeSelector = ScreenshotSaveModeSelector()
         self.saveModeSelector = saveModeSelector
+        # record widget.
+        recordWidget = QWidget()
+        recordWidget.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Minimum)
+        recordLayout = QHBoxLayout()
+        recordWidget.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            background: transparent;
+        }""")
+        recordLayout.setContentsMargins(0, 0, 0, 0)
+        recordLayout.setSpacing(80)
+        recordLayout.addWidget(videoToggle, 0, Qt.AlignVCenter)
+        recordLayout.addStretch(1)
+        recordLayout.addWidget(recordBtn, 0, Qt.AlignVCenter)
+        recordLayout.addStretch(1)
+        recordLayout.addWidget(delayBtn, 0, Qt.AlignVCenter)
+        recordWidget.setLayout(recordLayout)
+        # more options widget.
+        self.moreOptionsSelector = MoreOptions()
+        moreOptionsSelector = self.moreOptionsSelector
         # build layout.
         layout = QVBoxLayout()
         layout.addWidget(scopeSelector)
         layout.addWidget(saveModeSelector)
-        layout.addWidget(recordBtn, 0, Qt.AlignCenter)
+        layout.addWidget(moreOptionsSelector)
+        layout.addWidget(recordWidget, 0, Qt.AlignCenter)
         centralWidget.setLayout(layout)
         centralWidget.recordBtn = recordBtn
 
@@ -427,13 +580,13 @@ class DashScreenshotUI(QMainWindow):
             color: #fff;
             padding: 5px;
             font-size: 16px;
-            border-radius: 25px;
+            border-radius: 34px;
             background: transparent;
         }
         QToolButton:hover {
             background: rgba(255, 255, 255, 100);
         }""")
-        btn.setIconSize(QSize(40,40))
+        btn.setIconSize(QSize(55,55))
         btn.setIcon(FigD.Icon(os.path.join(
             "apps/screenshot",
             "record.svg"

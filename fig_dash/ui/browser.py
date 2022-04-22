@@ -797,6 +797,7 @@ class DebugWebView(QWebEngineView):
         self.splitter.setSizes([500, 300])
         # back reference to browser.
         self.splitter.browser = self
+        self._page_background_colors = []
 
         self.searchPanel = BrowserSearchPanel()
         self.searchPanel.connectBrowser(self)
@@ -823,6 +824,46 @@ class DebugWebView(QWebEngineView):
 
         self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+        self.titlebar = None
+
+    def getPageBackground(self):
+        """
+        get page background colors from computed css style.
+        """
+        self.page().runJavaScript(
+            "window.getComputedStyle(document.body).backgroundColor", 
+            self._set_background_color,
+        )
+
+    def _set_background_color(self, bgColor: str):
+        """set the background gradient from the returned gradient result."""
+        # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
+        import parse
+        try: 
+            matchExpr = "rgb({},{},{})"
+            bgColor = tuple(parse.parse(
+                matchExpr, bgColor
+            ))
+        except Exception as e:
+            print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
+            # handle a case where alpha is also present.
+            try:
+                matchExpr = "rgba({},{},{},{})"
+                bgColor = tuple(parse.parse(
+                    matchExpr, bgColor
+                ))
+            except Exception as e:
+                print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
+                # the default color.
+                bgColor = [89,89,89]
+        # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
+        self._page_background_color = bgColor
+        # print("\x1b[31;1mself.titlebar =\x1b[0m", self.titlebar)
+        if self.titlebar is not None:
+            r = bgColor[0]
+            g = bgColor[1]
+            b = bgColor[2]
+            self.titlebar.setTitleBarColor(r, g, b)
 
     def prevInHistory(self):
         self.back()
@@ -1665,6 +1706,8 @@ class Browser(DebugWebView):
         self.CtrlMinus.activated.connect(tabWidget.zoomOutTab)
         self.urlChanged.connect(self.updateTabTitle)
         try: 
+            self.titlebar = self.dash_window.titlebar
+            print("self.titlebar =", self.titlebar)
             self.dash_window = tabWidget.dash_window
             self.dash_window.statusBar().addWidget(self.statusbar)
         except AttributeError as e:

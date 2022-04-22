@@ -401,6 +401,7 @@ class DashTabWidget(QTabWidget):
         navbar.reloadBtn.setStopMode(False)
         browser.loadDevTools()
         browser.setSpellCheck(lang)
+        browser.getPageBackground()
         self.setTabText(i, "  "+browser.page().title())
         # print(f"\x1b[34mupdated tab title for urlChanged({browser.url().toString()})\x1b[0m")
         browser.page().linkHovered.connect(self.showLinkOnStatusBar)

@@ -10,7 +10,7 @@ from typing import Union, Tuple, List
 from PyQt5.QtPrintSupport import *
 from PyQt5.QtGui import QPixmap, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize 
-from PyQt5.QtWidgets import QApplication, QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut
+from PyQt5.QtWidgets import QApplication, QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut, QTabWidget
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.menu import DashMenu
@@ -38,7 +38,9 @@ QMainWindow {
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 2, stop : 0.1 #000, stop : 0.2 #292929, stop : 0.7 #917459, stop : 0.8 #cf6400); */
-    background: url('''+FigD.wallpaper("macos/apple.jpg")+''');
+    background: url('''+FigD.wallpapers(0)+''');
+    background-repeat: no-repeat; 
+    background-position: center;
 }''')
 # qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 220), stop : 0.6 rgba(235, 204, 52, 220));
 dash_tabbar_style = jinja2.Template('''
@@ -165,7 +167,7 @@ class DashWindow(QMainWindow):
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         }""")
         self.statusBar().setMaximumHeight(30)
-        # self.firstResizeOver = False
+        self.titlebar = TitleBar(self)
         self.centralWidget = self.initCentralWidget(**kwargs)
         self.tabs.connectWindow(self)
         self.setCentralWidget(self.centralWidget)
@@ -178,7 +180,7 @@ class DashWindow(QMainWindow):
         if maximize_by_default:
             self.showMaximized()
         # add title bar.
-        self.titlebar = TitleBar(self)
+        # self.titlebar = TitleBar(self)
         self.titlebar.connectTabWidget(self.tabs)
         # add shortcuts sidebar.
         self.shortcutbar = ShortcutBar(self)
@@ -195,7 +197,6 @@ class DashWindow(QMainWindow):
         self.dock.move(300, 300)
         self.dock.show()
         # self.dock.setGeometry(100, 100, 500, 70)
-        # self.dock.move(100, 100)
         self.shortcutbar.utils_launcher.connectWindow(self)
         # install event filter.
         self.installEventFilter(self)
@@ -303,7 +304,11 @@ class DashWindow(QMainWindow):
         # add tab widget.
         self.navbar = DashNavBar(self)
         self.tabs = self.initTabWidget(**kwargs)
+        print(self.tabs.children())
+        # self.tabs.setTabBarAutoHide(True)
+        # self.tabs.setTabPosition(QTabWidget.South)
         self.tabs.installEventFilter(self)
+        
         # top bar.
         self.topbar = QWidget()
         topLayout = QHBoxLayout()
@@ -350,6 +355,7 @@ class DashWindow(QMainWindow):
         # main horizontal splitter.
         self.h_split = QSplitter(Qt.Horizontal)
         # add tabwidget
+        self.tabs_stacked_widget = self.tabs.children()[0]
         self.h_split.addWidget(self.tabs)
         # add notifications and datetime splitter.
         self.datetime_notifs_splitter = self.initDatetime()
@@ -357,6 +363,15 @@ class DashWindow(QMainWindow):
         self.h_split.addWidget(self.datetime_notifs_splitter)
         self.h_split.setSizes([800,200,200])
         self.tabs.connectDropdown(self.h_split)
+
+        # hide the empty space that was once taken up by the tabbar.
+        # print(self.tabbar)
+        # print(self.tabs.tabBar())
+        # print(self.tabbar == self.tabs.tabBar())
+        # print(self.tabbar.parent())
+        # print(self.tabs.tabBar().parent())
+        # print(self.tabbar.parent() == self.tabs.tabBar().parent())
+        # self.tabs.tabBar().hide()
         # float menu widget
         # self.floatmenu = FloatMenu(self.tabs)
         # self.floatmenu.hide()
@@ -417,8 +432,8 @@ class DashWindow(QMainWindow):
         self.shortcutbar.morePagesBtn.setPos()
         self.shortcutbar.moreSocialBtn.setPos()
         self.shortcutbar.moreSystemBtn.setPos()
-        dock_width = 300 #(self.width() - self.shortcutbar.width())//2
-        dock_height = 300 # self.height()-120
+        dock_width = self.width()/2-350 #(self.width() - self.shortcutbar.width())//2
+        dock_height = self.height()-250
         try: 
             self.dock.move(dock_width, dock_height)
             self.tabs.currentWidget().browser.searchPanel.setPos()

@@ -1764,7 +1764,7 @@ class FileViewerOpenGroup(FileViewerGroup):
         # app selection dropdown.
         self.appDropdown = XdgOpenDropdown("text/plain")
         self.appDropdown.setFixedWidth(130)
-        self.appDropdown.setFixedHeight(22)
+        self.appDropdown.setFixedHeight(24)
         # self.mimeBtn.clicked.connect(
         #     lambda: os.system(f"gtk-launch {} {self.selected_item}")
         # )
@@ -1991,6 +1991,12 @@ class AppearanceSlider(QWidget):
         self.slider.setValue(value)
 # oa.set('backdrop-filter', 'brightness(0.3) sepia(0.7)')
 # oa.setBrightness(0.5)
+class FileViewerBlankGroup(FileViewerGroup):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FileViewerBlankGroup, self).__init__(parent,  "")
+        self.layout.addStretch(1)
+        self.setFixedWidth(400)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 class FileViewerAppearanceGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerAppearanceGroup, self).__init__(parent, "Appearance")
@@ -2117,6 +2123,7 @@ class FileViewerMenu(QWidget):
         self.opengroup = FileViewerOpenGroup()
         self.miscgroup = FileViewerMiscGroup()
         self.sharegroup = FileViewerShareGroup()
+        self.blankgroup = FileViewerBlankGroup()
         # self.appearancegroup = FileViewerAppearanceGroup()
         self.layout.addWidget(self.filegroup)
         # self.layout.addWidget(self.addSeparator())
@@ -2131,6 +2138,8 @@ class FileViewerMenu(QWidget):
         self.layout.addWidget(self.sharegroup)
         self.layout.addWidget(self.addSeparator())
         self.layout.addWidget(self.miscgroup)
+        self.layout.addWidget(self.addSeparator())
+        self.layout.addWidget(self.blankgroup)
 
         self.layout.addStretch(1)
         self.setLayout(self.layout)

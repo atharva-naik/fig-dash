@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # fig-dash imports.
-from fig_dash import FigD
+from fig_dash.assets import FigD
 from fig_dash.api.browser.url.parse import UrlOrQuery
 # qtwidgets import.
 from qtwidgets import AnimatedToggle

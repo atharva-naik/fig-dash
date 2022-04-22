@@ -16,7 +16,7 @@ dash_clock_style = '''
 QTabWidget {
     color: #fff;
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+    background: transparent;
     font-family: "Be Vietnam Pro";
 }
 QTabBar {
@@ -62,6 +62,7 @@ QWidget {
     color: #fff;
     border: 0px;
     font-size: 60px;
+    background: transparent;
 }
 QToolButton {
     border: 0px;
@@ -160,20 +161,34 @@ class DashClock(QTabWidget):
         self.stopwatch = StopWatch(self)
         self.timer = Timer(self)
         # add widgets to separate tabs.
-        self.addTab(self.clock, "Clock")
-        self.addTab(self.alarm, "Alarm")
-        self.addTab(self.stopwatch, "Stopwatch")
-        self.addTab(self.timer, "Timer")
+        self.addTab(self.wrap(self.clock), "Clock")
+        self.addTab(self.wrap(self.alarm), "Alarm")
+        self.addTab(self.wrap(self.stopwatch), "Stopwatch")
+        self.addTab(self.wrap(self.timer), "Timer")
         self.setCurrentIndex(0)
         self.setStyleSheet(dash_clock_style)
         self.setAutoFillBackground(True)
+
+    def wrap(self, _widget):
+        widget = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(_widget)
+        widget.setLayout(layout)
+        widget.setStyleSheet("""
+        QWidget {
+            background: transparent;
+        }""")
+
+        return widget
 
 
 dash_calendar_style = '''
 QTabWidget {
     color: #fff;
     border: 0px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));
+    background: transparent;
 }
 QTabBar {
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));

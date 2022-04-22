@@ -46,13 +46,14 @@ battery = jinja2.Template('''
       <rect x="26" y="5" stroke="#fff" stroke-width="1" width="3" height="6" fill="gray"></rect>
     </g>
 </svg>''')
+title_bar_default_bg = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #c24e2b, stop : 0.143 #c7502c, stop : 0.286 #cc522d, stop : 0.429 #d0542e, stop : 0.571 #d55630, stop : 0.714 #da5831, stop : 0.857 #df5a32, stop : 1.0 #e45c33)"""
 title_bar_style = jinja2.Template('''
 QToolBar {
     margin: 0px; 
     border: 0px; 
     color: #fff;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #c24e2b, stop : 0.143 #c7502c, stop : 0.286 #cc522d, stop : 0.429 #d0542e, stop : 0.571 #d55630, stop : 0.714 #da5831, stop : 0.857 #df5a32, stop : 1.0 #e45c33);
-
+    spacing: 0px;
+    background: {{ TITLEBAR_BACKGROUND_COLOR }};
     /* background: #000; */
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
     /* background: url({{ TITLEBAR_BACKGROUND_URL }}) */
@@ -63,14 +64,33 @@ QToolBar {
 ''')
 title_btn_style = '''
 QToolButton {
-    font-family: Helvetica;
     border-radius: 12px; 
+    font-family: Helvetica;
 }
 QToolButton:hover {
     background: rgba(255, 255, 255, 0.5);
     /* background: rgba(255, 223, 97, 0.5); */
-}   
-'''
+}'''
+title_btn_style_l = '''
+QToolButton {
+    background: #292929;
+    font-family: Helvetica;
+    /* border-top-left-radius: 5px; 
+    border-bottom-left-radius: 5px; */
+}'''
+title_btn_style_c = '''
+QToolButton {
+    background: #292929;
+    font-family: Helvetica;
+}'''
+title_btn_style_r = '''
+QToolButton {
+    background: #292929;
+    font-family: Helvetica;
+    /* border-top-right-radius: 5px; 
+    border-bottom-right-radius: 5px; */
+}'''
+
 window_title_bar_style = jinja2.Template('''
 QToolBar {
     margin: 0px; 
@@ -95,7 +115,7 @@ class TabSearchBar(QLineEdit):
         self.addAction(self.searchAction, self.LeadingPosition)
         self.setPlaceholderText("search tabs")
         # set size of tab search bar.
-        self.setFixedHeight(24)
+        self.setFixedHeight(26)
         self.setMaximumWidth(300)
         # connections.
         self.returnPressed.connect(self.switchTab)
@@ -115,7 +135,7 @@ class TabSearchBar(QLineEdit):
         # self.completer.popup().setFont()
         self.setCompleter(self.completer)
         # set style sheet.
-        self.setStyleSheet("""background: #292929; color: #fff; font-size: 17px; selection-background-color: #eb5f34; border-radius: 5px;""")
+        self.setStyleSheet("""background: #292929; color: #fff; font-size: 17px; selection-background-color: #eb5f34; border-radius: 7px;""")
 
     def switchTab(self):
         text = self.text()
@@ -391,38 +411,34 @@ class WindowTitleBar(QToolBar):
         self.printBtn = self.initTitleBtn(
             "titlebar/print.svg", 
             tip="print the webpage (as PDF).",
-            callback=self.callback if parent is None else parent.tabs.printPage
+            # callback=self.callback if parent is None else parent.tabs.printPage
         ) 
         self.viewSourceBtn = self.initTitleBtn(
             "titlebar/source.svg", 
             tip="view the source of the webpage.",
-            callback=self.callback if parent is None else parent.tabs.viewSource
-            # callback=self.callback if parent is None else parent.tabs.save
+            # callback=self.callback if parent is None else parent.tabs.viewSource
         )
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", 
             tip="save the source of the webpage.",
-            callback=self.callback if parent is None else parent.tabs.save
+            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.zoomInBtn = self.initTitleBtn(
             "titlebar/zoom_in.svg", 
             tip="zoom in",
-            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.findBtn = self.initTitleBtn(
             "titlebar/find_in_page.svg", 
             tip="find in page",
-            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.devToolsBtn = self.initTitleBtn(
             "titlebar/dev_tools.svg", 
             tip="toggle dev tools sidebar.",
-            callback=self.callback if parent is None else parent.tabs.toggleDevTools
+            # callback=self.callback if parent is None else parent.tabs.toggleDevTools
         )
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
             tip="zoom out",
-            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -438,6 +454,7 @@ class WindowTitleBar(QToolBar):
         self.zoomLabel.setText("125")
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
+            padding: 1px;
             color: #292929; /* #39a4e7; */
             font-size: 16px;
             font-weight: bold;
@@ -531,7 +548,11 @@ class WindowTitleBar(QToolBar):
         size = kwargs.get("size", (22,22))
         btn.setIconSize(QSize(*size))
         btn.clicked.connect(kwargs.get("callback", self.callback))
-        btn.setStyleSheet(title_btn_style)
+        style = kwargs.get("style", "default")
+        if style == "l": btn.setStyleSheet(title_btn_style_l)
+        elif style == "r": btn.setStyleSheet(title_btn_style_r)
+        elif style == "c": btn.setStyleSheet(title_btn_style_c)
+        else: btn.setStyleSheet(title_btn_style)
 
         return btn
 
@@ -558,7 +579,8 @@ class TitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None):
         super(TitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(title_bar_style.render(
-            TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
+            TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png"),
+            TITLEBAR_BACKGROUND_COLOR=title_bar_default_bg,
         ))
         self.tab_searchbar = TabSearchBar()
         self.setIconSize(QSize(22,22))
@@ -588,25 +610,27 @@ class TitleBar(QToolBar):
         #     callback=self.callback if parent is None else parent.floatmenu.toggle 
         # )
         self.printBtn = self.initTitleBtn(
-            "titlebar/print.svg", 
+            "titlebar/print.svg", style="c",
             tip="print the webpage (as PDF).",
-            callback=self.callback if parent is None else parent.tabs.printPage
+            size=(18,18),
+            # callback=self.callback if parent is None else parent.tabs.printPage
         ) 
         self.viewSourceBtn = self.initTitleBtn(
-            "titlebar/source.svg", 
+            "titlebar/source.svg", style="l",
             tip="view the source of the webpage.",
-            callback=self.callback if parent is None else parent.tabs.viewSource
-            # callback=self.callback if parent is None else parent.tabs.save
+            size=(18,18),
+            # callback=self.callback if parent is None else parent.tabs.viewSource
         )
         self.saveSourceBtn = self.initTitleBtn(
-            "titlebar/save.svg", 
+            "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",
-            callback=self.callback if parent is None else parent.tabs.save
+            size=(18,18),
+            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.zoomInBtn = self.initTitleBtn(
             "titlebar/zoom_in.svg", 
-            tip="zoom in",
-            # callback=self.callback if parent is None else parent.tabs.save
+            tip="zoom in", style="r",
+            size=(18,18),
         )
         self.accountBtn = self.initTitleBtn(
             "navbar/account.png",
@@ -621,18 +645,19 @@ class TitleBar(QToolBar):
         # )
         self.findBtn = self.initTitleBtn(
             "titlebar/find_in_page.svg", 
-            tip="find in page",
-            # callback=self.callback if parent is None else parent.tabs.save
+            tip="find in page", style="c",
+            size=(18,18),
         )
         self.devToolsBtn = self.initTitleBtn(
-            "titlebar/dev_tools.svg", 
+            "titlebar/dev_tools.svg", style="c",
             tip="toggle dev tools sidebar.",
-            callback=self.callback if parent is None else parent.tabs.toggleDevTools
+            size=(18,18),
+            # callback=self.callback if parent is None else parent.tabs.toggleDevTools
         )
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
-            tip="zoom out",
-            # callback=self.callback if parent is None else parent.tabs.save
+            tip="zoom out", style="c",
+            size=(18,18),
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -641,34 +666,30 @@ class TitleBar(QToolBar):
         self.bluetoothBtn = self.initTitleBtn(
             "titlebar/bluetooth.svg", 
             tip="open ubuntu's bluetooth panel.",
-            # callback=self.callback if parent is None else parent.tabs.save
         )
         self.bluetoothBtn.setFixedSize(QSize(17,17))
         self.fullscreenBtn.connectTitleBar(self)
         # self.onScreenKeyboard = self.initTitleBtn(
         #     "titlebar/onscreenkeyboard.svg", 
         #     tip="open on screen keyboard.",
-        #     # callback=self.callback if parent is None else parent.tabs.save
         # )
         # self.transBtn = self.initTitleBtn(
         #     "titlebar/trans.svg", 
         #     tip="open translation utility.",
-        #     # callback=self.callback if parent is None else parent.tabs.save
         # )
         # self.ttsBtn = self.initTitleBtn(
         #     "titlebar/tts.svg", 
         #     tip="open text to speech.",
-        #     # callback=self.callback if parent is None else parent.tabs.save
         # )
         self.zoomSlider = ZoomSlider()
         self.zoomLabel = QLineEdit()
         self.zoomLabel.setText("125")
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
-            color: #292929; /* #39a4e7; */
+            color: #fff; /* #39a4e7; */
+            background: #292929;
             font-size: 16px;
             font-weight: bold;
-            background: transparent;
         }""")
         self.zoomSlider.connectLabel(self.zoomLabel)
         palette = QPalette()
@@ -810,11 +831,22 @@ class TitleBar(QToolBar):
 
         return spacer
 
+    def setTitleBarColor(self, r: int, g: int, b: int):
+        self.setStyleSheet(title_bar_style.render(
+            TITLEBAR_BACKGROUND_COLOR=f"rgb({r},{g},{b})",
+        ))
+
     def connectTabWidget(self, tabWidget):
         self.tabs = tabWidget
         self.findBtn.clicked.connect(self.tabs.triggerFind)
         self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
+        
+        self.printBtn.clicked.connect(self.tabs.printPage) 
+        self.viewSourceBtn.clicked.connect(self.tabs.viewSource)
+        self.saveSourceBtn.clicked.connect(self.tabs.save)
+        self.devToolsBtn.clicked.connect(self.tabs.toggleDevTools)
+
         # self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
         self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
         self.CtrlS.activated.connect(self.tabs.saveAs)
@@ -824,7 +856,7 @@ class TitleBar(QToolBar):
     def initBlank2(self, width=10):
         btn = QWidget()
         btn.setFixedWidth(width)
-        btn.setStyleSheet("borderL 0px; background: transparent;")
+        btn.setStyleSheet("border 0px; background: transparent;")
 
         return btn
 
@@ -841,7 +873,11 @@ class TitleBar(QToolBar):
         size = kwargs.get("size", (22,22))
         btn.setIconSize(QSize(*size))
         btn.clicked.connect(kwargs.get("callback", self.callback))
-        btn.setStyleSheet(title_btn_style)
+        style = kwargs.get("style", "default")
+        if style == "l": btn.setStyleSheet(title_btn_style_l)
+        elif style == "r": btn.setStyleSheet(title_btn_style_r)
+        elif style == "c": btn.setStyleSheet(title_btn_style_c)
+        else: btn.setStyleSheet(title_btn_style)
 
         return btn
 

@@ -186,7 +186,7 @@ class MoreBtn(QToolButton):
         self.buttons = buttons
         self.more_toolbar = MoreToolbar()
         self.more_toolbar.connectSideBar(parent)
-        self.more_toolbar.setStyleSheet("""    background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));""")
+        self.more_toolbar.setStyleSheet("""    background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));""")
         # set icon size.
         self.more_toolbar.setIconSize(QSize(35,35))
         # make unmovable.
@@ -297,7 +297,7 @@ class SideToolBar(QToolBar):
         super(SideToolBar, self).__init__(name, parent)
         self.metaBtns = {}
         self.setStyleSheet("""
-            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.87), stop : 0.286 rgba(27, 27, 27, 0.84), stop : 0.429 rgba(32, 32, 32, 0.81), stop : 0.571 rgba(37, 37, 37, 0.79), stop : 0.714 rgba(41, 41, 41, 0.76), stop : 0.857 rgba(46, 46, 46, 0.73), stop : 1.0 rgba(51, 51, 51, 0.7));
             /* background-color: qlineargradient(x1 : 0, y1 : 0, x2 : 0.7, y2 : 1, stop : 0.3 rgba(32, 32, 32, 1), stop : 0.6 rgba(16, 16, 16, 1)); */
             color: #fff; 
             border: 0px;
@@ -364,7 +364,7 @@ QToolButton {
     /* border-radius: 28px; */
 }
 QToolButton:hover {
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 0.8), stop : 0.6 rgba(235, 204, 52, 0.9));
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(235, 95, 52, 0.8), stop : 0.6 rgba(235, 204, 52, 0.7));
 }''')
 class UtilsLauncher(SideToolBar):
     def __init__(self, parent: Union[QWidget, None]=None) -> None:
@@ -612,7 +612,12 @@ class ShortcutBar(QToolBar):
         self.addWidget(self.volumeUpBtn)
         self.addWidget(self.moreMediaBtn)
         self.addSpacer()
-        self.setStyleSheet("""background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));""")
+        # self.setStyleSheet("""background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));""")
+        self.setStyleSheet("""
+        QToolBar {
+            border: 0px;
+            background: qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.87), stop : 0.286 rgba(27, 27, 27, 0.84), stop : 0.429 rgba(32, 32, 32, 0.81), stop : 0.571 rgba(37, 37, 37, 0.79), stop : 0.714 rgba(41, 41, 41, 0.76), stop : 0.857 rgba(46, 46, 46, 0.73), stop : 1.0 rgba(51, 51, 51, 0.7));
+        }""")
         # set icon size.
         self.setIconSize(QSize(35,35))
         # make unmovable.

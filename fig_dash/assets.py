@@ -26,6 +26,14 @@ class AssetManager:
         self.static_dir = os.path.join(resource_dir, "static")
         self.locale_dir = os.path.join(resource_dir, "locales")
         self.wallpaper_dir = os.path.join(resource_dir, "wallpapers")
+        self.wallpaper_paths = []
+        for category in os.listdir(self.wallpaper_dir):
+            root = os.path.join(self.wallpaper_dir, category)
+            for filename in os.listdir(root):
+                self.wallpaper_paths.append(os.path.join(
+                    self.wallpaper_dir, 
+                    category, filename
+                ))
         # set constants.
         self.TempURLPath = QUrl.fromLocalFile(self.static_dir).toString()
 
@@ -36,6 +44,10 @@ class AssetManager:
     def wallpaper(self, path: str) -> str:
         '''return real absolute path of wallpaper.'''
         return os.path.join(self.wallpaper_dir, path)
+
+    def wallpapers(self, i: int):
+        '''return a list of all wallpapers.'''
+        return self.wallpaper_paths[i]
 
     def icon(self, path: str) -> str:
         '''return real absolute path'''
