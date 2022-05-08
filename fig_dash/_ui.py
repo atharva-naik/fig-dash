@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
-from fig_dash.ui import navbar
 import jinja2
 import getpass
-from typing import Union, Tuple, List
+from typing import *
 # Qt imports.
 # from PIL import Image, ImageQt
 from PyQt5.QtPrintSupport import *

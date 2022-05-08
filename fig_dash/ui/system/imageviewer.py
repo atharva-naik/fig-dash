@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from ast import Attribute
 import os
+import bs4
 import jinja2
+import svgpathtools
 from typing import Union
 from pathlib import Path
 # fig-dash imports.
@@ -13,7 +14,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTreeView, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -3681,6 +3682,36 @@ ImageViewerHTML = jinja2.Template(r"""
     </body>
 </html>
 """)
+scrollbar_style = '''
+QScrollBar:vertical {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0);
+}
+/* QScrollBar:vertical:hover {
+    background-color: rgba(255, 253, 184, 0.3);
+} */
+QScrollBar::handle:vertical {
+    min-height: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    /* background-color: transparent; */
+	background-color: rgba(255, 255, 255, 0.2);
+}
+QScrollBar::handle:vertical:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::add-line:vertical {
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    height: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}'''
 file_tree_style = '''
 QWidget {
     border: 0px;
@@ -3834,8 +3865,172 @@ class ImageViewerFileTree(QWidget):
             icon = "hide.svg"
         # if parent:
         # parent.fileBrowserVisBtn.setIcon(FigD.Icon(icon))
+def getAbsolutePath(item):
+	if item.parent() == None: 
+		return item.text(0)
+	else:
+		# print("item =", item.text(0))
+		return f"{getAbsolutePath(item.parent())}/{item.text(0)}"
+
 class ImageViewerSVGTree(QWidget):
-	pass
+	def __init__(self, parent: Union[None, QWidget]=None):
+		super(ImageViewerSVGTree, self).__init__(parent)
+		self.layout = QVBoxLayout()
+		self.layout.setContentsMargins(5, 5, 5, 5)
+		# tree widget & details pane.
+		self.tree = QTreeWidget()
+		self.details_pane = self.initDetailsPane()
+		self.splitter = QSplitter(Qt.Vertical)
+
+		self.tree.setColumnCount(1)
+		self.tree.setHeaderLabels(["name"])
+		print(self.tree.verticalScrollBar().setStyleSheet(
+			scrollbar_style
+		))
+		self._tree_records = {}
+		# self.tree.setHeaderLabels(["name", "id", "text", "fill", "width", "height", "opacity", "start", "end", "radius", "rotation", "large arc", "sweep"])
+		# self.tree.header().resizeSection(0, 100) # name
+		# self.tree.header().resizeSection(1, 50) # id
+		# self.tree.header().resizeSection(2, 100) # text
+		# self.tree.header().resizeSection(3, 80) # fill
+		# self.tree.header().resizeSection(4, 30) # width
+		# self.tree.header().resizeSection(5, 50) # height
+		# self.tree.header().resizeSection(6, 70) # opacity
+		# self.tree.header().resizeSection(7, 50) # start
+		# self.tree.header().resizeSection(8, 20) # end
+		# self.tree.header().resizeSection(9, 50) # radius
+		# self.tree.header().resizeSection(10, 70) # rotation
+		# self.tree.header().resizeSection(11, 80) # large arc
+		# self.true.header().resizeSection(12, 50) # sweep
+		self.tree.itemClicked.connect(self.printDetails)
+		self.tree.header().setStretchLastSection(True)
+		# add tree & details pane to splitter.
+		self.splitter.addWidget(self.tree)
+		self.splitter.addWidget(self.details_pane)
+
+		self.layout.addWidget(self.splitter)
+		# self.layout.addStretch(1)
+		self.setLayout(self.layout)
+
+	def printDetails(self, item):
+		record = self._tree_records.get(
+			getAbsolutePath(item), {}
+		)
+		print(record)
+
+	def initDetailsPane(self):
+		pane = QTextEdit()
+		pane.setReadOnly(True)
+		pane.setText("lol")
+		pane.setStyleSheet("""
+		QScrollBar:vertical {
+			border: 0px solid #999999;
+			width: 15px;
+			margin: 0px 0px 0px 0px;
+			background-color: rgba(255, 255, 255, 0);
+		}
+		/* QScrollBar:vertical:hover {
+			background-color: rgba(255, 253, 184, 0.3);
+		} */
+		QScrollBar::handle:vertical {
+			min-height: 0px;
+			border: 0px solid red;
+			border-radius: 0px;
+			background-color: transparent;
+		}
+		QScrollBar::handle:vertical:hover {
+			background-color: rgba(255, 255, 255, 0.5);
+		}
+		QScrollBar::add-line:vertical {
+			height: 0px;
+			subcontrol-position: bottom;
+			subcontrol-origin: margin;
+		}
+		QScrollBar::sub-line:vertical {
+			height: 0 px;
+			subcontrol-position: top;
+			subcontrol-origin: margin;
+		}""")
+		
+		return pane
+
+	def unfoldPath(self, path_key, path):
+		ctr = 0
+		op = {path_key: {}}
+		path = svgpathtools.parse_path(path)
+		# print("path_key =", path_key)
+		for part in path:
+			record = {}
+			record["end"] = str(part.end)
+			record["start"] = str(part.start)
+			if isinstance(part, svgpathtools.path.Line): 
+				op[path_key][f"line#{ctr}"] = record
+			elif isinstance(part, svgpathtools.path.Arc): 
+				op[path_key][f"arc#{ctr}"] = record
+			ctr += 1
+
+		return op
+
+	def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
+		if node.name == "path":
+			path_d = str(node.attrs["d"])
+			return self.unfoldPath(key, path_d)
+			# svgpathtools.parse_path(path_d)
+		elif node.name == "rect":
+			record = {
+				"id": node.attrs.get("id", "-"),
+				"fill": node.attrs.get("fill", "-"),
+				"width": node.attrs.get("width", "-"),
+				"height": node.attrs.get("height", "-"),
+				"opacity": node.attrs.get("opacity", "-"),
+			}
+			return record
+		elif node.name == "title":
+			record = {
+				"id": node.attrs.get("id", "-"),
+				"text": node.text,
+			}
+			return record
+		else: return {}
+
+	def loadSVGData(self, svg_data: str="") -> dict:
+		"""
+		load the SVG Tree data from 
+		Args:
+			svg_data (str, optional): String format SVG data. Defaults to "".
+
+		Returns:
+			dict: JSON object for tree
+		"""
+		# from pprint import pprint
+		tree = {}
+		treeItems = []
+		self.svg_data = bs4.BeautifulSoup(
+			svg_data, features="html.parser"
+		)
+		self.svg = self.svg_data.find("svg")
+		ctr = 0
+		for child in self.svg.children:
+			if str(child).strip() == "": continue
+			tree[child.name+f"#{ctr}"] = self.parseSVGNode(child, key=child.name+f"#{ctr}")
+			ctr += 1
+			# print("type(child) =", type(child))
+		for name, subtree in tree.items():
+			if name.startswith("path"):
+				treeItem = QTreeWidgetItem(self.tree, [name])
+				for key, record in subtree[name].items():
+					childItem = QTreeWidgetItem([key])
+					treeItem.addChild(childItem)
+					self._tree_records[getAbsolutePath(childItem)] = record
+				# self._tree_records[getAbsolutePath(treeItem)] = record
+			else:
+				record = subtree
+				treeItem = QTreeWidgetItem(self.tree, [name])
+				self._tree_records[getAbsolutePath(treeItem)] = record
+			treeItems.append(treeItem)
+		self.tree.insertTopLevelItems(0, treeItems)
+
+		return tree
 
 
 class ImageViewerLayers(QWidget):
@@ -3852,6 +4047,9 @@ class ImageViewerSidePanel(QTabWidget):
 		self.addTab(self.svgtree, "Elements")
 		self.addTab(self.layers, "Layers")
 		self.setStyleSheet("""color: #fff;""")
+
+	def loadSVGData(self, svg_data: str=""):
+		self.svgtree.loadSVGData(svg_data)
 
 
 class ImageViewerWebView(DebugWebView):
@@ -3944,6 +4142,9 @@ class ImageViewerWidget(QMainWindow):
         logo = FigD.Icon(logo)
         self.setWindowIcon(logo)
 
+    def loadSVGData(self, svg_data: str=""):
+        self.side_panel.svgtree.loadSVGData(svg_data)
+
     def initCentralWidget(self):
         centralWidget = QWidget()
         # init layout.
@@ -4027,6 +4228,10 @@ class ImageViewerWidget(QMainWindow):
         path = os.path.expanduser(path)
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
+		# load SVG data.
+        if path.endswith(".svg"):
+            svg_data = open(path).read()
+            self.loadSVGData(svg_data=svg_data) 
         # populate gallery info if path points to a folder.
         gallery_info = []
         if isdir:
@@ -4075,8 +4280,8 @@ def test_imageviewer():
         font-family: 'Be Vietnam Pro', sans-serif;
     }""")
 
-    titlebar = WindowTitleBar()
-    titlebar.setStyleSheet("background: transparent; color: #fff;")
+    titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
+    # titlebar.setStyleSheet("background: transparent; color: #fff;")
     palette = QPalette()
     palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
     titlebar.zoomSlider.setPalette(palette)
@@ -4088,6 +4293,7 @@ def test_imageviewer():
         background: transparent;
     }""")
     menu = ImageViewerMenu()
+    menu.hide()
     imageviewer = ImageViewerWidget(
         logo="system/imageviewer/logo.svg",
         parentless=True,
@@ -4103,7 +4309,8 @@ def test_imageviewer():
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
     )
-    imageviewer.open("~/Pictures/Elena_Posterised.png")
+    imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
+	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
     # imageviewer.open("~/Pictures/Elena_Posterised.png")
     imageviewer.setGeometry(100, 100, 960, 800)
     imageviewer.setWindowFlags(

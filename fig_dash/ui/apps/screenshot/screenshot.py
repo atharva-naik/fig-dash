@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 import os
 import datetime
-from tkinter.messagebox import NO
 import pyautogui
 from PIL.ImageQt import ImageQt
 # Qt5 imports.
