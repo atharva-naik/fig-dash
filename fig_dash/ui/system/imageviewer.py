@@ -4207,7 +4207,7 @@ class ImageViewerSidePanel(QTabWidget):
 		self.addTab(self.svgtree, "Elements")
 		self.addTab(self.layers, "Layers")
 		self.setStyleSheet("""color: #fff;""")
-		self.setFont(QFont("Be Vietnam Pro", 9))
+		self.setFont(QFont("Be Vietnam Pro", 10))
 
 	def loadSVGData(self, svg_data: str=""):
 		self.svgtree.loadSVGData(svg_data)
@@ -4304,12 +4304,22 @@ class ImageViewerWidget(QMainWindow):
         self.parentless = args.get("parentless")
         self.zoom_factor = args.get("zoom_factor", 1.3)
         # set icon.
+        self._fullscreen = False
         logo = args.get("logo")
         logo = FigD.Icon(logo)
         self.setWindowIcon(logo)
 
     def loadSVGData(self, svg_data: str=""):
         self.svgtree.loadSVGData(svg_data)
+
+    # def toggleFullScreen(self):
+    #     print("Full Screen")
+    #     if self._fullscreen:
+    #         self.showNormal()
+    #         self._fullscreen = False
+    #     else: 
+    #         self.showFullScreen()
+    #         self._fullscreen = True
 
     def initCentralWidget(self):
         centralWidget = QWidget()
@@ -4331,6 +4341,7 @@ class ImageViewerWidget(QMainWindow):
         self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
+        self.side_panel.hide()
         # self.filetree.hide()
         self.browser.splitter.insertWidget(0, self.side_panel)
         layout.addWidget(self.browser.splitter)
@@ -4478,7 +4489,9 @@ def test_imageviewer():
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
     )
-    imageviewer.open("~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg")
+    try: openpath = sys.argv[1]
+    except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+    imageviewer.open(openpath)
     # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
     # imageviewer.open("~/Pictures/Elena_Posterised.png")
@@ -4489,6 +4502,10 @@ def test_imageviewer():
 	# attach Ctrl+B to sidebar collapse.
     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
+    # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+    # print(FullScreen)
+    # FullScreen.activated.connect(imageviewer.toggleFullScreen)
+    titlebar.setWindowIcon(imageviewer.windowIcon())
     imageviewer.show()
     app.exec()
 

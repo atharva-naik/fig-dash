@@ -504,6 +504,8 @@ class WindowTitleBar(QToolBar):
         self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
         # self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        # to display window icon.
+        self.windowIcon = QLabel()
 
         self.addWidget(self.initBlank(5))
         self.addWidget(self.closeBtn)
@@ -525,7 +527,14 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.ribbonCollapseBtn)
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
+        self.addWidget(self.windowIcon)
+        self.addWidget(self.initBlank(5))
         self.setMaximumHeight(30)
+
+    def setWindowIcon(self, winIcon):
+        self.windowIcon.setPixmap(
+            winIcon.pixmap(QSize(30,30))
+        )
 
     def activate(self):
         self.closeBtn.setIcon(FigD.Icon("titlebar/close.svg"))
