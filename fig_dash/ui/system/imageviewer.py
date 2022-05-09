@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from operator import sub
 import os
 import bs4
+import json
 import jinja2
 import svgpathtools
 from typing import Union
@@ -12,9 +14,9 @@ from fig_dash.ui import DashWidgetGroup
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
+from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -3872,6 +3874,100 @@ def getAbsolutePath(item):
 		# print("item =", item.text(0))
 		return f"{getAbsolutePath(item.parent())}/{item.text(0)}"
 
+class SVGTreeNode:
+	def __init__(self, node: Union[bs4.element.Tag, svgpathtools.path.Arc, svgpathtools.path.Line, svgpathtools.path.CubicBezier],
+				 treewidget: Union[None, QTreeWidget]=None):
+		self._parent = None
+		self._children = []
+		self._record = {}
+		self._node = node # store the node object
+		# set the name field.
+		# name can be line, arc, g, path, rect, title etc.
+		if isinstance(node, bs4.element.Tag):
+			self._name = node.name
+		elif isinstance(node, svgpathtools.path.Arc):
+			self._name = "arc"
+		elif isinstance(node, svgpathtools.path.Line):
+			self._name = "line"
+		elif isinstance(node, svgpathtools.path.CubicBezier):
+			self._name = "cubic bezier"
+		else: 
+			# TODO: safe way to deal with this without crashing UI.
+			# need to write parsing function for this.
+			raise TypeError(f"SVGTreeNode has invalid datatype: `{type(node)}`. node = {str(node)}")
+
+		if treewidget is None:
+			self._tree_widget_item = QTreeWidgetItem([self.name()])
+		else:
+			self._tree_widget_item = QTreeWidgetItem(treewidget, [self.name()])
+		# build the subtree here (populate children)
+		if self.name() in ["g", "defs"]:
+			for child in node:
+				if str(child).strip() == "":
+					continue
+				childNode = SVGTreeNode(child)
+				self.addChild(childNode)
+		elif self.name() == "path":
+			path_objects = svgpathtools.parse_path(node.attrs["d"])
+			for child in path_objects:
+				childNode = SVGTreeNode(child)
+				self.addChild(childNode)
+		elif self.name() == "metadata":
+			print(node)
+			self._record = {"content": str(node)}
+		elif self.name() in ["lineargradient", "radialgradient"]:
+			for child in node:
+				if str(child).strip() == "":
+					continue
+				childNode = SVGTreeNode(child)
+				self.addChild(childNode)
+			self._record = dict(node.attrs) 
+		# elif self.name() == "stop":
+		# 	self._record = dict(node.attrs)
+		elif self.name() == "cubic bezier":
+			self._record["start"] = str(node.start)
+			self._record["end"] = str(node.end)
+			self._record["control1"] = str(node.control1)
+			self._record["control2"] = str(node.control2)
+		elif self.name() == "line":
+			self._record["start"] = str(node.start)
+			self._record["end"] = str(node.end)
+		elif self.name() == "arc":
+			self._record["start"] = str(node.start)
+			self._record["end"] = str(node.end)
+			self._record["rotation"] = str(node.rotation)
+			self._record["radius"] = str(node.radius)
+			self._record["sweep"] = str(node.sweep)
+			self._record["large arc"] = str(node.large_arc)
+		# elif self.name() == "title":
+		# 	self._record = {
+		# 		"id": node.attrs.get("id", "-"),
+		# 		"text": node.text,
+		# 	}
+		else:
+			self._record = dict(node.attrs)
+			# self._record = {
+			# 	"id": node.attrs.get("id", "-"),
+			# 	"fill": node.attrs.get("fill", "-"),
+			# 	"width": node.attrs.get("width", "-"),
+			# 	"height": node.attrs.get("height", "-"),
+			# 	"opacity": node.attrs.get("opacity", "-"),
+			# }
+		self._tree_widget_item._record_ptr = self._record
+
+	def toTreeWidgetItem(self):
+		return self._tree_widget_item
+
+	def name(self):
+		return self._name
+
+	def addChild(self, child):
+		assert isinstance(child, SVGTreeNode), "invalid node type"
+		self._tree_widget_item.addChild(child.toTreeWidgetItem())
+		self._children.append(child)
+		child.parent = self
+
+
 class ImageViewerSVGTree(QWidget):
 	def __init__(self, parent: Union[None, QWidget]=None):
 		super(ImageViewerSVGTree, self).__init__(parent)
@@ -3879,11 +3975,12 @@ class ImageViewerSVGTree(QWidget):
 		self.layout.setContentsMargins(5, 5, 5, 5)
 		# tree widget & details pane.
 		self.tree = QTreeWidget()
+		self.tree.setFont(QFont("Be Vietnam Pro", 10))
 		self.details_pane = self.initDetailsPane()
 		self.splitter = QSplitter(Qt.Vertical)
 
 		self.tree.setColumnCount(1)
-		self.tree.setHeaderLabels(["name"])
+		self.tree.setHeaderLabels(["element"])
 		print(self.tree.verticalScrollBar().setStyleSheet(
 			scrollbar_style
 		))
@@ -3902,7 +3999,7 @@ class ImageViewerSVGTree(QWidget):
 		# self.tree.header().resizeSection(10, 70) # rotation
 		# self.tree.header().resizeSection(11, 80) # large arc
 		# self.true.header().resizeSection(12, 50) # sweep
-		self.tree.itemClicked.connect(self.printDetails)
+		self.tree.itemClicked.connect(self.updateDetailsPane)
 		self.tree.header().setStretchLastSection(True)
 		# add tree & details pane to splitter.
 		self.splitter.addWidget(self.tree)
@@ -3912,16 +4009,36 @@ class ImageViewerSVGTree(QWidget):
 		# self.layout.addStretch(1)
 		self.setLayout(self.layout)
 
-	def printDetails(self, item):
-		record = self._tree_records.get(
-			getAbsolutePath(item), {}
-		)
-		print(record)
+	def updateDetailsPane(self, item):
+		record = item._record_ptr
+		html = """
+<div style="margin-left: auto; margin-right: auto; border: 1px solid green;">
+	<table width="100%" style="background-color: rgba(152, 186, 60, 0.2); font-family: 'Be Vietnam Pro', sans-serif;">
+		<thead border>
+			<tr>
+				<th style="border: 2px inset green; text-align: right; color: green;">field</th>
+				<th style="border: 2px inset green; text-align: right; color: green;">value</th>
+			</tr>
+		</thead>
+		<tbody>
+"""
+		for field, value in record.items():
+			# html += f"""&nbsp;<span style="color: green; font-weight: bold;">{field}:</span> {value}<br>\n"""
+			html += f"""
+			<tr> 
+				<td style="border: 2px inset green; text-align: right; color: green;">{field}</td>
+				<td style="border: 2px inset green; text-align: right; color: green;">{value}</td>
+			</tr>"""
+		html += """
+		</tbody>
+	</table>
+</div>"""
+		self.details_pane.setHtml(html)	
 
 	def initDetailsPane(self):
 		pane = QTextEdit()
 		pane.setReadOnly(True)
-		pane.setText("lol")
+		pane.setText("")
 		pane.setStyleSheet("""
 		QScrollBar:vertical {
 			border: 0px solid #999999;
@@ -3954,44 +4071,80 @@ class ImageViewerSVGTree(QWidget):
 		
 		return pane
 
-	def unfoldPath(self, path_key, path):
-		ctr = 0
-		op = {path_key: {}}
-		path = svgpathtools.parse_path(path)
-		# print("path_key =", path_key)
-		for part in path:
-			record = {}
-			record["end"] = str(part.end)
-			record["start"] = str(part.start)
-			if isinstance(part, svgpathtools.path.Line): 
-				op[path_key][f"line#{ctr}"] = record
-			elif isinstance(part, svgpathtools.path.Arc): 
-				op[path_key][f"arc#{ctr}"] = record
-			ctr += 1
+	# def unfoldPath(self, path_key, path):
+	# 	ctr = 0
+	# 	op = {path_key: {}}
+	# 	path = svgpathtools.parse_path(path)
+	# 	# print("path_key =", path_key)
+	# 	for part in path:
+	# 		record = {}
+	# 		record["end"] = str(part.end)
+	# 		record["start"] = str(part.start)
+	# 		if isinstance(part, svgpathtools.path.Line): 
+	# 			op[path_key][f"line#{ctr}"] = record
+	# 		elif isinstance(part, svgpathtools.path.Arc):
+	# 			record["large arc"] = str(part.large_arc)
+	# 			record["rotation"] = str(part.rotation)
+	# 			record["radius"] = str(part.radius)
+	# 			record["sweep"] = str(part.sweep)
+	# 			op[path_key][f"arc#{ctr}"] = record
+	# 		ctr += 1
 
-		return op
+	# 	return op
 
-	def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
-		if node.name == "path":
-			path_d = str(node.attrs["d"])
-			return self.unfoldPath(key, path_d)
-			# svgpathtools.parse_path(path_d)
-		elif node.name == "rect":
-			record = {
-				"id": node.attrs.get("id", "-"),
-				"fill": node.attrs.get("fill", "-"),
-				"width": node.attrs.get("width", "-"),
-				"height": node.attrs.get("height", "-"),
-				"opacity": node.attrs.get("opacity", "-"),
-			}
-			return record
-		elif node.name == "title":
-			record = {
-				"id": node.attrs.get("id", "-"),
-				"text": node.text,
-			}
-			return record
-		else: return {}
+	# def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
+	# 	if node.name == "path":
+	# 		path_d = str(node.attrs["d"])
+	# 		return self.unfoldPath(key, path_d)
+	# 		# svgpathtools.parse_path(path_d)
+	# 	elif node.name == "g":
+	# 		tree = {key: {}}
+	# 		subctr = 0
+	# 		for subnode in node:
+	# 			if str(subnode).strip() == "": continue
+	# 			tree[key][subnode.name+f"#{subctr}"] = self.parseSVGNode(subnode, key=subnode.name)
+	# 			subctr += 1
+	# 		return tree
+	# 	elif node.name == "rect":
+	# 		record = {
+	# 			"id": node.attrs.get("id", "-"),
+	# 			"fill": node.attrs.get("fill", "-"),
+	# 			"width": node.attrs.get("width", "-"),
+	# 			"height": node.attrs.get("height", "-"),
+	# 			"opacity": node.attrs.get("opacity", "-"),
+	# 		}
+	# 		return record
+	# 	elif node.name == "title":
+	# 		record = {
+	# 			"id": node.attrs.get("id", "-"),
+	# 			"text": node.text,
+	# 		}
+	# 		return record
+	# 	else: return {}
+
+	# def buildTreeItems(self, tree):
+	# 	treeItems = []
+	# 	for name, subtree in tree.items():
+	# 		if name.startswith("path"):
+	# 			treeItem = QTreeWidgetItem([name])
+	# 			# treeItem = QTreeWidgetItem(self.tree, [name])
+	# 			# print(tree)
+	# 			for key, record in subtree[name].items():
+	# 				childItem = QTreeWidgetItem([key])
+	# 				treeItem.addChild(childItem)
+	# 				self._tree_records[getAbsolutePath(childItem)] = record
+	# 		elif name.startswith("g"):
+	# 			treeItem = QTreeWidgetItem([name])
+	# 			for subname, subtree in tree[name].items():
+	# 				subTreeItem = self.buildTreeItems(subtree)
+	# 				treeItem.addChild(subTreeItem)
+	# 		else: # rect etc.
+	# 			record = subtree
+	# 			treeItem = QTreeWidgetItem(self.tree, [name])
+	# 			self._tree_records[getAbsolutePath(treeItem)] = record
+	# 		treeItems.append(treeItem)
+
+	# 	return treeItems
 
 	def loadSVGData(self, svg_data: str="") -> dict:
 		"""
@@ -4008,26 +4161,33 @@ class ImageViewerSVGTree(QWidget):
 		self.svg_data = bs4.BeautifulSoup(
 			svg_data, features="html.parser"
 		)
+		# print(svg_data)
 		self.svg = self.svg_data.find("svg")
-		ctr = 0
 		for child in self.svg.children:
 			if str(child).strip() == "": continue
-			tree[child.name+f"#{ctr}"] = self.parseSVGNode(child, key=child.name+f"#{ctr}")
-			ctr += 1
-			# print("type(child) =", type(child))
-		for name, subtree in tree.items():
-			if name.startswith("path"):
-				treeItem = QTreeWidgetItem(self.tree, [name])
-				for key, record in subtree[name].items():
-					childItem = QTreeWidgetItem([key])
-					treeItem.addChild(childItem)
-					self._tree_records[getAbsolutePath(childItem)] = record
-				# self._tree_records[getAbsolutePath(treeItem)] = record
-			else:
-				record = subtree
-				treeItem = QTreeWidgetItem(self.tree, [name])
-				self._tree_records[getAbsolutePath(treeItem)] = record
+			treeNode = SVGTreeNode(child, treewidget=self.tree)
+			treeItem = treeNode.toTreeWidgetItem()
 			treeItems.append(treeItem)
+		# print(json.dumps(tree))
+		# for name, subtree in tree.items():
+		# 	if name.startswith("path"):
+		# 		treeItem = QTreeWidgetItem(self.tree, [name])
+		# 		for key, record in subtree[name].items():
+		# 			childItem = QTreeWidgetItem([key])
+		# 			treeItem.addChild(childItem)
+		# 			self._tree_records[getAbsolutePath(childItem)] = record
+		# 	elif name.startswith("g"):
+		# 		treeItem = QTreeWidgetItem(self.tree, [name])
+		# 		for key, record in subtree[name].items():
+		# 			childItem = QTreeWidgetItem([key])
+		# 			treeItem.addChild(childItem)
+		# 			self._tree_records[getAbsolutePath(childItem)] = record
+		# 		# self._tree_records[getAbsolutePath(treeItem)] = record
+		# 	else:
+		# 		record = subtree
+		# 		treeItem = QTreeWidgetItem(self.tree, [name])
+		# 		self._tree_records[getAbsolutePath(treeItem)] = record
+		# 	treeItems.append(treeItem)
 		self.tree.insertTopLevelItems(0, treeItems)
 
 		return tree
@@ -4047,9 +4207,15 @@ class ImageViewerSidePanel(QTabWidget):
 		self.addTab(self.svgtree, "Elements")
 		self.addTab(self.layers, "Layers")
 		self.setStyleSheet("""color: #fff;""")
+		self.setFont(QFont("Be Vietnam Pro", 9))
 
 	def loadSVGData(self, svg_data: str=""):
 		self.svgtree.loadSVGData(svg_data)
+
+	def toggle(self):
+		if self.isVisible():
+			self.hide()
+		else: self.show()
 
 
 class ImageViewerWebView(DebugWebView):
@@ -4143,7 +4309,7 @@ class ImageViewerWidget(QMainWindow):
         self.setWindowIcon(logo)
 
     def loadSVGData(self, svg_data: str=""):
-        self.side_panel.svgtree.loadSVGData(svg_data)
+        self.svgtree.loadSVGData(svg_data)
 
     def initCentralWidget(self):
         centralWidget = QWidget()
@@ -4162,6 +4328,7 @@ class ImageViewerWidget(QMainWindow):
         #     background: #000;
         # }""")
         self.side_panel = ImageViewerSidePanel()
+        self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
         # self.filetree.hide()
@@ -4229,6 +4396,8 @@ class ImageViewerWidget(QMainWindow):
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
 		# load SVG data.
+        self.svgtree.tree.clear()
+        self.svgtree.details_pane.setText("click on element on the SVG tree to view details")
         if path.endswith(".svg"):
             svg_data = open(path).read()
             self.loadSVGData(svg_data=svg_data) 
@@ -4309,13 +4478,17 @@ def test_imageviewer():
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
     )
-    imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
+    imageviewer.open("~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg")
+    # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
     # imageviewer.open("~/Pictures/Elena_Posterised.png")
     imageviewer.setGeometry(100, 100, 960, 800)
     imageviewer.setWindowFlags(
         Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
     # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
+	# attach Ctrl+B to sidebar collapse.
+    CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
+    CtrlB.activated.connect(imageviewer.side_panel.toggle)
     imageviewer.show()
     app.exec()
 
