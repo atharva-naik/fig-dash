@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # titlebar for the main window
-from gc import callbacks
 import sys
 import jinja2
-from typing import Union
+from typing import *
 # fig-dash imports.
 from fig_dash import FigD
 from fig_dash.api.system.battery import Battery
@@ -83,6 +82,7 @@ QToolButton {
 title_btn_style_c = jinja2.Template('''
 QToolButton {
     padding: 2px;
+    border: 0px;
     background: {{ BACKGROUND }};
     font-family: Helvetica;
 }''')
@@ -441,16 +441,19 @@ class WindowTitleBar(QToolBar):
             style="c",
             # callback=self.callback if parent is None else parent.tabs.printPage
         ) 
+        self.printBtn.hide()
         self.viewSourceBtn = self.initTitleBtn(
             "titlebar/source.svg", style="l",
             tip="view the source of the webpage.",
             # callback=self.callback if parent is None else parent.tabs.viewSource
         )
+        self.viewSourceBtn.hide()
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",
             # callback=self.callback if parent is None else parent.tabs.save
         )
+        self.saveSourceBtn.hide()
         self.zoomInBtn = self.initTitleBtn(
             "titlebar/zoom_in.svg", 
             tip="zoom in", style="r",
@@ -459,14 +462,16 @@ class WindowTitleBar(QToolBar):
             "titlebar/find_in_page.svg", 
             tip="find in page", style="c",
         )
+        self.findBtn.hide()
         self.devToolsBtn = self.initTitleBtn(
             "titlebar/dev_tools.svg", style="c",
             tip="toggle dev tools sidebar.",
             # callback=self.callback if parent is None else parent.tabs.toggleDevTools
         )
+        self.devToolsBtn.hide()
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
-            tip="zoom out", style="c",
+            tip="zoom out", style="l",
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -485,15 +490,22 @@ class WindowTitleBar(QToolBar):
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
             padding: 1px;
-            color: #34b4eb; /* #39a4e7; */
+            color: #fff; /* #34b4eb; #39a4e7; */
             font-size: 16px;
             font-weight: bold;
             background: transparent;
         }""")
+        if "qlineargradient" in background:
+            sliderHandleColor = self.background.split(":")[-1].strip()
+            sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
+            sliderHandleColor = sliderHandleColor.strip()
+        else: 
+            sliderHandleColor = background
         self.zoomSlider.connectLabel(self.zoomLabel)
         palette = QPalette()
-        palette.setColor(QPalette.Base, QColor(41, 41, 41))
-        palette.setColor(QPalette.Highlight, QColor(52, 180, 235))
+        palette.setColor(QPalette.Window, QColor(0,0,0,0))
+        palette.setColor(QPalette.Button, QColor(sliderHandleColor))
+        palette.setColor(QPalette.Highlight, QColor(255,255,255))
         self.zoomSlider.setPalette(palette)
         # self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
@@ -531,9 +543,25 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.initBlank(5))
         self.setMaximumHeight(30)
 
-    def setWindowIcon(self, winIcon):
+    def resetSliderPalette(self):
+        if "qlineargradient" in self.background:
+            sliderHandleColor = self.background.split(":")[-1].strip()
+            sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
+            sliderHandleColor = sliderHandleColor.strip()
+        else: 
+            sliderHandleColor = self.background
+        self.zoomSlider.connectLabel(self.zoomLabel)
+        palette = QPalette()
+        palette.setColor(QPalette.Window, QColor(0,0,0,0))
+        palette.setColor(QPalette.Button, QColor(sliderHandleColor))
+        palette.setColor(QPalette.Highlight, QColor(255,255,255))
+        print("\x1b[34;1mresetSliderPalette:\x1b[0m", palette)
+        self.zoomSlider.setPalette(palette)
+
+    def setWindowIcon(self, winIcon: QIcon, 
+                      size: Tuple[int,int]=(30,30)):
         self.windowIcon.setPixmap(
-            winIcon.pixmap(QSize(30,30))
+            winIcon.pixmap(QSize(*size))
         )
 
     def activate(self):

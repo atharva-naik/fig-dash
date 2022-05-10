@@ -8,8 +8,8 @@ from pathlib import Path
 from fig_dash import FigD
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtWidgets import QWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtCore import Qt, QSize, QEvent
+from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QToolButton, QVBoxLayout, QHBoxLayout
 
 
 class DashWidgetGroupBtnStyler:
@@ -193,3 +193,81 @@ class DashWidgetGroup(QWidget):
 
     def initBtn(self, **args):
         return DashWidgetGroupBtn(self, **args)
+
+
+class FigDWindow(QMainWindow):
+    def __init__(self, widget, **args):
+        # self.layout.insertWidget(0, titlebar)
+        # set window icon, title and flags.
+        super(FigDWindow, self).__init__()
+        title = args.get("title", "FigD wrapped widget")
+        winIcon = args.get("icon", "system/clipboard/window_icon.png")
+        self.__win_icon_size = args.get("size", (30,30))
+        self.setWindowIcon(FigD.Icon(winIcon))
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowTitle(title)
+        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        self.setCentralWidget(widget)
+        # self.setStyleSheet("""
+        # QMainWindow {
+        #     border-radius: 20px;
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+        # }""")
+    def connectTitleBar(self, titlebar):
+        self.titlebar = titlebar
+        self.titlebar.setWindowIcon(
+            self.windowIcon(), 
+            size=self.__win_icon_size,
+        )
+        self.titlebar.connectWindow(self)
+
+    def notify(self, obj, event):
+        if event.type() == QEvent.WindowDeactivate:
+            self.titlebar.deactivate()
+        if event.type() == QEvent.WindowActivate:
+            self.titlebar.activate()
+
+        return super().notify(obj, event)
+
+def wrapFigDWindow(widget: QWidget, **args):
+    from fig_dash.ui.titlebar import WindowTitleBar
+    accent_color = args.get("accent_color", "red")
+    titlebar = WindowTitleBar(background=accent_color)
+
+    centralWidget = QWidget()
+    centralWidget.setObjectName("FigDUI")
+    centralWidget.setStyleSheet("""
+    QWidget#FigDUI {
+        border-radius: 20px;
+        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    }""")
+    layout = QVBoxLayout()
+    layout.setSpacing(0)
+    layout.setContentsMargins(0, 0, 0, 0)
+    # build layout.
+    layout.addWidget(titlebar)
+    layout.addWidget(widget)
+    centralWidget.setLayout(layout)
+
+    window = FigDWindow(widget=centralWidget, **args)
+    window.connectTitleBar(titlebar)
+    # style application tooltips
+    app = QApplication.instance()
+    app.setStyleSheet("""
+    QToolTip {
+        color: #fff;
+        border: 0px;
+        padding-top: -1px;
+        padding-left: 5px;
+        padding-right: 5px;
+        padding-bottom: -1px;
+        font-size:  17px;
+        background: #000;
+        font-family: 'Be Vietnam Pro', sans-serif;
+    }""")
+    # reposition window
+    screen_rect = app.desktop().screenGeometry()
+    w, h = screen_rect.width()//2, screen_rect.height()//2
+    window.move(w, h)
+
+    return window

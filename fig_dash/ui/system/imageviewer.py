@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 from operator import sub
 import os
+from turtle import title
 import bs4
 import json
 import jinja2
@@ -4438,8 +4439,6 @@ class ImageViewerWidget(QMainWindow):
         self.browser.load(render_url)
         # self.filetree.setRootPath(path)
         # print(path)
-
-
 def test_imageviewer():
     import sys
     from fig_dash.ui.titlebar import TitleBar
@@ -4462,16 +4461,6 @@ def test_imageviewer():
 
     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
     # titlebar.setStyleSheet("background: transparent; color: #fff;")
-    palette = QPalette()
-    palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
-    titlebar.zoomSlider.setPalette(palette)
-    titlebar.zoomLabel.setStyleSheet("""
-    QLineEdit {
-        color: #fff;
-        font-size: 16px;
-        font-weight: bold;
-        background: transparent;
-    }""")
     menu = ImageViewerMenu()
     menu.hide()
     imageviewer = ImageViewerWidget(
@@ -4502,10 +4491,12 @@ def test_imageviewer():
 	# attach Ctrl+B to sidebar collapse.
     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
-    # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+    FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+    FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
     # print(FullScreen)
     # FullScreen.activated.connect(imageviewer.toggleFullScreen)
     titlebar.setWindowIcon(imageviewer.windowIcon())
+    titlebar.resetSliderPalette()
     imageviewer.show()
     app.exec()
 

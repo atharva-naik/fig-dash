@@ -5,6 +5,7 @@ import os
 import jinja2
 from pprint import pprint
 from typing import Union, Tuple, List
+# PyQt5 imports.
 from PyQt5.QtGui import QColor, QKeySequence
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, Qt, QUrl, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QToolBar, QToolButton, QWidget, QVBoxLayout, QHBoxLayout, QSizePolicy, QGraphicsDropShadowEffect
