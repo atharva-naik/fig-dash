@@ -11,13 +11,13 @@ from typing import Union
 from pathlib import Path
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import DashWidgetGroup
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.ui.titlebar import WindowTitleBar
+from fig_dash.ui import DashWidgetGroup, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion
+from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -28,7 +28,7 @@ ViewerJSPluginCSS = r"""/*!
  * Released under the MIT license
  *
  * Date: 2022-02-13T08:39:57.620Z
- */.viewer-close:before,.viewer-flip-horizontal:before,.viewer-flip-vertical:before,.viewer-fullscreen-exit:before,.viewer-fullscreen:before,.viewer-next:before,.viewer-one-to-one:before,.viewer-play:before,.viewer-prev:before,.viewer-reset:before,.viewer-rotate-left:before,.viewer-rotate-right:before,.viewer-zoom-in:before,.viewer-zoom-out:before{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAAAUCAYAAABWOyJDAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAQPSURBVHic7Zs/iFxVFMa/0U2UaJGksUgnIVhYxVhpjDbZCBmLdAYECxsRFBTUamcXUiSNncgKQbSxsxH8gzAP3FU2jY0kKKJNiiiIghFlccnP4p3nPCdv3p9778vsLOcHB2bfveeb7955c3jvvNkBIMdxnD64a94GHMfZu3iBcRynN7zAOI7TG15gHCeeNUkr8zaxG2lbYDYsdgMbktBsP03jdQwljSXdtBhLOmtjowC9Mg9L+knSlcD8TNKpSA9lBpK2JF2VdDSR5n5J64m0qli399hNFMUlpshQii5jbXTbHGviB0nLNeNDSd9VO4A2UdB2fp+x0eCnaXxWXGA2X0au/3HgN9P4LFCjIANOJdrLr0zzZ+BEpNYDwKbpnQMeAw4m8HjQtM6Z9qa917zPQwFr3M5KgA6J5rTJCdFZJj9/lyvGhsDvwFNVuV2MhhjrK6b9bFiE+j1r87eBl4HDwCF7/U/k+ofAX5b/EXBv5JoLMuILzf3Ap6Z3EzgdqHMCuF7hcQf4HDgeoHnccncqdK/TvSDWffFXI/exICY/xZyqc6XLWF1UFZna4gJ7q8BsRvgd2/xXpo6P+D9dfT7PpECtA3cnWPM0GXGFZh/wgWltA+cDNC7X+AP4GzjZQe+k5dRxuYPeiuXU7e1qwLpDz7dFjXKRaSwuMLvAlG8zZlG+YmiK1HoFqT7wP2z+4Q45TfEGcMt01xLoNZEBTwRqD4BLpnMLeC1A41UmVxsXgXeBayV/Wx20rpTyrpnWRft7p6O/FdqzGrDukPNtkaMoMo3FBdBSQMOnYBCReyf05s126fU9ytfX98+mY54Kxnp7S9K3kj6U9KYdG0h6UdLbkh7poFXMfUnSOyVvL0h6VtIXHbS6nOP+s/Zm9mvyXW1uuC9ohZ72E9uDmXWLJOB1GxsH+DxPftsB8B6wlGDN02TAkxG6+4D3TWsbeC5CS8CDFce+AW500LhhOW2020TRjK3b21HEmgti9m0RonxbdMZeVzV+/4tF3cBpP7E9mKHNL5q8h5g0eYsCMQz0epq8gQrwMXAgcs0FGXGFRcB9wCemF9PkbYqM/Bas7fxLwNeJPdTdpo4itQti8lPMqTpXuozVRVXPpbHI3KkNTB1NfkL81j2mvhDp91HgV9MKuRIqrykj3WPq4rHyL+axj8/qGPmTqi6F9YDlHOvJU6oYcTsh/TYSzWmTE6JT19CtLTJt32D6CmHe0eQn1O8z5AXgT4sx4Vcu0/EQecMydB8z0hUWkTd2t4CrwNEePqMBcAR4mrBbwyXLPWJa8zrXmmLEhNBmfpkuY2102xxrih+pb+ieAb6vGhuA97UcJ5KR8gZ77K+99xxeYBzH6Q3/Z0fHcXrDC4zjOL3hBcZxnN74F+zlvXFWXF9PAAAAAElFTkSuQmCC");background-repeat:no-repeat;background-size:280px;color:transparent;display:block;font-size:0;height:20px;line-height:0;width:20px}.viewer-zoom-in:before{background-position:0 0;content:"Zoom In"}.viewer-zoom-out:before{background-position:-20px 0;content:"Zoom Out"}.viewer-one-to-one:before{background-position:-40px 0;content:"One to One"}.viewer-reset:before{background-position:-60px 0;content:"Reset"}.viewer-prev:before{background-position:-80px 0;content:"Previous"}.viewer-play:before{background-position:-100px 0;content:"Play"}.viewer-next:before{background-position:-120px 0;content:"Next"}.viewer-rotate-left:before{background-position:-140px 0;content:"Rotate Left"}.viewer-rotate-right:before{background-position:-160px 0;content:"Rotate Right"}.viewer-flip-horizontal:before{background-position:-180px 0;content:"Flip Horizontal"}.viewer-flip-vertical:before{background-position:-200px 0;content:"Flip Vertical"}.viewer-fullscreen:before{background-position:-220px 0;content:"Enter Full Screen"}.viewer-fullscreen-exit:before{background-position:-240px 0;content:"Exit Full Screen"}.viewer-close:before{background-position:-260px 0;content:"Close"}.viewer-container{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;bottom:0;direction:ltr;font-size:0;left:0;line-height:0;overflow:hidden;position:absolute;right:0;top:0;-ms-touch-action:none;touch-action:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.viewer-container ::-moz-selection,.viewer-container::-moz-selection{background-color:transparent}.viewer-container ::selection,.viewer-container::selection{background-color:transparent}.viewer-container:focus{outline:0}.viewer-container img{display:block;height:auto;max-height:none!important;max-width:none!important;min-height:0!important;min-width:0!important;width:100%}.viewer-canvas{bottom:0;left:0;overflow:hidden;position:absolute;right:0;top:0}.viewer-canvas>img{height:auto;margin:15px auto;max-width:90%!important;width:auto}.viewer-footer{bottom:0;left:0;overflow:hidden;position:absolute;right:0;text-align:center}.viewer-navbar{background-color:rgba(0,0,0,.5);overflow:hidden}.viewer-list{box-sizing:content-box;height:50px;margin:0;overflow:hidden;padding:1px 0}.viewer-list>li{color:transparent;cursor:pointer;float:left;font-size:0;height:50px;line-height:0;opacity:.5;overflow:hidden;transition:opacity .15s;width:30px}.viewer-list>li:focus,.viewer-list>li:hover{opacity:.75}.viewer-list>li:focus{outline:0}.viewer-list>li+li{margin-left:1px}.viewer-list>.viewer-loading{position:relative}.viewer-list>.viewer-loading:after{border-width:2px;height:20px;margin-left:-10px;margin-top:-10px;width:20px}.viewer-list>.viewer-active,.viewer-list>.viewer-active:focus,.viewer-list>.viewer-active:hover{opacity:1}.viewer-player{background-color:#000;bottom:0;cursor:none;display:none;right:0;z-index:1}.viewer-player,.viewer-player>img{left:0;position:absolute;top:0}.viewer-toolbar>ul{display:inline-block;margin:0 auto 5px;overflow:hidden;padding:6px 3px}.viewer-toolbar>ul>li{background-color:rgba(0,0,0,.5);border-radius:50%;cursor:pointer;float:left;height:24px;overflow:hidden;transition:background-color .15s;width:24px}.viewer-toolbar>ul>li:focus,.viewer-toolbar>ul>li:hover{background-color:rgba(0,0,0,.8)}.viewer-toolbar>ul>li:focus{box-shadow:0 0 3px #fff;outline:0;position:relative;z-index:1}.viewer-toolbar>ul>li:before{margin:2px}.viewer-toolbar>ul>li+li{margin-left:1px}.viewer-toolbar>ul>.viewer-small{height:18px;margin-bottom:3px;margin-top:3px;width:18px}.viewer-toolbar>ul>.viewer-small:before{margin:-1px}.viewer-toolbar>ul>.viewer-large{height:30px;margin-bottom:-3px;margin-top:-3px;width:30px}.viewer-toolbar>ul>.viewer-large:before{margin:5px}.viewer-tooltip{background-color:rgba(0,0,0,.8);border-radius:10px;color:#fff;display:none;font-size:12px;height:20px;left:50%;line-height:20px;margin-left:-25px;margin-top:-10px;position:absolute;text-align:center;top:50%;width:50px}.viewer-title{color:#ccc;display:inline-block;font-size:12px;line-height:1.2;margin:0 5% 5px;max-width:90%;opacity:.8;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s;white-space:nowrap}.viewer-title:hover{opacity:1}.viewer-button{background-color:rgba(0,0,0,.5);border-radius:50%;cursor:pointer;height:80px;overflow:hidden;position:absolute;right:-40px;top:-40px;transition:background-color .15s;width:80px}.viewer-button:focus,.viewer-button:hover{background-color:rgba(0,0,0,.8)}.viewer-button:focus{box-shadow:0 0 3px #fff;outline:0}.viewer-button:before{bottom:15px;left:15px;position:absolute}.viewer-fixed{position:fixed}.viewer-open{overflow:hidden}.viewer-show{display:block}.viewer-hide{display:none}.viewer-backdrop{background-color:rgba(0,0,0,.5)}.viewer-invisible{visibility:hidden}.viewer-move{cursor:move;cursor:-webkit-grab;cursor:grab}.viewer-fade{opacity:0}.viewer-in{opacity:1}.viewer-transition{transition:all .3s}@-webkit-keyframes viewer-spinner{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}@keyframes viewer-spinner{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}.viewer-loading:after{-webkit-animation:viewer-spinner 1s linear infinite;animation:viewer-spinner 1s linear infinite;border:4px solid hsla(0,0%,100%,.1);border-left-color:hsla(0,0%,100%,.5);border-radius:50%;content:"";display:inline-block;height:40px;left:50%;margin-left:-20px;margin-top:-20px;position:absolute;top:50%;width:40px;z-index:1}@media (max-width:767px){.viewer-hide-xs-down{display:none}}@media (max-width:991px){.viewer-hide-sm-down{display:none}}@media (max-width:1199px){.viewer-hide-md-down{display:none}}"""
+ */.viewer-close:before,.viewer-flip-horizontal:before,.viewer-flip-vertical:before,.viewer-fullscreen-exit:before,.viewer-fullscreen:before,.viewer-next:before,.viewer-one-to-one:before,.viewer-play:before,.viewer-prev:before,.viewer-reset:before,.viewer-rotate-left:before,.viewer-rotate-right:before,.viewer-zoom-in:before,.viewer-zoom-out:before{background-image:url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAARgAAAAUCAYAAABWOyJDAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAABx0RVh0U29mdHdhcmUAQWRvYmUgRmlyZXdvcmtzIENTNui8sowAAAQPSURBVHic7Zs/iFxVFMa/0U2UaJGksUgnIVhYxVhpjDbZCBmLdAYECxsRFBTUamcXUiSNncgKQbSxsxH8gzAP3FU2jY0kKKJNiiiIghFlccnP4p3nPCdv3p9778vsLOcHB2bfveeb7955c3jvvNkBIMdxnD64a94GHMfZu3iBcRynN7zAOI7TG15gHCeeNUkr8zaxG2lbYDYsdgMbktBsP03jdQwljSXdtBhLOmtjowC9Mg9L+knSlcD8TNKpSA9lBpK2JF2VdDSR5n5J64m0qli399hNFMUlpshQii5jbXTbHGviB0nLNeNDSd9VO4A2UdB2fp+x0eCnaXxWXGA2X0au/3HgN9P4LFCjIANOJdrLr0zzZ+BEpNYDwKbpnQMeAw4m8HjQtM6Z9qa917zPQwFr3M5KgA6J5rTJCdFZJj9/lyvGhsDvwFNVuV2MhhjrK6b9bFiE+j1r87eBl4HDwCF7/U/k+ofAX5b/EXBv5JoLMuILzf3Ap6Z3EzgdqHMCuF7hcQf4HDgeoHnccncqdK/TvSDWffFXI/exICY/xZyqc6XLWF1UFZna4gJ7q8BsRvgd2/xXpo6P+D9dfT7PpECtA3cnWPM0GXGFZh/wgWltA+cDNC7X+AP4GzjZQe+k5dRxuYPeiuXU7e1qwLpDz7dFjXKRaSwuMLvAlG8zZlG+YmiK1HoFqT7wP2z+4Q45TfEGcMt01xLoNZEBTwRqD4BLpnMLeC1A41UmVxsXgXeBayV/Wx20rpTyrpnWRft7p6O/FdqzGrDukPNtkaMoMo3FBdBSQMOnYBCReyf05s126fU9ytfX98+mY54Kxnp7S9K3kj6U9KYdG0h6UdLbkh7poFXMfUnSOyVvL0h6VtIXHbS6nOP+s/Zm9mvyXW1uuC9ohZ72E9uDmXWLJOB1GxsH+DxPftsB8B6wlGDN02TAkxG6+4D3TWsbeC5CS8CDFce+AW500LhhOW2020TRjK3b21HEmgti9m0RonxbdMZeVzV+/4tF3cBpP7E9mKHNL5q8h5g0eYsCMQz0epq8gQrwMXAgcs0FGXGFRcB9wCemF9PkbYqM/Bas7fxLwNeJPdTdpo4itQti8lPMqTpXuozVRVXPpbHI3KkNTB1NfkL81j2mvhDp91HgV9MKuRIqrykj3WPq4rHyL+axj8/qGPmTqi6F9YDlHOvJU6oYcTsh/TYSzWmTE6JT19CtLTJt32D6CmHe0eQn1O8z5AXgT4sx4Vcu0/EQecMydB8z0hUWkTd2t4CrwNEePqMBcAR4mrBbwyXLPWJa8zrXmmLEhNBmfpkuY2102xxrih+pb+ieAb6vGhuA97UcJ5KR8gZ77K+99xxeYBzH6Q3/Z0fHcXrDC4zjOL3hBcZxnN74F+zlvXFWXF9PAAAAAElFTkSuQmCC");background-repeat:no-repeat;background-size:280px;color:transparent;display:block;font-size:0;height:20px;line-height:0;width:20px}.viewer-zoom-in:before{background-position:0 0;content:"Zoom In"}.viewer-zoom-out:before{background-position:-20px 0;content:"Zoom Out"}.viewer-one-to-one:before{background-position:-40px 0;content:"One to One"}.viewer-reset:before{background-position:-60px 0;content:"Reset"}.viewer-prev:before{background-position:-80px 0;content:"Previous"}.viewer-play:before{background-position:-100px 0;content:"Play"}.viewer-next:before{background-position:-120px 0;content:"Next"}.viewer-rotate-left:before{background-position:-140px 0;content:"Rotate Left"}.viewer-rotate-right:before{background-position:-160px 0;content:"Rotate Right"}.viewer-flip-horizontal:before{background-position:-180px 0;content:"Flip Horizontal"}.viewer-flip-vertical:before{background-position:-200px 0;content:"Flip Vertical"}.viewer-fullscreen:before{background-position:-220px 0;content:"Enter Full Screen"}.viewer-fullscreen-exit:before{background-position:-240px 0;content:"Exit Full Screen"}.viewer-close:before{background-position:-260px 0;content:"Close"}.viewer-container{-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;bottom:0;direction:ltr;font-size:0;left:0;line-height:0;overflow:hidden;position:absolute;right:0;top:0;-ms-touch-action:none;touch-action:none;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.viewer-container ::-moz-selection,.viewer-container::-moz-selection{background-color:transparent}.viewer-container ::selection,.viewer-container::selection{background-color:transparent}.viewer-container:focus{outline:0}.viewer-container img{display:block;height:auto;max-height:none!important;max-width:none!important;min-height:0!important;min-width:0!important;width:100%}.viewer-canvas{bottom:0;left:0;overflow:hidden;position:absolute;right:0;top:0}.viewer-canvas>img{height:auto;margin:15px auto;max-width:90%!important;width:auto}.viewer-footer{bottom:0;left:0;overflow:hidden;position:absolute;right:0;text-align:center}.viewer-navbar{background-color:rgba(0,0,0,.5);overflow:hidden}.viewer-list{box-sizing:content-box;height:50px;margin:0;overflow:hidden;padding:1px 0}.viewer-list>li{color:transparent;cursor:pointer;float:left;font-size:0;height:50px;line-height:0;opacity:.5;overflow:hidden;transition:opacity .15s;width:30px}.viewer-list>li:focus,.viewer-list>li:hover{opacity:.75}.viewer-list>li:focus{outline:0}.viewer-list>li+li{margin-left:1px}.viewer-list>.viewer-loading{position:relative}.viewer-list>.viewer-loading:after{border-width:2px;height:20px;margin-left:-10px;margin-top:-10px;width:20px}.viewer-list>.viewer-active,.viewer-list>.viewer-active:focus,.viewer-list>.viewer-active:hover{opacity:1}.viewer-player{background-color:#000;bottom:0;cursor:none;display:none;right:0;z-index:1}.viewer-player,.viewer-player>img{left:0;position:absolute;top:0}.viewer-toolbar>ul{display:inline-block;margin:0 auto 5px;overflow:hidden;padding:6px 3px}.viewer-toolbar>ul>li{background-color:rgba(0,0,0,.5);border-radius:50%;cursor:pointer;float:left;height:24px;overflow:hidden;transition:background-color .15s;width:24px}.viewer-toolbar>ul>li:focus,.viewer-toolbar>ul>li:hover{background-color:rgba(0,0,0,.8)}.viewer-toolbar>ul>li:focus{box-shadow:0 0 3px #fff;outline:0;position:relative;z-index:1}.viewer-toolbar>ul>li:before{margin:2px}.viewer-toolbar>ul>li+li{margin-left:1px}.viewer-toolbar>ul>.viewer-small{height:18px;margin-bottom:3px;margin-top:3px;width:18px}.viewer-toolbar>ul>.viewer-small:before{margin:-1px}.viewer-toolbar>ul>.viewer-large{height:30px;margin-bottom:-3px;margin-top:-3px;width:30px}.viewer-toolbar>ul>.viewer-large:before{margin:5px}.viewer-tooltip{background-color:rgba(0,0,0,.8);border-radius:10px;color:#fff;display:none;font-size:12px;height:20px;left:50%;line-height:20px;margin-left:-25px;margin-top:-10px;position:absolute;text-align:center;top:50%;width:50px}.viewer-title{color:#ccc;display:inline-block;font-size:12px;line-height:1.2;margin:0 5% 5px;max-width:90%;opacity:.8;overflow:hidden;text-overflow:ellipsis;transition:opacity .15s;white-space:nowrap}.viewer-title:hover{opacity:1}.viewer-button{background-color:rgba(0,0,0,.5);border-radius:50%;cursor:pointer;height:80px;overflow:hidden;position:absolute;right:-40px;top:-40px;transition:background-color .15s;width:80px}.viewer-button:focus,.viewer-button:hover{background-color:rgba(0,0,0,.8)}.viewer-button:focus{box-shadow:0 0 3px #fff;outline:0}.viewer-button:before{bottom:15px;left:15px;position:absolute}.viewer-fixed{position:fixed}.viewer-open{overflow:hidden}.viewer-show{display:block}.viewer-hide{display:none}.viewer-backdrop{background:linear-gradient(360deg,#11111180,#14141480,#18181880,#1a1a1a80,#1d1d1d80,#20202080,#23232380,#26262680,#2a2a2a80,#2d2d2d80,#30303080,#33333380);backdrop-filter:blur(5px)}.viewer-invisible{visibility:hidden}.viewer-move{cursor:move;cursor:-webkit-grab;cursor:grab}.viewer-fade{opacity:0}.viewer-in{opacity:1}.viewer-transition{transition:all .3s}@-webkit-keyframes viewer-spinner{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}@keyframes viewer-spinner{0%{transform:rotate(0deg)}to{transform:rotate(1turn)}}.viewer-loading:after{-webkit-animation:viewer-spinner 1s linear infinite;animation:viewer-spinner 1s linear infinite;border:4px solid hsla(0,0%,100%,.1);border-left-color:hsla(0,0%,100%,.5);border-radius:50%;content:"";display:inline-block;height:40px;left:50%;margin-left:-20px;margin-top:-20px;position:absolute;top:50%;width:40px;z-index:1}@media (max-width:767px){.viewer-hide-xs-down{display:none}}@media (max-width:991px){.viewer-hide-sm-down{display:none}}@media (max-width:1199px){.viewer-hide-md-down{display:none}}"""
 ViewerJSPluginJS = r"""
 /*!
  * Viewer.js v1.10.4
@@ -3632,10 +3632,33 @@ ImageViewerHTML = jinja2.Template(r"""
 			height: 100%;
 			margin: 0;
 		}
+		*::-webkit-scrollbar {
+			width: 10px;
+			height: 10px;
+		}
+		/* *::-webkit-scrollbar-track:hover {
+			background: rgba(29, 29, 29, 0.4);
+		}  */  
+		*::-webkit-scrollbar-track {
+			/* background-color: rgba(235, 235, 235, 0.8);
+			background: linear-gradient(0deg, rgba(235,95,52,0.8) 0%, rgba(235,204,52,1) 94%); */
+			background-color: #292929;
+		}
+		*::-webkit-scrollbar-thumb {
+			background: {{ CSS_GRAD }};
+		}
+		/* *::-webkit-scrollbar-thumb:hover {
+			background: rgb(235,95,52);
+			background: linear-gradient(0deg, rgba(235,95,52,1) 40%, rgba(235,204,52,1) 94%);
+		} */
+		*::-webkit-scrollbar-corner {
+			background: rgba(235, 235, 235, 0.5);
+		}
         body {
             color: #fff;
 			height: 100%;
-            background: #292929;
+			background: repeating-conic-gradient(#292929 0% 25%, #424242 0% 50%) 
+    		50% / 25px 25px;
             font-size: 14px;
             font-family: 'Be Vietnam Pro', sans-serif;
         }
@@ -4220,12 +4243,30 @@ class ImageViewerSidePanel(QTabWidget):
 
 
 class ImageViewerWebView(DebugWebView):
+    def setAccentColor(self, accent_color):
+        self.accent_color = accent_color
+
     def contextMenuEvent(self, event):
         self.menu = self.page().createStandardContextMenu()
         self.menu.setObjectName("ImageViewerContextMenu")
         data = self.page().contextMenuData()
         # print("MediaType:", data.mediaType())       
         # update palette.
+        self.menu.setAttribute(Qt.WA_TranslucentBackground)
+        self.menu.setStyleSheet(jinja2.Template("""
+		QMenu {
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+			color: #fff;
+			padding: 10px;
+			border-radius: 15px;
+		}
+		QMenu::item:selected {
+			color: #fff; 
+			background-color: {{ ACCENT_COLOR }}; 
+		}
+		QMenu:separator {
+			background: #292929;
+		}""").render(ACCENT_COLOR=self.accent_color))
         palette = self.menu.palette()
         palette.setColor(QPalette.Base, QColor(48,48,48))
         palette.setColor(QPalette.Text, QColor(125,125,125))
@@ -4233,14 +4274,15 @@ class ImageViewerWebView(DebugWebView):
         # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
         palette.setColor(QPalette.Window, QColor(255,255,255))
         palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
         self.menu.setPalette(palette)
-        # apply rounding mask.
-        roundingPath = QPainterPath()
+        
         self.menu.popup(event.globalPos())
-        roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
-        mask = QRegion(roundingPath.toFillPolygon().toPolygon())
-        self.menu.setMask(mask)
+		# # apply rounding mask.
+        # roundingPath = QPainterPath()
+        # roundingPath.addRoundedRect(QRectF(self.menu.rect()).adjusted(.5, .5, -1.5, -1.5), 15, 15)
+        # mask = QRegion(roundingPath.toFillPolygon(QTransform()).toPolygon())
+        # self.menu.setMask(mask)
+
         # if data.mediaType() == 1:
         for action in self.menu.actions():
             if action.text() == "Save page":
@@ -4268,7 +4310,7 @@ class ImageViewerWebView(DebugWebView):
         # elif data.mediaType() == 0:
         #     for action in self.menu.actions():
         #         print(action.text())
-class ImageViewerWidget(QMainWindow):
+class ImageViewerWidget(QWidget):
     """
     [summary]
     Widget for viewing images
@@ -4291,36 +4333,60 @@ class ImageViewerWidget(QMainWindow):
     4. list mode
     5. tree mode
     """
-
     def __init__(self, **args):
         super(ImageViewerWidget, self).__init__()
+		# arguments.
+        self.svg_data = None
+        self.css_grad = args.get("css_grad", "gray")
         # connect a mimedatabase.
         self.mime_database = QMimeDatabase()
-        # set central widget.
-        centralWidget = self.initCentralWidget()
-        self.setCentralWidget(centralWidget)
-        # connect slots to signals.
+        # create layout
+        layout = QVBoxLayout()
+        # TODO: Check if margin is needed anymore at all.
+        margin = 10
+        layout.setContentsMargins(margin, 0, margin, margin)
+        layout.setSpacing(0)
+        self.layout = layout
+        # build layout.
+        self.browser = ImageViewerWebView()
+        # self.statusbar = self.statusBar()
+        # self.statusbar.setStyleSheet("""
+        # QWidget {
+        #     color: gray;
+        #     background: #000;
+        # }""")
+        self.side_panel = ImageViewerSidePanel()
+        self.svgtree = self.side_panel.svgtree
+        self.filetree = self.side_panel.filetree
+        self.filetree.connectImageViewer(self)
+        self.side_panel.hide()
+        # self.filetree.hide()
+        self.browser.splitter.insertWidget(0, self.side_panel)
+        layout.addWidget(self.browser.splitter)
+        # set layout.
+        self.setLayout(layout)
+
+		# connect slots to signals.
         self.browser.urlChanged.connect(self.onUrlChange)
         # parameters stuff.
-        self.parentless = args.get("parentless")
         self.zoom_factor = args.get("zoom_factor", 1.3)
         # set icon.
         self._fullscreen = False
-        logo = args.get("logo")
-        logo = FigD.Icon(logo)
-        self.setWindowIcon(logo)
 
     def loadSVGData(self, svg_data: str=""):
         self.svgtree.loadSVGData(svg_data)
 
-    # def toggleFullScreen(self):
-    #     print("Full Screen")
-    #     if self._fullscreen:
-    #         self.showNormal()
-    #         self._fullscreen = False
-    #     else: 
-    #         self.showFullScreen()
-    #         self._fullscreen = True
+    def viewSource(self):
+        # print("showing source")
+        # print(self.svg_data)
+        textarea = QPlainTextEdit()
+        if self.svg_data: 
+            textarea.setPlainText(str(self.svg_data))
+        else:
+            textarea.setPlainText("Not an SVG (no source available)")
+        textarea.setStyleSheet("background: #292929; color: #fff;")
+        window = wrapFigDWindow(textarea)
+        window.show()
 
     def initCentralWidget(self):
         centralWidget = QWidget()
@@ -4348,14 +4414,6 @@ class ImageViewerWidget(QMainWindow):
         layout.addWidget(self.browser.splitter)
         # set layout.
         centralWidget.setLayout(layout)
-        centralWidget.setObjectName("ImageViewerCentralWidget")
-        centralWidget.setStyleSheet("""
-        QWidget#ImageViewerCentralWidget {
-            border-radius: 20px;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-        }""")
-
-        return centralWidget
 
     def onUrlChange(self):
         self.browser.setZoomFactor(self.zoom_factor)
@@ -4386,8 +4444,9 @@ class ImageViewerWidget(QMainWindow):
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
             "GALLERY_INFO": gallery_info,
+			"CSS_GRAD": self.css_grad,
         })
-        if self.parentless:
+        if self.window_ptr is not None:
             self.setWindowTitle(filename_without_ext)
         render_url = FigD.createTempUrl(html)
         self.browser.load(render_url)
@@ -4395,15 +4454,16 @@ class ImageViewerWidget(QMainWindow):
     def connectMenu(self, menu: ImageViewerMenu):
         self.menu = menu
 
-    def connectTitlebar(self, titlebar: WindowTitleBar):
-        self.titlebar = titlebar
-        self.titlebar.findBtn.setParent(None)
-        self.titlebar.connectWindow(self)
-        rcb = self.titlebar.ribbonCollapseBtn
-        try: rcb.clicked.connect(self.menu.toggle)
-        except AttributeError as e: print(e)
+    # def connectTitlebar(self, titlebar: WindowTitleBar):
+    #     self.titlebar = titlebar
+    #     self.titlebar.findBtn.setParent(None)
+    #     self.titlebar.connectWindow(self)
+    #     rcb = self.titlebar.ribbonCollapseBtn
+    #     try: rcb.clicked.connect(self.menu.toggle)
+    #     except AttributeError as e: print(e)
 
     def open(self, path: str):
+        self.svg_data = None
         path = os.path.expanduser(path)
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
@@ -4412,7 +4472,8 @@ class ImageViewerWidget(QMainWindow):
         self.svgtree.details_pane.setText("click on element on the SVG tree to view details")
         if path.endswith(".svg"):
             svg_data = open(path).read()
-            self.loadSVGData(svg_data=svg_data) 
+            self.loadSVGData(svg_data=svg_data)
+            self.svg_data = svg_data 
         # populate gallery info if path points to a folder.
         gallery_info = []
         if isdir:
@@ -4432,8 +4493,9 @@ class ImageViewerWidget(QMainWindow):
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
             "GALLERY_INFO": gallery_info,
+			"CSS_GRAD": self.css_grad,
         })
-        if self.parentless:
+        if self.window_ptr is not None:
             self.setWindowTitle(filename_without_ext)
         render_url = FigD.createTempUrl(html)
         self.browser.load(render_url)
@@ -4441,65 +4503,271 @@ class ImageViewerWidget(QMainWindow):
         # print(path)
 def test_imageviewer():
     import sys
-    from fig_dash.ui.titlebar import TitleBar
-
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = QApplication(sys.argv)
-    # set app stylesheet.
-    app.setStyleSheet("""
-    QToolTip {
-        color: #fff;
-        border: 0px;
-        padding-top: -1px;
-        padding-left: 5px;
-        padding-right: 5px;
-        padding-bottom: -1px;
-        font-size:  17px;
-        background: #000;
-        font-family: 'Be Vietnam Pro', sans-serif;
-    }""")
-
-    titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
     # titlebar.setStyleSheet("background: transparent; color: #fff;")
     menu = ImageViewerMenu()
     menu.hide()
-    imageviewer = ImageViewerWidget(
-        logo="system/imageviewer/logo.svg",
-        parentless=True,
-    )
-    imageviewer.setAttribute(Qt.WA_TranslucentBackground)
-    # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
-    imageviewer.titlebar = titlebar
+    # accent color and css grad color.
+    accent_color = "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)"
+    grad_colors = extract_colors_from_qt_grad(accent_color)
+    css_grad = create_css_grad(grad_colors)
+    # create imageviewer widget.
+    imageviewer = ImageViewerWidget(css_grad=css_grad)
+    imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
-    imageviewer.connectTitlebar(titlebar)
     imageviewer.layout.insertWidget(0, menu)
-    imageviewer.layout.insertWidget(0, titlebar)
+    # imageviewer.layout.insertWidget(0, titlebar)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
-    QFontDatabase.addApplicationFont(
-        FigD.font("BeVietnamPro-Regular.ttf")
-    )
+    # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+    # FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
+    window = wrapFigDWindow(
+		imageviewer, title="Image Viewer", 
+		icon="system/imageviewer/logo.svg",
+		accent_color=accent_color,
+		titlebar_callbacks={
+			"viewSourceBtn": imageviewer.viewSource,
+            "ribbonCollapseBtn": menu.toggle,
+		}
+	)
+    window.show()
+
     try: openpath = sys.argv[1]
-    except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+    except IndexError: 
+        openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     imageviewer.open(openpath)
-    # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
-	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
-    # imageviewer.open("~/Pictures/Elena_Posterised.png")
-    imageviewer.setGeometry(100, 100, 960, 800)
-    imageviewer.setWindowFlags(
-        Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-    # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
-	# attach Ctrl+B to sidebar collapse.
     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
-    FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
-    FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
-    # print(FullScreen)
-    # FullScreen.activated.connect(imageviewer.toggleFullScreen)
-    titlebar.setWindowIcon(imageviewer.windowIcon())
-    titlebar.resetSliderPalette()
-    imageviewer.show()
+
     app.exec()
+# def test_imageviewer():
+#     import sys
+#     from fig_dash.ui.titlebar import TitleBar
 
+#     FigD("/home/atharva/GUI/fig-dash/resources")
+#     app = QApplication(sys.argv)
+#     # set app stylesheet.
+#     app.setStyleSheet("""
+#     QToolTip {
+#         color: #fff;
+#         border: 0px;
+#         padding-top: -1px;
+#         padding-left: 5px;
+#         padding-right: 5px;
+#         padding-bottom: -1px;
+#         font-size:  17px;
+#         background: #000;
+#         font-family: 'Be Vietnam Pro', sans-serif;
+#     }""")
 
+#     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
+#     # titlebar.setStyleSheet("background: transparent; color: #fff;")
+#     menu = ImageViewerMenu()
+#     menu.hide()
+#     imageviewer = ImageViewerWidget(
+#         logo="system/imageviewer/logo.svg",
+#         parentless=True,
+#     )
+#     imageviewer.setAttribute(Qt.WA_TranslucentBackground)
+#     # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
+#     imageviewer.titlebar = titlebar
+#     imageviewer.connectMenu(menu)
+#     imageviewer.connectTitlebar(titlebar)
+#     imageviewer.layout.insertWidget(0, menu)
+#     imageviewer.layout.insertWidget(0, titlebar)
+#     imageviewer.setStyleSheet("background: transparent; border: 0px;")
+#     QFontDatabase.addApplicationFont(
+#         FigD.font("BeVietnamPro-Regular.ttf")
+#     )
+#     try: openpath = sys.argv[1]
+#     except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+#     imageviewer.open(openpath)
+#     # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
+# 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
+#     # imageviewer.open("~/Pictures/Elena_Posterised.png")
+#     imageviewer.setGeometry(100, 100, 960, 800)
+#     imageviewer.setWindowFlags(
+#         Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+#     # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
+# 	# attach Ctrl+B to sidebar collapse.
+#     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
+#     CtrlB.activated.connect(imageviewer.side_panel.toggle)
+#     FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+#     FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
+#     # print(FullScreen)
+#     # FullScreen.activated.connect(imageviewer.toggleFullScreen)
+#     titlebar.setWindowIcon(imageviewer.windowIcon())
+#     titlebar.resetSliderPalette()
+#     imageviewer.show()
+#     app.exec()
 if __name__ == "__main__":
     test_imageviewer()
+# class ImageViewerWidget(QMainWindow):
+#     """
+#     [summary]
+#     Widget for viewing images
+#     - If a filepath is given: image viewer is opened.
+#     - If a folderpath is given: image gallery is opened.
+
+#     # UI Elements
+#     This section describes the UI design of the ImageViewer.
+
+
+#     # Browser (MainView) (as Image Viewer):
+
+#     OR
+
+#     # Browser (MainView) (as Image Gallery):
+#     # Viewer modes
+#     1. 2D flow-layout
+#     2. carousel mode
+#     3. 3D carousel (max 20 images)
+#     4. list mode
+#     5. tree mode
+#     """
+
+#     def __init__(self, **args):
+#         super(ImageViewerWidget, self).__init__()
+#         # connect a mimedatabase.
+#         self.mime_database = QMimeDatabase()
+#         # set central widget.
+#         centralWidget = self.initCentralWidget()
+#         self.setCentralWidget(centralWidget)
+#         # connect slots to signals.
+#         self.browser.urlChanged.connect(self.onUrlChange)
+#         # parameters stuff.
+#         self.parentless = args.get("parentless")
+#         self.zoom_factor = args.get("zoom_factor", 1.3)
+#         # set icon.
+#         self._fullscreen = False
+#         logo = args.get("logo")
+#         logo = FigD.Icon(logo)
+#         self.setWindowIcon(logo)
+
+#     def loadSVGData(self, svg_data: str=""):
+#         self.svgtree.loadSVGData(svg_data)
+
+#     # def toggleFullScreen(self):
+#     #     print("Full Screen")
+#     #     if self._fullscreen:
+#     #         self.showNormal()
+#     #         self._fullscreen = False
+#     #     else: 
+#     #         self.showFullScreen()
+#     #         self._fullscreen = True
+
+#     def initCentralWidget(self):
+#         centralWidget = QWidget()
+#         # init layout.
+#         layout = QVBoxLayout()
+#         margin = 10
+#         layout.setContentsMargins(margin, 0, margin, margin)
+#         layout.setSpacing(0)
+#         self.layout = layout
+#         # build layout.
+#         self.browser = ImageViewerWebView()
+#         # self.statusbar = self.statusBar()
+#         # self.statusbar.setStyleSheet("""
+#         # QWidget {
+#         #     color: gray;
+#         #     background: #000;
+#         # }""")
+#         self.side_panel = ImageViewerSidePanel()
+#         self.svgtree = self.side_panel.svgtree
+#         self.filetree = self.side_panel.filetree
+#         self.filetree.connectImageViewer(self)
+#         self.side_panel.hide()
+#         # self.filetree.hide()
+#         self.browser.splitter.insertWidget(0, self.side_panel)
+#         layout.addWidget(self.browser.splitter)
+#         # set layout.
+#         centralWidget.setLayout(layout)
+#         centralWidget.setObjectName("ImageViewerCentralWidget")
+#         centralWidget.setStyleSheet("""
+#         QWidget#ImageViewerCentralWidget {
+#             border-radius: 20px;
+#             background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
+#         }""")
+
+#         return centralWidget
+
+#     def onUrlChange(self):
+#         self.browser.setZoomFactor(self.zoom_factor)
+#         self.browser.loadFinished.connect(self.onLoadFinished)
+
+#     def onLoadFinished(self):        
+#         self.browser.loadDevTools()
+#         # self.browser.page().runJavaScript("viewer.full();")
+#     def openUrl(self, path: str):
+#         filename_without_ext = str(Path(path).stem)
+#         isdir = os.path.isdir(path)
+#         # populate gallery info if path points to a folder.
+#         gallery_info = []
+#         if isdir:
+#             for iter_file in os.listdir(path):
+#                 iter_file = os.path.join(path, iter_file)
+#                 mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
+#                 if not mimetype.startswith("image"):
+#                     continue
+#                 url = QUrl.fromLocalFile(iter_file).toString()
+#                 gallery_info.append((url, Path(iter_file).stem))
+#         url = QUrl.fromLocalFile(path).toString()
+#         html = ImageViewerHTML.render({
+#             "FILEPATH": path,
+#             "FILEPATH_URL": url,
+#             "FILENAME_WITHOUT_EXT": filename_without_ext,
+#             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+#             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
+#             "PATH_IS_FOLDER": isdir,
+#             "GALLERY_INFO": gallery_info,
+#         })
+#         if self.parentless:
+#             self.setWindowTitle(filename_without_ext)
+#         render_url = FigD.createTempUrl(html)
+#         self.browser.load(render_url)
+
+#     def connectMenu(self, menu: ImageViewerMenu):
+#         self.menu = menu
+
+#     def connectTitlebar(self, titlebar: WindowTitleBar):
+#         self.titlebar = titlebar
+#         self.titlebar.findBtn.setParent(None)
+#         self.titlebar.connectWindow(self)
+#         rcb = self.titlebar.ribbonCollapseBtn
+#         try: rcb.clicked.connect(self.menu.toggle)
+#         except AttributeError as e: print(e)
+
+#     def open(self, path: str):
+#         path = os.path.expanduser(path)
+#         filename_without_ext = str(Path(path).stem)
+#         isdir = os.path.isdir(path)
+# 		# load SVG data.
+#         self.svgtree.tree.clear()
+#         self.svgtree.details_pane.setText("click on element on the SVG tree to view details")
+#         if path.endswith(".svg"):
+#             svg_data = open(path).read()
+#             self.loadSVGData(svg_data=svg_data) 
+#         # populate gallery info if path points to a folder.
+#         gallery_info = []
+#         if isdir:
+#             for iter_file in os.listdir(path):
+#                 iter_file = os.path.join(path, iter_file)
+#                 mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
+#                 if not mimetype.startswith("image"):
+#                     continue
+#                 url = QUrl.fromLocalFile(iter_file).toString()
+#                 gallery_info.append((url, Path(iter_file).stem))
+#         url = QUrl.fromLocalFile(path).toString()
+#         html = ImageViewerHTML.render({
+#             "FILEPATH": path,
+#             "FILEPATH_URL": url,
+#             "FILENAME_WITHOUT_EXT": filename_without_ext,
+#             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+#             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
+#             "PATH_IS_FOLDER": isdir,
+#             "GALLERY_INFO": gallery_info,
+#         })
+#         if self.parentless:
+#             self.setWindowTitle(filename_without_ext)
+#         render_url = FigD.createTempUrl(html)
+#         self.browser.load(render_url)

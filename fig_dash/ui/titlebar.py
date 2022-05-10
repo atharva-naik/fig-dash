@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # titlebar for the main window
 import sys
+from unittest.mock import call
 import jinja2
 from typing import *
 # fig-dash imports.
@@ -409,7 +410,8 @@ class ZoomSlider(QSlider):
 
 
 class WindowTitleBar(QToolBar):
-    def __init__(self, parent: Union[QWidget, None]=None, background: str="#292929"):
+    def __init__(self, parent: Union[QWidget, None]=None, 
+                 background: str="#292929", callbacks: dict={}):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
@@ -441,19 +443,22 @@ class WindowTitleBar(QToolBar):
             style="c",
             # callback=self.callback if parent is None else parent.tabs.printPage
         ) 
-        self.printBtn.hide()
+        if "printBtn" not in callbacks:
+            self.printBtn.hide()
         self.viewSourceBtn = self.initTitleBtn(
             "titlebar/source.svg", style="l",
             tip="view the source of the webpage.",
-            # callback=self.callback if parent is None else parent.tabs.viewSource
+            callback=callbacks.get("viewSourceBtn"),
         )
-        self.viewSourceBtn.hide()
+        if "viewSourceBtn" not in callbacks:
+            self.viewSourceBtn.hide()
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",
             # callback=self.callback if parent is None else parent.tabs.save
         )
-        self.saveSourceBtn.hide()
+        if "saveSourceBtn" not in callbacks:
+            self.saveSourceBtn.hide()
         self.zoomInBtn = self.initTitleBtn(
             "titlebar/zoom_in.svg", 
             tip="zoom in", style="r",
@@ -462,16 +467,19 @@ class WindowTitleBar(QToolBar):
             "titlebar/find_in_page.svg", 
             tip="find in page", style="c",
         )
-        self.findBtn.hide()
+        if "findBtn" not in callbacks: 
+            self.findBtn.hide()
         self.devToolsBtn = self.initTitleBtn(
             "titlebar/dev_tools.svg", style="c",
             tip="toggle dev tools sidebar.",
             # callback=self.callback if parent is None else parent.tabs.toggleDevTools
         )
-        self.devToolsBtn.hide()
+        if "devToolsBtn" not in callbacks: 
+            self.devToolsBtn.hide()
         self.zoomOutBtn = self.initTitleBtn(
             "titlebar/zoom_out.svg", 
-            tip="zoom out", style="l",
+            tip="zoom out", 
+            style="l" if callbacks=={} else "c",
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -481,7 +489,8 @@ class WindowTitleBar(QToolBar):
         self.ribbonCollapseBtn = self.initTitleBtn(
             "titlebar/widgets_bar.svg", 
             tip="collapse the ribbon menu",
-            style="l",
+            style="l", 
+            c=callbacks.get("ribbonCollapseBtn")
         )
 
         self.zoomSlider = ZoomSlider()
@@ -540,9 +549,27 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         self.addWidget(self.windowIcon)
-        self.addWidget(self.initBlank(5))
+        self.addWidget(self.initBlank(10))
         self.setMaximumHeight(30)
+    # def define(self, btn: str, callback) -> bool:
+    #     """connect `callback` to a `button` (string name) attribute.
 
+    #     Args:
+    #         btn (str): the button whose slot/connection/callback is to be defined.
+    #         callback (function): callback function.
+
+    #     Returns:
+    #         bool: returns True if callback is successfully connected, otherwise it prints the exception and returns a False message.
+    #     """
+    #     try:
+    #         btn = eval(f"self.{btn}")
+    #         print(btn)
+    #         btn.show()
+    #         btn.clicked.connect(callback)
+    #         return True
+    #     except Exception as e:
+    #         print(e)
+    #         return False
     def resetSliderPalette(self):
         if "qlineargradient" in self.background:
             sliderHandleColor = self.background.split(":")[-1].strip()
@@ -619,7 +646,8 @@ class WindowTitleBar(QToolBar):
         btn.setIcon(FigD.Icon(icon))
         size = kwargs.get("size", (22,22))
         btn.setIconSize(QSize(*size))
-        btn.clicked.connect(kwargs.get("callback", self.callback))
+        callback = kwargs.get("callback", self.callback)
+        btn.clicked.connect(self.callback if callback is None else callback)
         style = kwargs.get("style", "default")
         BACKGROUND = self.background
         if style == "l": btn.setStyleSheet(
@@ -699,8 +727,8 @@ class TitleBar(QToolBar):
             "titlebar/source.svg", style="l",
             tip="view the source of the webpage.",
             size=(18,18),
-            # callback=self.callback if parent is None else parent.tabs.viewSource
         )
+        print("viewSourceBtn:", self.callbacks.get("viewSourceBtn"))
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",

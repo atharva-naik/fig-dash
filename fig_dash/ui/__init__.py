@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 import os
 import jinja2
-from typing import Union
+from typing import *
 from pathlib import Path
 # fig-dash imports.
 from fig_dash import FigD
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
+from PyQt5.QtGui import QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QEvent
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QToolButton, QVBoxLayout, QHBoxLayout
 
@@ -208,6 +209,7 @@ class FigDWindow(QMainWindow):
         self.setWindowTitle(title)
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCentralWidget(widget)
+        self.titlebar = None
         # self.setStyleSheet("""
         # QMainWindow {
         #     border-radius: 20px;
@@ -221,6 +223,10 @@ class FigDWindow(QMainWindow):
         )
         self.titlebar.connectWindow(self)
 
+    def define(self, *args, **kwargs):
+        if self.titlebar:
+            self.titlebar.define(*args, **kwargs)
+
     def notify(self, obj, event):
         if event.type() == QEvent.WindowDeactivate:
             self.titlebar.deactivate()
@@ -229,17 +235,69 @@ class FigDWindow(QMainWindow):
 
         return super().notify(obj, event)
 
-def wrapFigDWindow(widget: QWidget, **args):
-    from fig_dash.ui.titlebar import WindowTitleBar
-    accent_color = args.get("accent_color", "red")
-    titlebar = WindowTitleBar(background=accent_color)
+def extract_colors_from_qt_grad(qt_grad: str) -> List[str]:
+    return ["#"+i.split("#")[-1] for i in ("#"+"#".join(qt_grad.split(")")[0].split("#")[1:])).split(",")]
 
+def create_css_grad(colors: List[str], angle: int=90) -> str:
+    """create css gradients from a list of hex colors, and angle (in integers).
+
+    Returns:
+        str: css gradient string.
+    """
+    css_grad = f"linear-gradient({angle}deg, "
+    css_grad += ", ".join(colors)
+    css_grad += ")"
+
+    return css_grad
+
+def wrapFigDWindow(widget: QWidget, **args):
+    QFontDatabase.addApplicationFont(
+        FigD.font("BeVietnamPro-Regular.ttf")
+    )
+    from fig_dash.ui.titlebar import WindowTitleBar
+    # arguments.
+    accent_color = args.get("accent_color", "red")
+    titlebar_callbacks = args.get("titlebar_callbacks", {})
+    # create the titlebar.
+    titlebar = WindowTitleBar(
+        background=accent_color, 
+        callbacks=titlebar_callbacks
+    )
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")
     centralWidget.setStyleSheet("""
     QWidget#FigDUI {
         border-radius: 20px;
         background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    }
+    QScrollBar:vertical {
+        border: 0px solid #999999;
+        width: 12px;
+        margin: 0px 0px 0px 0px;
+        background-color: rgba(255, 255, 255, 0);
+    }
+    /* QScrollBar:vertical:hover {
+        background-color: rgba(255, 253, 184, 0.3);
+    } */
+    QScrollBar::handle:vertical {
+        min-height: 0px;
+        border: 0px solid red;
+        border-radius: 0px;
+        /* background-color: transparent; */
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+    QScrollBar::handle:vertical:hover {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+    QScrollBar::add-line:vertical {
+        height: 0px;
+        subcontrol-position: bottom;
+        subcontrol-origin: margin;
+    }
+    QScrollBar::sub-line:vertical {
+        height: 0 px;
+        subcontrol-position: top;
+        subcontrol-origin: margin;
     }""")
     layout = QVBoxLayout()
     layout.setSpacing(0)
@@ -266,8 +324,10 @@ def wrapFigDWindow(widget: QWidget, **args):
         font-family: 'Be Vietnam Pro', sans-serif;
     }""")
     # reposition window
+    window.setGeometry(100, 100, 960, 800)
     screen_rect = app.desktop().screenGeometry()
     w, h = screen_rect.width()//2, screen_rect.height()//2
+    widget.window_ptr = window
     window.move(w, h)
 
     return window
