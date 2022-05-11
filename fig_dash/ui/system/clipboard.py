@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys
 from turtle import title
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 import jinja2
 import datetime
 from typing import Union
@@ -143,24 +144,35 @@ class DashClipboardUI(QWidget):
         clipboard_item = self.initClipboardItem(text)
         self.stackLayout.insertWidget(0, clipboard_item)
 
-def test_clipboard_ui():
+def test_clipboard():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
     # create the clipboard UI widget.
+    accent_color = FigDAccentColorMap["clipboard"]
     app = QApplication(sys.argv)
     clipboard_ui = DashClipboardUI()
     # wrap it in a FigDWindow
-    window = wrapFigDWindow(clipboard_ui, size=(25,25), title="Clipboard Viewer", 
-                            icon="system/clipboard/window_icon.png",
-                            accent_color="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #390b56, stop : 0.091 #420d64, stop : 0.182 #4c0f72, stop : 0.273 #561181, stop : 0.364 #601390, stop : 0.455 #6a169f, stop : 0.545 #7418ae, stop : 0.636 #7f1abe, stop : 0.727 #891cce, stop : 0.818 #941ede, stop : 0.909 #9f20ee, stop : 1.0 #aa22ff);")
+    window = wrapFigDWindow(clipboard_ui, size=(25,25), 
+                            title="Clipboard Viewer", 
+                            icon="system/clipboard/logo.png",
+                            accent_color=accent_color)
     # show the app window.
     window.show()
     # run the application!
     app.exec()
 
+def launch_clipboard():
+    clipboard = DashClipboardUI()
+    icon = FigDSystemAppIconMap["clipboard"]
+    accent_color = FigDAccentColorMap["clipboard"]
+    window = wrapFigDWindow(clipboard, size=(25,25), width=900,
+                            title="Clipboard Viewer", height=300,
+                            icon=icon, accent_color=accent_color)
+    window.show()
+
 
 if __name__ == "__main__":
-    test_clipboard_ui()
+    test_clipboard()
 # class DashClipboardUI(QMainWindow):
 #     def __init__(self):
 #         super(DashClipboardUI, self).__init__()

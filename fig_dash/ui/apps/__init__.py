@@ -1,1 +1,1 @@
-# app related widgets
+# FigD apps.

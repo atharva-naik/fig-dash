@@ -84,3 +84,30 @@ class BlurBackgroundEffect(QtWidgets.QGraphicsEffect):
         painter.drawRoundedRect(bound, 5, 5, QtCore.Qt.RelativeSize)
         painter.drawPixmap(offset, pixmap)
         painter.restore()
+
+
+class BackgroundBlurEffect(QtWidgets.QGraphicsBlurEffect):
+    effectRect = None
+
+    def setEffectRect(self, rect):
+        self.effectRect = rect
+        self.update()
+
+    def draw(self, qp):
+        if self.effectRect is None or self.effectRect.isNull():
+            # no valid effect rect to be used, use the default implementation
+            super().draw(qp)
+        else:
+            qp.save()
+            # clip the drawing so that it's restricted to the effectRect
+            qp.setClipRect(self.effectRect)
+            # call the default implementation, which will draw the effect
+            super().draw(qp)
+            # get the full region that should be painted
+            fullRegion = QtGui.QRegion(qp.viewport())
+            # and subtract the effect rectangle
+            fullRegion -= QtGui.QRegion(self.effectRect)
+            qp.setClipRegion(fullRegion)
+            # draw the *source*, which has no effect applied
+            self.drawSource(qp)
+            qp.restore()

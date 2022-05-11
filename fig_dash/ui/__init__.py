@@ -5,7 +5,8 @@ import jinja2
 from typing import *
 from pathlib import Path
 # fig-dash imports.
-from fig_dash import FigD
+from fig_dash.assets import FigD
+from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase
@@ -254,8 +255,10 @@ def wrapFigDWindow(widget: QWidget, **args):
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
     )
-    from fig_dash.ui.titlebar import WindowTitleBar
     # arguments.
+    width = args.get("width", 960)
+    height = args.get("height", 800)
+    show_titlebar = args.get("titlebar", True)
     accent_color = args.get("accent_color", "red")
     titlebar_callbacks = args.get("titlebar_callbacks", {})
     # create the titlebar.
@@ -263,6 +266,7 @@ def wrapFigDWindow(widget: QWidget, **args):
         background=accent_color, 
         callbacks=titlebar_callbacks
     )
+    if not show_titlebar: titlebar.hide()
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")
     centralWidget.setStyleSheet("""
@@ -324,7 +328,7 @@ def wrapFigDWindow(widget: QWidget, **args):
         font-family: 'Be Vietnam Pro', sans-serif;
     }""")
     # reposition window
-    window.setGeometry(100, 100, 960, 800)
+    window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()
     w, h = screen_rect.width()//2, screen_rect.height()//2
     widget.window_ptr = window
