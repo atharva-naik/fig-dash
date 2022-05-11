@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # the fig-dash fileviewer is known as the "orchard".
 import os
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 import jinja2
 import socket
 import getpass
@@ -9,6 +10,7 @@ from pathlib import Path
 from typing import Union, Tuple
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui import wrapFigDWindow
 from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
@@ -3151,6 +3153,40 @@ def test_fileviewer():
     # fileviewer.saveScreenshot("fileviewer.html")
     fileviewer.show()
     app.exec()
+
+def launch_fileviewer(app):
+    import sys
+    import platform
+    fileviewer = FileViewerWidget(
+        clipboard=QApplication.instance().clipboard(),
+        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
+        font_color="#fff", parentless=True,
+    )
+    fileviewer.setStyleSheet("background: tranparent; border: 0px;")
+    fileviewer.open("~")
+    icon = FigDSystemAppIconMap["fileviewer"]
+    accent_color = FigDAccentColorMap["fileviewer"]
+    window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
+                            icon=icon, width=800, height=600)
+    spacer1 = QWidget()
+    spacer1.setStyleSheet("background: transparent")
+    spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    spacer2 = QWidget()
+    spacer2.setStyleSheet("background: transparent")
+    spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    window.statusBar().addWidget(spacer1)
+    window.statusBar().addWidget(fileviewer.statusbar)
+    window.statusBar().addWidget(spacer2)
+    window.statusBar().setStyleSheet("""
+    QStatusBar {
+        color: #4293d5;
+        border-radius: 20px;
+        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    }""")
+    # if platform.system() == "Linux":
+    # app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
+    window.show()
 
 
 if __name__ == '__main__':

@@ -11,6 +11,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.ui import DashWidgetGroup, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # all system imports.
 from fig_dash.ui.system.clipboard import launch_clipboard
+from fig_dash.ui.system.fileviewer import launch_fileviewer
 from fig_dash.ui.system.imageviewer import launch_imageviewer
 # PyQt5 imports.
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QPalette
@@ -20,8 +21,8 @@ from PyQt5.QtWidgets import QWidget, QAction, QScrollArea, QShortcut, QMainWindo
 def blank(): pass
 FigDAppLauncherMap = {
     "clipboard": launch_clipboard,
+    "fileviewer": launch_fileviewer,
     "imageviewer": launch_imageviewer,
-    "fileviewer": blank,
 }
 ROW_SIZE = 4
 
