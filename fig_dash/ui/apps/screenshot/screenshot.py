@@ -605,6 +605,14 @@ def test_screenshot_ui():
     screenshot_ui.show()
     app.exec()
 
+def launch_screenshot_ui(app):
+    screen_rect = app.desktop().screenGeometry()
+    w, h = screen_rect.width()//2, screen_rect.height()//2
+    screenshot_ui = DashScreenshotUI(app=app)
+    screenshot_ui.move(w, h)
+    screenshot_ui.show()
+    app.exec()
+
 
 if __name__ == "__main__":
     test_screenshot_ui()

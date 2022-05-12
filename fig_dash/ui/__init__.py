@@ -202,11 +202,7 @@ class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
         super(FigDAppContainer, self).__init__(*args, **kwargs)
         self.active_window_ptr = None
-    #     self.titlebars = {}
-    # def appendTitleBar(self, titlebar):
-    #     if isinstance(titlebar, WindowTitleBar) or isinstance(titlebar, TitleBar):
-    #         try: self.titlebars[titlebar.window_name] = titlebar
-    #         except: self.titlebars["-"] = titlebar
+
     def notify(self, obj, event):
         if isinstance(obj, FigDWindow):
             if event.type() == QEvent.WindowDeactivate:
@@ -288,6 +284,9 @@ def wrapFigDWindow(widget: QWidget, **args):
         background=accent_color, 
         callbacks=titlebar_callbacks
     )
+    try:
+        titlebar.ribbonCollapseBtn.clicked.connect(widget.menu.toggle)
+    except Exception as e: print(e)
     if not show_titlebar: titlebar.hide()
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")

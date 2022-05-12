@@ -19,7 +19,7 @@ from PyQt5.QtCore import Qt, QSize, QStringListModel, QPoint, QRectF, QTimer, QU
 from PyQt5.QtWidgets import QWidget, QAction, QScrollArea, QShortcut, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QHBoxLayout, QGridLayout, QLineEdit, QCompleter, QTabWidget, QGraphicsDropShadowEffect
 
 def blank(): pass
-FigDAppLauncherMap = {
+FIgDSystemAppLauncherMap = {
     "clipboard": launch_clipboard,
     "fileviewer": launch_fileviewer,
     "imageviewer": launch_imageviewer,
@@ -27,9 +27,9 @@ FigDAppLauncherMap = {
 }
 ROW_SIZE = 4
 
-class AppLauncherSearchBar(QLineEdit):
+class SystemAppLauncherSearchBar(QLineEdit):
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(AppLauncherSearchBar, self).__init__(parent)
+        super(SystemAppLauncherSearchBar, self).__init__(parent)
         # create actions.
         caseAction = self.addAction(
             FigD.Icon("browser/case.svg"), 
@@ -50,22 +50,22 @@ class AppLauncherSearchBar(QLineEdit):
         completer = QCompleter()
         stringModel = QStringListModel()
         stringModel.setStringList(list(
-            FigDAppLauncherMap.keys()
+            FIgDSystemAppLauncherMap.keys()
         ))
         completer.setModel(stringModel)
         self.setCompleter(completer)
         self.setMinimumWidth(600)
 
 
-class DashAppLauncher(QWidget): 
+class DashSystemAppLauncher(QWidget): 
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(DashAppLauncher, self).__init__(parent)
+        super(DashSystemAppLauncher, self).__init__(parent)
         # vertical layout.
         self.vboxlayout = QVBoxLayout()
         self.vboxlayout.setContentsMargins(10, 10, 10, 10)
         self.vboxlayout.setSpacing(10)
         # initialize scroll area (with buttons to launch apps.)
-        self.searchbar = AppLauncherSearchBar()
+        self.searchbar = SystemAppLauncherSearchBar()
         self.scroll_area = self.initScrollArea()
         # build layout.
         self.vboxlayout.addWidget(self.searchbar, 0, Qt.AlignCenter | Qt.AlignTop)
@@ -83,7 +83,7 @@ class DashAppLauncher(QWidget):
             background: #292929;
         }""")
         launcher_layout = QGridLayout()
-        for i, app_name in enumerate(FigDAppLauncherMap):
+        for i, app_name in enumerate(FIgDSystemAppLauncherMap):
             accent_color = FigDAccentColorMap[app_name]
             btn = QToolButton()
             btn.setText(app_name)
@@ -108,7 +108,7 @@ class DashAppLauncher(QWidget):
             btn.setFixedWidth(150)
             btn.setFixedHeight(150)
             btn.clicked.connect(
-                FigDAppLauncherMap[app_name]
+                FIgDSystemAppLauncherMap[app_name]
             )
             launcher_layout.addWidget(btn, i//ROW_SIZE, i%ROW_SIZE)
         launcher_widget.setLayout(launcher_layout)
@@ -125,7 +125,7 @@ def start_system_app_launcher():
     FigD("/home/atharva/GUI/fig-dash/resources")
     # create the clipboard UI widget.
     app = FigDAppContainer(sys.argv)
-    app_launcher = DashAppLauncher()
+    app_launcher = DashSystemAppLauncher()
     # wrap it in a FigDWindow
     icon = FigDSystemAppIconMap["app_launcher"]
     accent_color = FigDAccentColorMap["app_launcher"]

@@ -17,7 +17,7 @@ from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow, extra
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -3965,14 +3965,24 @@ class SVGTreeNode:
 				childNode = SVGTreeNode(child)
 				self.addChild(childNode)
 		elif self.name() == "path":
+			self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/path.png"))
 			path_objects = svgpathtools.parse_path(node.attrs["d"])
 			for child in path_objects:
 				childNode = SVGTreeNode(child)
 				self.addChild(childNode)
 		elif self.name() == "metadata":
+			self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/metadata.png"))
 			# print(node) # TODO: parse this into fields and values.
 			self._record = {"content": str(node)}
 		elif self.name() in ["lineargradient", "radialgradient"]:
+			if self.name() == "lineargradient":
+				self._tree_widget_item.setIcon(0, 
+					FigD.Icon("system/imageviewer/linear_gradient.png")
+				)
+			elif self.name() == "radialgradient":
+				self._tree_widget_item.setIcon(0, 
+					FigD.Icon("system/imageviewer/radial_gradient.png")
+				)
 			for child in node:
 				if str(child).strip() == "":
 					continue
@@ -3982,14 +3992,17 @@ class SVGTreeNode:
 		# elif self.name() == "stop":
 		# 	self._record = dict(node.attrs)
 		elif self.name() == "cubic bezier":
+			self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/cubic_bezier.svg"))
 			self._record["start"] = str(node.start)
 			self._record["end"] = str(node.end)
 			self._record["control1"] = str(node.control1)
 			self._record["control2"] = str(node.control2)
 		elif self.name() == "line":
+			self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/line.png"))
 			self._record["start"] = str(node.start)
 			self._record["end"] = str(node.end)
 		elif self.name() == "arc":
+			self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/arc.png"))
 			self._record["start"] = str(node.start)
 			self._record["end"] = str(node.end)
 			self._record["rotation"] = str(node.rotation)
@@ -4002,6 +4015,8 @@ class SVGTreeNode:
 		# 		"text": node.text,
 		# 	}
 		else:
+			if node.name == "rect":
+				self._tree_widget_item.setIcon(0, FigD.Icon("system/imageviewer/rect.png"))
 			self._record = dict(node.attrs)
 			# self._record = {
 			# 	"id": node.attrs.get("id", "-"),
@@ -4032,6 +4047,7 @@ class ImageViewerSVGTree(QWidget):
 		self.layout.setContentsMargins(5, 5, 5, 5)
 		# tree widget & details pane.
 		self.tree = QTreeWidget()
+		self.tree.setAnimated(True)
 		self.tree.setFont(QFont("Be Vietnam Pro", 10))
 		self.details_pane = self.initDetailsPane()
 		self.splitter = QSplitter(Qt.Vertical)
@@ -4073,8 +4089,8 @@ class ImageViewerSVGTree(QWidget):
 	<table width="100%" style="background-color: rgba(152, 186, 60, 0.2); font-family: 'Be Vietnam Pro', sans-serif;">
 		<thead border>
 			<tr>
-				<th style="border: 2px inset green; text-align: right; color: green;">field</th>
-				<th style="border: 2px inset green; text-align: right; color: green;">value</th>
+				<th style="border: 2px inset green; text-align: right; color: #72ff47;">field</th>
+				<th style="border: 2px inset green; text-align: right; color: #72ff47;">value</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -4083,8 +4099,8 @@ class ImageViewerSVGTree(QWidget):
 			# html += f"""&nbsp;<span style="color: green; font-weight: bold;">{field}:</span> {value}<br>\n"""
 			html += f"""
 			<tr> 
-				<td style="border: 2px inset green; text-align: right; color: green;">{field}</td>
-				<td style="border: 2px inset green; text-align: right; color: green;">{value}</td>
+				<td style="border: 2px inset green; text-align: right; color: #72ff47;">{field}</td>
+				<td style="border: 2px inset green; text-align: right; color: #72ff47;">{value}</td>
 			</tr>"""
 		html += """
 		</tbody>
@@ -4250,20 +4266,206 @@ class ImageViewerSVGTree(QWidget):
 		return tree
 
 
+class ImageViewerEffectsPanel(QWidget):
+	pass # effects: rotoscope, pixelate.
+
 class ImageViewerLayers(QWidget):
 	pass
 
 
+class ImageViewerFilterSlider(QWidget):
+	def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25),
+				 minm: int=0, maxm: int=50, value: int=100, accent_color: str="",
+				 parent: Union[QWidget, None]=None):
+		super(ImageViewerFilterSlider, self).__init__(parent)
+		# main layout.
+		self.vboxlayout = QVBoxLayout()
+		self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+		self.vboxlayout.setSpacing(0)
+		# upper widget with hboxlayout.
+		self.hboxlayout = QHBoxLayout()
+		self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+		self.hboxlayout.setSpacing(0)
+		# slider widget.
+		self.slider = QSlider(Qt.Horizontal)
+		self.slider.setMinimum(minm)
+		self.slider.setMaximum(maxm)
+		self.slider.setValue(value)
+		self.slider.setMinimumWidth(200)
+		# self.slider.setStyleSheet("")
+		self.slider.valueChanged.connect(self.updateEffect)
+		# self.slider.setStyleSheet("""
+		# QSlider {
+		# 	background: #292929;
+		# }""")
+		# text label.
+		self.label = QLabel(text)
+		self.label.setStyleSheet("""
+		QLabel {
+			font-size: 17px;
+		}""")
+		# slider readout.
+		self.readout = QLineEdit()
+		self.readout.setText(str(value))
+		self.readout.setStyleSheet("""
+		QLineEdit {
+			font-size: 16px;
+		}""")
+		self.readout.setMaximumWidth(40)
+		# display icon.
+		self.icon = QLabel()
+		self.icon.setPixmap(
+			FigD.Icon(icon).pixmap(
+				QSize(*icon_size)
+		))
+		# hboxwidget.
+		self.hboxwidget = QWidget()
+		self.hboxwidget.setLayout(self.hboxlayout)
+		# build hboxlayout.
+		self.hboxlayout.addWidget(self.icon)
+		self.hboxlayout.addWidget(self.readout)
+		self.hboxlayout.addWidget(self.slider)
+		self.hboxlayout.addStretch(1)
+		self.vboxlayout.addWidget(
+			self.hboxwidget, 0, 
+			Qt.AlignCenter
+		)
+		self.vboxlayout.addWidget(
+			self.label, 0, 
+			Qt.AlignCenter
+		)
+		self.vboxlayout.addStretch(1)
+		self.setObjectName("ImageViewerFilterSlider")
+		self.setStyleSheet("""
+		QWidget#ImageViewerFilterSlider {
+			color: #fff;
+			font-family: 'Be Vietnam Pro';
+			background: transparent;
+		}""")
+		self.setLayout(self.vboxlayout)
+		# set slider palette color.
+		background = accent_color
+		if "qlineargradient" in background:
+			sliderHandleColor = background.split(":")[-1].strip()
+			sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
+			sliderHandleColor = sliderHandleColor.strip()
+		else: 
+			sliderHandleColor = background
+		palette = QPalette()
+		palette.setColor(QPalette.Window, QColor(0,255,255))
+		palette.setColor(QPalette.Button, QColor(sliderHandleColor))
+		palette.setColor(QPalette.Highlight, QColor(sliderHandleColor))
+		self.slider.setPalette(palette)
+
+	def updateEffect(self, value):
+		self.readout.setText(str(value))
+
+
+class ImageViewerFiltersPanel(QWidget):
+	def __init__(self, parent: Union[QWidget, None]=None,
+				 accent_color: str="yellow"):
+		super(ImageViewerFiltersPanel, self).__init__(parent)
+		self.vboxlayout = QVBoxLayout()
+		self.vboxlayout.setContentsMargins(10, 10, 10, 10)
+		self.vboxlayout.setSpacing(5)
+		self.blurSlider = ImageViewerFilterSlider(
+			"blur (in px)", icon="system/fileviewer/blur.svg",
+			minm=0, maxm=100, value=0, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.brightnessSlider = ImageViewerFilterSlider(
+			"brightness", icon="system/fileviewer/brightness.svg",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.contrastSlider = ImageViewerFilterSlider(
+			"contrast", icon="system/fileviewer/contrast.svg",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.dropShadowSlider = ImageViewerFilterSlider(
+			"drop shadow", icon="system/fileviewer/drop_shadow.svg",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.grayScaleSlider = ImageViewerFilterSlider(
+			"gray scale", icon="system/fileviewer/grayscale.png",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.invertSlider = ImageViewerFilterSlider(
+			"invert", icon="system/fileviewer/invert.svg",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.opacitySlider = ImageViewerFilterSlider(
+			"opacity", icon="system/fileviewer/opacity.svg",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.saturationSlider = ImageViewerFilterSlider(
+			"saturation", icon="system/fileviewer/saturation.png",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.sepiaSlider = ImageViewerFilterSlider(
+			"sepia", icon="system/fileviewer/sepia.png",
+			minm=0, maxm=100, value=50, icon_size=(20,20),
+			accent_color=accent_color,
+		)
+		self.vboxlayout.addWidget(
+			self.blurSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.brightnessSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.contrastSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.grayScaleSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.invertSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.opacitySlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.saturationSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addWidget(
+			self.sepiaSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		self.vboxlayout.addStretch(1)
+		self.setLayout(self.vboxlayout)
+		# self.vboxlayout.addWidget(self.)
+
 class ImageViewerSidePanel(QTabWidget):
-	def __init__(self, parent: Union[None, QWidget]=None):
+	def __init__(self, parent: Union[None, QWidget]=None,
+				 accent_color: str="yellow"):
 		super(ImageViewerSidePanel, self).__init__()
+		self.filters_panel = ImageViewerFiltersPanel(
+			accent_color=accent_color,
+		)
+		self.effects_panel = ImageViewerEffectsPanel()
 		self.filetree = ImageViewerFileTree()
 		self.svgtree = ImageViewerSVGTree()
 		self.layers = ImageViewerLayers()
 		self.addTab(self.filetree, "Folders")
 		self.addTab(self.svgtree, "Elements")
 		self.addTab(self.layers, "Layers")
-		self.setStyleSheet("""color: #fff;""")
+		self.addTab(self.filters_panel, "Filters")
+		self.addTab(self.effects_panel, "Effects")
+		self.setStyleSheet("""color: #fff; background: #292929;""")
 		self.setFont(QFont("Be Vietnam Pro", 10))
 
 	def loadSVGData(self, svg_data: str=""):
@@ -4374,6 +4576,7 @@ class ImageViewerWidget(QWidget):
         super(ImageViewerWidget, self).__init__()
 		# arguments.
         self.svg_data = None
+        accent_color = args.get("accent_color", "yellow")
         self.css_grad = args.get("css_grad", "gray")
         # connect a mimedatabase.
         self.mime_database = QMimeDatabase()
@@ -4392,7 +4595,9 @@ class ImageViewerWidget(QWidget):
         #     color: gray;
         #     background: #000;
         # }""")
-        self.side_panel = ImageViewerSidePanel()
+        self.side_panel = ImageViewerSidePanel(
+			accent_color=accent_color,
+		)
         self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
@@ -4548,12 +4753,14 @@ def launch_imageviewer(app):
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
     # create imageviewer widget.
-    imageviewer = ImageViewerWidget(css_grad=css_grad)
+    imageviewer = ImageViewerWidget(
+		css_grad=css_grad, 
+		accent_color=accent_color,
+	)
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
     imageviewer.layout.insertWidget(0, menu)
     # imageviewer.layout.insertWidget(0, titlebar)
-    imageviewer.setStyleSheet("background: transparent; border: 0px;")
     # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
     # FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
     window = wrapFigDWindow(
@@ -4577,7 +4784,6 @@ def test_imageviewer():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
-    # titlebar.setStyleSheet("background: transparent; color: #fff;")
     menu = ImageViewerMenu()
     menu.hide()
     # accent color and css grad color.
@@ -4585,7 +4791,10 @@ def test_imageviewer():
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
     # create imageviewer widget.
-    imageviewer = ImageViewerWidget(css_grad=css_grad)
+    imageviewer = ImageViewerWidget(
+		css_grad=css_grad,
+		accent_color=accent_color,
+	)
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
     imageviewer.layout.insertWidget(0, menu)
