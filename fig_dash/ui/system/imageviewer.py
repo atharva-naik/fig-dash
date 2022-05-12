@@ -13,7 +13,7 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashWidgetGroup, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
@@ -4576,7 +4576,7 @@ def launch_imageviewer(app):
 def test_imageviewer():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
-    app = QApplication(sys.argv)
+    app = FigDAppContainer(sys.argv)
     # titlebar.setStyleSheet("background: transparent; color: #fff;")
     menu = ImageViewerMenu()
     menu.hide()

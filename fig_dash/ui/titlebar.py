@@ -592,12 +592,12 @@ class WindowTitleBar(QToolBar):
         )
 
     def activate(self):
-        self.closeBtn.setIcon(FigD.Icon("titlebar/close.svg"))
-        self.maximizeBtn.setIcon(FigD.Icon("titlebar/maximize.svg"))
-        self.minimizeBtn.setIcon(FigD.Icon("titlebar/minimize.svg"))
+        self.closeBtn.setIcon(FigD.Icon("titlebar/close_large.svg"))
+        self.maximizeBtn.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
+        self.minimizeBtn.setIcon(FigD.Icon("titlebar/minimize_large.svg"))
 
     def deactivate(self):
-        icon = "titlebar/disabled.svg"
+        icon = "titlebar/disabled_large.svg"
         self.closeBtn.setIcon(FigD.Icon(icon))
         self.maximizeBtn.setIcon(FigD.Icon(icon))
         self.minimizeBtn.setIcon(FigD.Icon(icon))

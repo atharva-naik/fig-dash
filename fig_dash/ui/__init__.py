@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+from turtle import title
 import jinja2
 from typing import *
 from pathlib import Path
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.titlebar import WindowTitleBar
+from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase
@@ -197,6 +198,29 @@ class DashWidgetGroup(QWidget):
         return DashWidgetGroupBtn(self, **args)
 
 
+class FigDAppContainer(QApplication):
+    def __init__(self, *args, **kwargs):
+        super(FigDAppContainer, self).__init__(*args, **kwargs)
+        self.titlebars = []
+
+    def appendTitleBar(self, titlebar):
+        if isinstance(titlebar, WindowTitleBar) or isinstance(titlebar, TitleBar):
+            self.titlebars.append(titlebar)
+
+    def notify(self, obj, event):
+        if event.type() == QEvent.WindowDeactivate:
+            for titlebar in self.titlebars:
+                # print(titlebar)
+                titlebar.deactivate()
+            # print("deactivate")
+        if event.type() == QEvent.WindowActivate:
+            for titlebar in self.titlebars:
+                # print(titlebar)
+                titlebar.activate()
+            # print("activate")
+        return super(FigDAppContainer, self).notify(obj, event)
+
+
 class FigDWindow(QMainWindow):
     def __init__(self, widget, **args):
         # self.layout.insertWidget(0, titlebar)
@@ -210,6 +234,7 @@ class FigDWindow(QMainWindow):
         self.setWindowTitle(title)
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCentralWidget(widget)
+        self.installEventFilter(self)
         self.titlebar = None
         # self.setStyleSheet("""
         # QMainWindow {
@@ -227,14 +252,6 @@ class FigDWindow(QMainWindow):
     def define(self, *args, **kwargs):
         if self.titlebar:
             self.titlebar.define(*args, **kwargs)
-
-    def notify(self, obj, event):
-        if event.type() == QEvent.WindowDeactivate:
-            self.titlebar.deactivate()
-        if event.type() == QEvent.WindowActivate:
-            self.titlebar.activate()
-
-        return super().notify(obj, event)
 
 def extract_colors_from_qt_grad(qt_grad: str) -> List[str]:
     return ["#"+i.split("#")[-1] for i in ("#"+"#".join(qt_grad.split(")")[0].split("#")[1:])).split(",")]
@@ -327,6 +344,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         background: #000;
         font-family: 'Be Vietnam Pro', sans-serif;
     }""")
+    try: app.appendTitleBar(titlebar)
+    except Exception as e: print(e)
     # reposition window
     window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()
