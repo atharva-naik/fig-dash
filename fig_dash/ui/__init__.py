@@ -201,23 +201,21 @@ class DashWidgetGroup(QWidget):
 class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
         super(FigDAppContainer, self).__init__(*args, **kwargs)
-        self.titlebars = []
-
-    def appendTitleBar(self, titlebar):
-        if isinstance(titlebar, WindowTitleBar) or isinstance(titlebar, TitleBar):
-            self.titlebars.append(titlebar)
-
+        self.active_window_ptr = None
+    #     self.titlebars = {}
+    # def appendTitleBar(self, titlebar):
+    #     if isinstance(titlebar, WindowTitleBar) or isinstance(titlebar, TitleBar):
+    #         try: self.titlebars[titlebar.window_name] = titlebar
+    #         except: self.titlebars["-"] = titlebar
     def notify(self, obj, event):
-        if event.type() == QEvent.WindowDeactivate:
-            for titlebar in self.titlebars:
-                # print(titlebar)
-                titlebar.deactivate()
-            # print("deactivate")
-        if event.type() == QEvent.WindowActivate:
-            for titlebar in self.titlebars:
-                # print(titlebar)
-                titlebar.activate()
-            # print("activate")
+        if isinstance(obj, FigDWindow):
+            if event.type() == QEvent.WindowDeactivate:
+                # print("deactivated", obj.appName)
+                obj.titlebar.deactivate()
+            if event.type() == QEvent.WindowActivate:
+                # print("activated", obj.appName)
+                obj.titlebar.activate()
+
         return super(FigDAppContainer, self).notify(obj, event)
 
 
@@ -236,6 +234,12 @@ class FigDWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.installEventFilter(self)
         self.titlebar = None
+    # def focusInEvent(self, event):
+    #     if self.titlebar: self.titlebar.activate()
+    #     super(FigDWindow, self).focusInEvent(event)
+    # def focusOutEvent(self, event):
+    #     if self.titlebar: self.titlebar.deactivate()
+    #     super(FigDWindow, self).focusOutEvent(event)
         # self.setStyleSheet("""
         # QMainWindow {
         #     border-radius: 20px;
@@ -273,6 +277,7 @@ def wrapFigDWindow(widget: QWidget, **args):
         FigD.font("BeVietnamPro-Regular.ttf")
     )
     # arguments.
+    name = args.get("name", "-")
     width = args.get("width", 960)
     height = args.get("height", 800)
     show_titlebar = args.get("titlebar", True)
@@ -297,6 +302,12 @@ def wrapFigDWindow(widget: QWidget, **args):
         margin: 0px 0px 0px 0px;
         background-color: rgba(255, 255, 255, 0);
     }
+    QScrollBar:horizontal {
+        border: 0px solid #999999;
+        width: 12px;
+        margin: 0px 0px 0px 0px;
+        background-color: rgba(255, 255, 255, 0);
+    }
     /* QScrollBar:vertical:hover {
         background-color: rgba(255, 253, 184, 0.3);
     } */
@@ -307,8 +318,28 @@ def wrapFigDWindow(widget: QWidget, **args):
         /* background-color: transparent; */
         background-color: rgba(255, 255, 255, 0.2);
     }
+    QScrollBar::handle:horizontal {
+        min-width: 0px;
+        border: 0px solid red;
+        border-radius: 0px;
+        /* background-color: transparent; */
+        background-color: rgba(255, 255, 255, 0.2);
+    }
     QScrollBar::handle:vertical:hover {
         background-color: rgba(255, 255, 255, 0.5);
+    }
+    QScrollBar::handle:horizontal:hover {
+        background-color: rgba(255, 255, 255, 0.5);
+    }
+    QScrollBar::add-line:horizontal {
+        width: 0px;
+        subcontrol-position: bottom;
+        subcontrol-origin: margin;
+    }
+    QScrollBar::sub-line:horizontal {
+        width: 0 px;
+        subcontrol-position: top;
+        subcontrol-origin: margin;
     }
     QScrollBar::add-line:vertical {
         height: 0px;
@@ -329,6 +360,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     centralWidget.setLayout(layout)
 
     window = FigDWindow(widget=centralWidget, **args)
+    window.appName = name
     window.connectTitleBar(titlebar)
     # style application tooltips
     app = QApplication.instance()
@@ -344,8 +376,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         background: #000;
         font-family: 'Be Vietnam Pro', sans-serif;
     }""")
-    try: app.appendTitleBar(titlebar)
-    except Exception as e: print(e)
+    # try: app.appendTitleBar(titlebar)
+    # except Exception as e: print(e)
     # reposition window
     window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()

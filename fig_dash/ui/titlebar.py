@@ -624,6 +624,7 @@ class WindowTitleBar(QToolBar):
         self.window = window
         self.closeBtn.clicked.connect(window.close)
         self.minimizeBtn.clicked.connect(window.showMinimized)
+        self.window_name = self.window.appName
         # self.findBtn.clicked.connect(self.tabs.triggerFind)
         # self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         # self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
@@ -631,6 +632,9 @@ class WindowTitleBar(QToolBar):
         # self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
         # self.CtrlS.activated.connect(self.tabs.saveAs)
         # self.zoomSlider.connectTabWidget(self.tabs)
+    def __str__(self):
+        return self.window_name
+
     def initBlank(self, width: Union[None, int]=None):
         btn = QToolButton(self)
         btn.setIcon(QIcon(None))

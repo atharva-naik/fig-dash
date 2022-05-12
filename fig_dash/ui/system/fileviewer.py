@@ -3155,19 +3155,18 @@ def test_fileviewer():
     app.exec()
 
 def launch_fileviewer(app):
-    import sys
-    import platform
     fileviewer = FileViewerWidget(
         clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True,
+        font_color="#fff", parentless=True
     )
     fileviewer.setStyleSheet("background: tranparent; border: 0px;")
     fileviewer.open("~")
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
     window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
-                            icon=icon, width=800, height=600)
+                            icon=icon, width=800, height=600, 
+                            name="fileviewer")
     spacer1 = QWidget()
     spacer1.setStyleSheet("background: transparent")
     spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

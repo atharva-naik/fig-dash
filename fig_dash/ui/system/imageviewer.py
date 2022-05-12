@@ -4596,7 +4596,7 @@ def test_imageviewer():
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", 
 		icon="system/imageviewer/logo.svg",
-		accent_color=accent_color,
+		accent_color=accent_color, name="imageviewer",
 		titlebar_callbacks={
 			"viewSourceBtn": imageviewer.viewSource,
             "ribbonCollapseBtn": menu.toggle,

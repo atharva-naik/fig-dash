@@ -167,7 +167,8 @@ def launch_clipboard():
     accent_color = FigDAccentColorMap["clipboard"]
     window = wrapFigDWindow(clipboard, size=(25,25), width=900,
                             title="Clipboard Viewer", height=300,
-                            icon=icon, accent_color=accent_color)
+                            icon=icon, accent_color=accent_color,
+                            name="clipboard")
     window.show()
 
 
