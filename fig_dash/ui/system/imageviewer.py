@@ -16,8 +16,8 @@ from fig_dash.ui.effects import BackgroundBlurEffect
 from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
+from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -4478,6 +4478,10 @@ class ImageViewerSidePanel(QTabWidget):
 
 
 class ImageViewerWebView(DebugWebView):
+    def __init__(self, *args, imageviewer=None, **kwargs):
+        super(ImageViewerWebView, self).__init__(*args, **kwargs)
+        self.imageviewer = imageviewer
+
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
 
@@ -4540,6 +4544,7 @@ class ImageViewerWebView(DebugWebView):
                 action.setIcon(FigD.Icon("system/imageviewer/reload.svg"))
             elif action.text() == "Save image":
                 action.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
+                action.triggered.connect(self.imageviewer.saveImage)
             elif action.text() == "Copy image":
                 action.setIcon(FigD.Icon("system/imageviewer/copy_image.svg"))
             elif action.text() == "Copy image address":
@@ -4580,6 +4585,7 @@ class ImageViewerWidget(QWidget):
         self.css_grad = args.get("css_grad", "gray")
         # connect a mimedatabase.
         self.mime_database = QMimeDatabase()
+        self.file_watcher = QFileSystemWatcher()
         # create layout
         layout = QVBoxLayout()
         # TODO: Check if margin is needed anymore at all.
@@ -4588,7 +4594,8 @@ class ImageViewerWidget(QWidget):
         layout.setSpacing(0)
         self.layout = layout
         # build layout.
-        self.browser = ImageViewerWebView()
+        self.browser = ImageViewerWebView(imageviewer=self)
+        self.file_watcher.fileChanged.connect(self.browser.reload)
         # self.statusbar = self.statusBar()
         # self.statusbar.setStyleSheet("""
         # QWidget {
@@ -4615,6 +4622,17 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
+    def saveImage(self):
+        name = Path(self.path_ptr).name
+        filename, _ = QFileDialog.getSaveFileName(
+			self, "Save image file to ...", 
+			name, "Image Files (*.png)"
+		)
+        print(filename)
+        if filename is not None:
+            # self.page().runJavaScript("")
+            pass
+
     def loadSVGData(self, svg_data: str=""):
         self.svgtree.loadSVGData(svg_data)
 
@@ -4640,6 +4658,7 @@ class ImageViewerWidget(QWidget):
         self.layout = layout
         # build layout.
         self.browser = ImageViewerWebView()
+        self.browser.imageviewer = self
         # self.statusbar = self.statusBar()
         # self.statusbar.setStyleSheet("""
         # QWidget {
@@ -4707,6 +4726,8 @@ class ImageViewerWidget(QWidget):
     def open(self, path: str):
         self.svg_data = None
         path = os.path.expanduser(path)
+        self.file_watcher.addPath(path)
+        self.path_ptr = path
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
 		# load SVG data.
