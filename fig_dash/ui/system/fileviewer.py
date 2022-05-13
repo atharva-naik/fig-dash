@@ -18,8 +18,8 @@ from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QFontDatabase
-from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QFontDatabase, QPalette
+from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QFileSystemWatcher
 from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
 # filweviewer widget.
 ViSelectJS = r'''/*! @viselect/vanilla 3.0.0-beta.13 MIT | https://github.com/Simonwep/selection */
@@ -949,6 +949,30 @@ class FileViewerWebView(DebugWebView):
         self.itemMenu.addSeparator()
         self.itemMenu.addAction("Cut")
         self.itemMenu.addAction("Copy")
+
+        self.orchardMenu.setAttribute(Qt.WA_TranslucentBackground)
+        # self.menu.setStyleSheet(jinja2.Template("""
+		# QMenu {
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+		# 	color: #fff;
+		# 	padding: 10px;
+		# 	border-radius: 15px;
+		# }
+		# QMenu::item:selected {
+		# 	color: #fff; 
+		# 	background-color: {{ ACCENT_COLOR }}; 
+		# }
+		# QMenu:separator {
+		# 	background: #292929;
+		# }""").render(ACCENT_COLOR=self.accent_color))
+        # palette = self.menu.palette()
+        # palette.setColor(QPalette.Base, QColor(48,48,48))
+        # palette.setColor(QPalette.Text, QColor(125,125,125))
+        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+        # # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+        # palette.setColor(QPalette.Window, QColor(255,255,255))
+        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # self.menu.setPalette(palette)
 
     def dragEnterEvent(self, e):
         e.ignore()
@@ -2117,6 +2141,7 @@ class FileViewerMenu(QWidget):
         # direct access to mime database and icon provider.
         self.mime_database = QMimeDatabase()
         self.icon_provider = QFileIconProvider()
+        self.scroll_area_ptr = None
 
         self.filegroup = FileViewerFileGroup()
         # self.pathgroup = FileViewerPathGroup()
@@ -2166,6 +2191,11 @@ class FileViewerMenu(QWidget):
 
         return sep
 
+    def toggle(self):
+        print("\x1b[34;1mtoggling menu\x1b[0m")
+        if self.scroll_area_ptr:
+            self.scroll_area_ptr.toggle()
+
     def connectWidget(self, widget):
         self.filegroup.connectWidget(widget)
         self.editgroup.connectWidget(widget)
@@ -2187,6 +2217,7 @@ def wrapInScrollArea(widget):
     scrollArea = ToggleScrollArea()
     scrollArea.setWidget(widget)
     scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    widget.scroll_area_ptr = scrollArea
 
     return scrollArea
 
@@ -2568,6 +2599,7 @@ class FileViewerWidget(QMainWindow):
         self.background_image = QUrl.fromLocalFile(
             args.get("background")
         ).toString()
+        self.file_watcher = QFileSystemWatcher()
         self.icon_provider = QFileIconProvider()
         self.mime_database = QMimeDatabase()
         self.showItemContextMenu = False
@@ -2575,6 +2607,7 @@ class FileViewerWidget(QMainWindow):
         self.browsing_history = []
         self.selected_item = None
         self.hidden_visible = False
+        self.file_watcher.directoryChanged.connect(self.reOpen)
         # handle click events (using click handler)
         self.channel = QWebChannel()
         self.eventHandler = EventHandler(fileviewer=self)
@@ -2619,12 +2652,16 @@ class FileViewerWidget(QMainWindow):
         self.layout.insertWidget(0, self.webview.splitter, 0)
         self.layout.insertWidget(0, self.foldersearchbar, 0, Qt.AlignCenter)
         self.layout.insertWidget(0, self.folderbar, 0)
-        if args.get("parentless", False):
-            self.menuArea = self.wrapInScrollArea(self.menu)
-            self.menuArea.setFixedHeight(130)
-            self.layout.insertWidget(0, self.menuArea)
-        else:
-            self.layout.insertWidget(0, self.menu)
+        # if args.get("parentless", False):
+        #     self.menuArea = self.wrapInScrollArea(self.menu)
+        #     self.menuArea.setFixedHeight(130)
+        #     self.layout.insertWidget(0, self.menuArea)
+        # else:
+        #     self.layout.insertWidget(0, self.menu)
+        self.menuArea = wrapInScrollArea(self.menu)
+        self.menuArea.setFixedHeight(130)
+        self.menuArea.hide()
+        self.layout.insertWidget(0, self.menuArea)
         # self.layout.addStretch(1)
 
         self.webview.splitter.insertWidget(0, self.sideArea)
@@ -2682,6 +2719,10 @@ class FileViewerWidget(QMainWindow):
 
     def openParent(self):
         path = str(self.folder.parent)
+        self.open(path)
+
+    def reOpen(self):
+        path = str(self.folder)
         self.open(path)
 
     def openFileInWebView(self):
@@ -2831,6 +2872,7 @@ class FileViewerWidget(QMainWindow):
             print("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
         # expand user.
         folder = os.path.expanduser(folder) 
+        self.file_watcher.addPath(folder)
         # call xdg-open if a file is clicked instead of a folder.
         if os.path.isfile(folder): 
             self.callXdgOpen(folder)
@@ -3129,39 +3171,43 @@ class FileViewerWidget(QMainWindow):
 
 def test_fileviewer():
     import sys
-    import platform
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = QApplication(sys.argv)
-    fileviewer = FileViewerWidget(
-        clipboard=app.clipboard(),
-        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        logo="system/fileviewer/logo.svg",
-        font_color="#fff", parentless=True,
-    )
-    fileviewer.setStyleSheet("background: tranparent; border: 0px;")
-    QFontDatabase.addApplicationFont(
-        FigD.font("BeVietnamPro-Regular.ttf")
-    )
-    fileviewer.open("~")
-    fileviewer.setGeometry(200, 200, 800, 600)
-    fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
-    fileviewer.statusBar().addWidget(
-        fileviewer.statusbar
-    )
-    # if platform.system() == "Linux":
-    app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
-    # fileviewer.saveScreenshot("fileviewer.html")
-    fileviewer.show()
-    app.exec()
-
-def launch_fileviewer(app):
+    # fileviewer = FileViewerWidget(
+    #     clipboard=app.clipboard(),
+    #     background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
+    #     logo="system/fileviewer/logo.svg",
+    #     font_color="#fff", parentless=True,
+    # )
+    # fileviewer.setStyleSheet("background: tranparent; border: 0px;")
+    # QFontDatabase.addApplicationFont(
+    #     FigD.font("BeVietnamPro-Regular.ttf")
+    # )
+    # fileviewer.setGeometry(200, 200, 800, 600)
+    # fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
+    # fileviewer.statusBar().addWidget(
+    #     fileviewer.statusbar
+    # )
+    # app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
+    # try: 
+    #     path = os.path.expanduser(sys.argv[1])
+    # except IndexError: 
+    #     path = os.path.expanduser("~")
+    # fileviewer.open(path)
+    # fileviewer.show()
+    # app.exec()
     fileviewer = FileViewerWidget(
         clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         font_color="#fff", parentless=True
     )
-    fileviewer.setStyleSheet("background: tranparent; border: 0px;")
-    fileviewer.open("~")
+    # open path.
+    try: 
+        path = os.path.expanduser(sys.argv[1])
+    except IndexError: 
+        path = os.path.expanduser("~")
+    fileviewer.open(path)
+    # get accent color & icon.
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
     window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
@@ -3183,8 +3229,41 @@ def launch_fileviewer(app):
         border-radius: 20px;
         background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
     }""")
-    # if platform.system() == "Linux":
-    # app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
+    window.show()
+    app.exec()
+    # fileviewer.saveScreenshot("fileviewer.html")
+def launch_fileviewer(app, path: Union[str, None]=None):
+    fileviewer = FileViewerWidget(
+        clipboard=QApplication.instance().clipboard(),
+        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
+        font_color="#fff", parentless=True
+    )
+    # open path.
+    if path: fileviewer.open(path)
+    else: fileviewer.open("~")
+    fileviewer.open(path)
+    # get accent color & icon.
+    icon = FigDSystemAppIconMap["fileviewer"]
+    accent_color = FigDAccentColorMap["fileviewer"]
+    window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
+                            icon=icon, width=800, height=600, 
+                            name="fileviewer")
+    spacer1 = QWidget()
+    spacer1.setStyleSheet("background: transparent")
+    spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    spacer2 = QWidget()
+    spacer2.setStyleSheet("background: transparent")
+    spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    window.statusBar().addWidget(spacer1)
+    window.statusBar().addWidget(fileviewer.statusbar)
+    window.statusBar().addWidget(spacer2)
+    window.statusBar().setStyleSheet("""
+    QStatusBar {
+        color: #4293d5;
+        border-radius: 20px;
+        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    }""")
     window.show()
 
 
