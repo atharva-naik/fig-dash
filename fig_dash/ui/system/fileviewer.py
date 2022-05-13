@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Union, Tuple
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import wrapFigDWindow
 from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
+from fig_dash.ui import wrapFigDWindow, styleContextMenu
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
@@ -376,13 +376,13 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         })
         divElement.addEventListener('contextmenu', function(event) {
             // event.preventDefault(); // disable regular contextmenu.
-            event.preventDefault();
-            var file_item = this;
-            new QWebChannel(qt.webChannelTransport, function(channel) {
+            // event.preventDefault();
+            // var file_item = this;
+            /* new QWebChannel(qt.webChannelTransport, function(channel) {
                 var eventHandler = channel.objects.eventHandler;
                 eventHandler.triggerContextMenu(file_item.id);
             });
-            console.log(event);
+            console.log(event); */
             // file_item.dispatchEvent(new CustomEvent('contextmenu'));
         });
         if (fileHiddenFlags[i] == "1") {
@@ -928,7 +928,7 @@ class FileViewerStatus(QWidget):
 
 class FileViewerWebView(DebugWebView):
     '''fileviewer web view'''
-    def __init__(self):
+    def __init__(self, accent_color="yellow"):
         super(FileViewerWebView, self).__init__()
         self.orchardMenu = QMenu()
         self.orchardMenu.setStyleSheet("background: #292929; color: #fff;")
@@ -950,29 +950,14 @@ class FileViewerWebView(DebugWebView):
         self.itemMenu.addAction("Cut")
         self.itemMenu.addAction("Copy")
 
-        self.orchardMenu.setAttribute(Qt.WA_TranslucentBackground)
-        # self.menu.setStyleSheet(jinja2.Template("""
-		# QMenu {
-        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-		# 	color: #fff;
-		# 	padding: 10px;
-		# 	border-radius: 15px;
-		# }
-		# QMenu::item:selected {
-		# 	color: #fff; 
-		# 	background-color: {{ ACCENT_COLOR }}; 
-		# }
-		# QMenu:separator {
-		# 	background: #292929;
-		# }""").render(ACCENT_COLOR=self.accent_color))
-        # palette = self.menu.palette()
-        # palette.setColor(QPalette.Base, QColor(48,48,48))
-        # palette.setColor(QPalette.Text, QColor(125,125,125))
-        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        # # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-        # palette.setColor(QPalette.Window, QColor(255,255,255))
-        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # self.menu.setPalette(palette)
+        self.orchardMenu = styleContextMenu(
+            self.orchardMenu, 
+            accent_color=accent_color
+        )
+        self.itemMenu = styleContextMenu(
+            self.itemMenu, 
+            accent_color=accent_color
+        )
 
     def dragEnterEvent(self, e):
         e.ignore()
@@ -981,8 +966,12 @@ class FileViewerWebView(DebugWebView):
     #     self.itemMenu.popup(event.globalPos())
     def contextMenuEvent(self, event):
         '''show the orchared context menu (not specific to a selected item)'''
+        data = self.page().contextMenuData()
         # print(dir(event))
-        self.orchardMenu.popup(event.globalPos())
+        if data.mediaType() == 0:
+            self.orchardMenu.popup(event.globalPos())
+        elif data.mediaType() == 1:
+            self.itemMenu.popup(event.globalPos())
 
     def connectWidget(self, widget):
         self.widget = widget
@@ -2625,10 +2614,11 @@ class FileViewerWidget(QMainWindow):
                  logo: Union[None, str, QIcon]=None, 
                  zoom_factor: float=1.35, **args):
         super(FileViewerWidget, self).__init__(parent)
+        accent_color = args.get("accent_color", "blue")
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
-        self.webview = FileViewerWebView()
+        self.webview = FileViewerWebView(accent_color=accent_color)
         self.browser = self.webview
         self.zoom_factor = zoom_factor
         self.menu = FileViewerMenu()
@@ -3242,10 +3232,14 @@ def test_fileviewer():
     # fileviewer.open(path)
     # fileviewer.show()
     # app.exec()
+    # get accent color & icon.
+    icon = FigDSystemAppIconMap["fileviewer"]
+    accent_color = FigDAccentColorMap["fileviewer"]
     fileviewer = FileViewerWidget(
         clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True
+        font_color="#fff", parentless=True,
+        accent_color=accent_color,
     )
     # open path.
     try: 
@@ -3253,9 +3247,6 @@ def test_fileviewer():
     except IndexError: 
         path = os.path.expanduser("~")
     fileviewer.open(path)
-    # get accent color & icon.
-    icon = FigDSystemAppIconMap["fileviewer"]
-    accent_color = FigDAccentColorMap["fileviewer"]
     window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
                             icon=icon, width=800, height=600, 
                             name="fileviewer")
@@ -3279,18 +3270,19 @@ def test_fileviewer():
     app.exec()
     # fileviewer.saveScreenshot("fileviewer.html")
 def launch_fileviewer(app, path: Union[str, None]=None):
+    # get accent color & icon.
+    icon = FigDSystemAppIconMap["fileviewer"]
+    accent_color = FigDAccentColorMap["fileviewer"]
     fileviewer = FileViewerWidget(
         clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True
+        font_color="#fff", parentless=True, accent_color=accent_color
     )
     # open path.
     if path: fileviewer.open(path)
     else: fileviewer.open("~")
     fileviewer.open(path)
-    # get accent color & icon.
-    icon = FigDSystemAppIconMap["fileviewer"]
-    accent_color = FigDAccentColorMap["fileviewer"]
+
     window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
                             icon=icon, width=800, height=600, 
                             name="fileviewer")

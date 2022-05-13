@@ -7,16 +7,16 @@ import jinja2
 import datetime
 from typing import Union
 # fig-dash imports.
-from fig_dash.ui import wrapFigDWindow
+from fig_dash.ui import styleContextMenu, wrapFigDWindow
 from fig_dash.assets import FigD
 # PyQt5 imports
 from PyQt5.QtGui import QColor, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QWidget, QScrollArea, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
+from PyQt5.QtWidgets import QWidget, QScrollArea, QMenu, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
 
 # Clipboard UI.
 class DashClipboardUI(QWidget):
-    def __init__(self):
+    def __init__(self, accent_color="purple"):
         super(DashClipboardUI, self).__init__()
         QApplication.clipboard().dataChanged.connect(
             self.onDataChanged
@@ -42,7 +42,15 @@ class DashClipboardUI(QWidget):
         #     border-radius: 20px;
         #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         # }""")
+        self.accent_color = accent_color
         self.history = []
+
+    def contextMenuEvent(self, event):
+        self.menu = QMenu()
+        self.menu.addAction(FigD.Icon("system/clipboard/clear.svg"), "Clear")
+        self.menu.addAction(FigD.Icon("system/clipboard/export.svg"), "Export")
+        self.menu = styleContextMenu(self.menu, accent_color=self.accent_color)
+        self.menu.popup(event.globalPos())
 
     def wrapInScrollArea(self, widget):
         scrollArea = QScrollArea()
@@ -150,23 +158,23 @@ def test_clipboard():
     # create the clipboard UI widget.
     accent_color = FigDAccentColorMap["clipboard"]
     app = QApplication(sys.argv)
-    clipboard_ui = DashClipboardUI()
+    clipboard = DashClipboardUI(accent_color=accent_color)
     # wrap it in a FigDWindow
-    window = wrapFigDWindow(clipboard_ui, size=(25,25), 
-                            title="Clipboard Viewer", 
-                            icon="system/clipboard/logo.png",
-                            accent_color=accent_color)
+    window = wrapFigDWindow(clipboard, size=(25,25), 
+                            icon="system/clipboard/logo.png", 
+                            title="Clipboard Viewer", width=900,
+                            height=250, accent_color=accent_color)
     # show the app window.
     window.show()
     # run the application!
     app.exec()
 
 def launch_clipboard():
-    clipboard = DashClipboardUI()
+    clipboard = DashClipboardUI(accent_color=accent_color)
     icon = FigDSystemAppIconMap["clipboard"]
     accent_color = FigDAccentColorMap["clipboard"]
     window = wrapFigDWindow(clipboard, size=(25,25), width=900,
-                            title="Clipboard Viewer", height=300,
+                            title="Clipboard Viewer", height=250,
                             icon=icon, accent_color=accent_color,
                             name="clipboard")
     window.show()

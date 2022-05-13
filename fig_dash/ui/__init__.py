@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
-from turtle import title
 import jinja2
 from typing import *
 from pathlib import Path
@@ -10,7 +9,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
-from PyQt5.QtGui import QFontDatabase
+from PyQt5.QtGui import QFontDatabase, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QEvent
 from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QToolButton, QVBoxLayout, QHBoxLayout
 
@@ -43,6 +42,34 @@ QToolTip {
 }""")
 DASH_WIDGET_GROUP = jinja2.Template("""
 """)
+def styleContextMenu(menu, accent_color: str="yellow"):
+    menu.setAttribute(Qt.WA_TranslucentBackground)
+    menu.setObjectName("FigDMenu")
+    menu.setStyleSheet(jinja2.Template("""
+    QMenu#FigDMenu {
+        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    	color: #fff;
+    	padding: 10px;
+    	border-radius: 15px;
+    }
+    QMenu#FigDMenu::item:selected {
+    	color: #fff; 
+    	background-color: {{ ACCENT_COLOR }}; 
+    }
+    QMenu#FigDMenu:separator {
+    	background: #292929;
+    }""").render(ACCENT_COLOR=accent_color))
+    palette = menu.palette()
+    palette.setColor(QPalette.Base, QColor(48,48,48))
+    palette.setColor(QPalette.Text, QColor(125,125,125))
+    palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+    # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+    palette.setColor(QPalette.Window, QColor(255,255,255))
+    palette.setColor(QPalette.Highlight, QColor(235,95,52))
+    menu.setPalette(palette)
+
+    return menu
+
 class DashWidgetGroupBtn(QToolButton):
     '''Dash Widget button'''
     def __init__(self, parent: Union[None, QWidget]=None, **args):
