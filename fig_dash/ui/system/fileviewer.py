@@ -1163,6 +1163,8 @@ class FileViewerGroup(QWidget):
             background: transparent;
             padding-bottom: 0px;
         }''')
+        self.groupNameLabel = name
+
         return name
 
     def initBtnGrid(self, btn_args, spacing=None, 
@@ -1281,6 +1283,50 @@ class FileViewerGroup(QWidget):
         btnGroup.setLayout(layout)
 
         return btnGroup
+
+    def setBackgroundColor(self, color):
+        palette = self.palette()
+        if isinstance(color, str): 
+            color = QColor(color)
+        elif isinstance(color, tuple): 
+            color = QColor(*color)
+        palette.setColor(QPalette.Window, color)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+
+    def enterEvent(self, event):
+        """on entering highlight the group's background and it's name"""
+        # print("\x1b[34;1menterEvent\x1b[0m")
+        self.setBackgroundColor((255,255,255,50))
+        self.groupNameLabel.setStyleSheet("""
+        QLabel {
+            border: 0px;
+            border-right: 1px;
+            padding: 6px;
+            color: #69bfee;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: transparent;
+            padding-bottom: 0px;
+        }""")
+        super(FileViewerGroup, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        """on exiting restore the group's default styling"""
+        # print("\x1b[34;1mleaveEvent\x1b[0m")
+        self.setBackgroundColor((255,255,255,0))
+        self.groupNameLabel.setStyleSheet("""
+        QLabel {
+            border: 0px;
+            border-right: 1px;
+            padding: 6px;
+            color: #6e6e6e;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: transparent;
+            padding-bottom: 0px;
+        }""")
+        super(FileViewerGroup, self).leaveEvent(event)
 
     def initBtn(self, **args):
         return FileViewerBtn(self, **args)
