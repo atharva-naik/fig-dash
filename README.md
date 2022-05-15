@@ -13,8 +13,17 @@ An intelligent workspace, with a chromium browser instance at the centerstage an
 
 ## Screenshots
 Screenshots/showcase 
-1. Homepage
+1. Fig Dash Home Page.
 ![Homepage](https://github.com/atharva-naik/fig-dash/blob/main/showcase/homepage1.png?raw=true)
+2. System app launcher.
+![System app launcher](https://github.com/atharva-naik/fig-dash/blob/main/showcase/app_launcher.png?raw=true)
+3. File Viewer.
+![File Viewer](https://github.com/atharva-naik/fig-dash/blob/main/showcase/fileviewer.png?raw=true)
+![File Viewer (Ribbon)](https://github.com/atharva-naik/fig-dash/blob/main/showcase/fileviewer.png?raw=true)
+4. Image Viewer.
+![Image Viewer](https://github.com/atharva-naik/fig-dash/blob/main/showcase/imageviewer.png?raw=true)
+5. Clipboard Viewer.
+![Clipboard Viewer](https://github.com/atharva-naik/fig-dash/blob/main/showcase/clipboard.png?raw=true)
 
 ## Helpful links
 Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter) <br>
