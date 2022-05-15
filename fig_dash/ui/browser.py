@@ -658,11 +658,17 @@ class CustomWebPage(QWebEnginePage):
 
     def createWindow(self, windowType: QWebEnginePage.WebWindowType):
         if windowType == QWebEnginePage.WebBrowserTab:
-            return self.dash_window.tabs.openUrl("https://google.com")
+            if self.dash_window:
+                return self.dash_window.tabs.openUrl("https://google.com")
+            else: return None
         elif windowType == QWebEnginePage.WebBrowserWindow:
             app = QApplication.instance()
-            window = app.newMainWindow()
-            return window.tabs.openTab()
+            try:
+                window = app.newMainWindow()
+                return window.tabs.openTab()
+            except Exception as e:
+                print(e)
+                return None
         else:
             # handle this case appropriately.
             print(windowType)
@@ -1171,7 +1177,7 @@ class PageInfo(QWidget):
 #         print(f"wrapped action for {self.original.text()} triggered")
 #         self._original_action_ref.trigger()
 #         print(f"after triggering of {self.original.text()} is done")
-def inspectTriggerd(browser, inspect_action):
+def inspectTriggered(browser, inspect_action):
     if not browser.dev_view.isVisible():
         browser.dev_view.show()
     inspect_action.trigger()
@@ -1510,7 +1516,7 @@ class Browser(DebugWebView):
             else:
                 wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
             wrappedInspectAction.triggered.connect(
-                lambda: inspectTriggerd(
+                lambda: inspectTriggered(
                     browser=self,
                     inspect_action=inspectAction,
                 )

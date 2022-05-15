@@ -2343,6 +2343,8 @@ class FileViewerFolderBar(QWidget):
             icon="next.svg",
             tip="go forward (tied to webview.forward)",
         )
+        self.backBtn.setFixedHeight(27)
+        self.forwardBtn.setFixedHeight(27)
 
     def toggle(self):
         print("toggling folderbar visibility")
@@ -2428,6 +2430,7 @@ class FileViewerFolderBar(QWidget):
         icon = os.path.join("system/fileviewer", icon)
         btn.setIcon(FigD.Icon(icon))
         btn.setStyleSheet(self.folderBtnStyle)
+        btn.setFixedHeight(27)
 
         return btn 
 
@@ -2445,6 +2448,7 @@ class FileViewerFolderBar(QWidget):
                 lambda: self.widget.open(full_path)
             )
         btn.setStyleSheet(self.folderBtnStyle)
+        btn.setFixedHeight(27)
 
         return btn 
 

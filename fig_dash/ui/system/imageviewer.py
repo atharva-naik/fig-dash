@@ -3,6 +3,7 @@
 import os
 import bs4
 import json
+from fig_dash.ui import browser
 import jinja2
 import svgpathtools
 from typing import *
@@ -17,7 +18,7 @@ from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wra
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -4482,77 +4483,88 @@ class ImageViewerWebView(DebugWebView):
         super(ImageViewerWebView, self).__init__(*args, **kwargs)
         self.imageviewer = imageviewer
         self.accent_color = "yellow"
-
+        # self.menu = self.createContextMenu()
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
 
-    def contextMenuEvent(self, event):
-        self.menu = self.page().createStandardContextMenu()
-        self.menu.setObjectName("ImageViewerContextMenu")
+    def inspectTriggered(self):
+        print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
+        if not self.dev_view.isVisible():
+            self.dev_view.show()
+        self.inspect_action.trigger()
+        print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
+
+    def createContextMenu(self) -> QMenu:
+        menu = self.page().createStandardContextMenu()
+        menu.setObjectName("ImageViewerContextMenu")
         background_blur = BackgroundBlurEffect()
         background_blur.setEnabled(False)
         background_blur.setBlurRadius(10)
-        self.menu.setGraphicsEffect(background_blur)
-        data = self.page().contextMenuData()
-        # print("MediaType:", data.mediaType())       
-        # update palette.
-        self.menu = styleContextMenu(self.menu, accent_color=self.accent_color)
-        # self.menu.setAttribute(Qt.WA_TranslucentBackground)
-        # self.menu.setStyleSheet(jinja2.Template("""
-		# QMenu {
-        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-		# 	color: #fff;
-		# 	padding: 10px;
-		# 	border-radius: 15px;
-		# }
-		# QMenu::item:selected {
-		# 	color: #fff; 
-		# 	background-color: {{ ACCENT_COLOR }}; 
-		# }
-		# QMenu:separator {
-		# 	background: #292929;
-		# }""").render(ACCENT_COLOR=self.accent_color))
-        # palette = self.menu.palette()
-        # palette.setColor(QPalette.Base, QColor(48,48,48))
-        # palette.setColor(QPalette.Text, QColor(125,125,125))
-        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        # # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-        # palette.setColor(QPalette.Window, QColor(255,255,255))
-        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # self.menu.setPalette(palette)
-        
-        self.menu.popup(event.globalPos())
-		# # apply rounding mask.
-        # roundingPath = QPainterPath()
-        # roundingPath.addRoundedRect(QRectF(self.menu.rect()).adjusted(.5, .5, -1.5, -1.5), 15, 15)
-        # mask = QRegion(roundingPath.toFillPolygon(QTransform()).toPolygon())
-        # self.menu.setMask(mask)
-
-        # if data.mediaType() == 1:
-        for action in self.menu.actions():
+        menu.setGraphicsEffect(background_blur)
+        # data = self.page().contextMenuData()
+        menu = styleContextMenu(menu, accent_color=self.accent_color)
+        for action in menu.actions():
             if action.text() == "Save page":
                 action.setIcon(FigD.Icon("system/imageviewer/save_page.svg"))
+                action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+            elif action.text() == "View page source":
+                action.setShortcut(QKeySequence("Ctrl+U"))
+                action.setIcon(FigD.Icon("titlebar/source.svg"))
             elif action.text() == "Back":
+                action.setShortcut(QKeySequence.Back)
                 if action.isEnabled():
                     action.setIcon(FigD.Icon("system/imageviewer/prev.svg"))
                 else:
                     action.setIcon(FigD.Icon("system/imageviewer/prev_disabled.svg"))
             elif action.text() == "Forward":
+                action.setShortcut(QKeySequence.Forward)
                 if action.isEnabled():
                     action.setIcon(FigD.Icon("system/imageviewer/next.svg"))
                 else:
                     action.setIcon(FigD.Icon("system/imageviewer/next_disabled.svg"))
             elif action.text() == "Reload":
+                action.setShortcut(QKeySequence.Refresh)
                 action.setIcon(FigD.Icon("system/imageviewer/reload.svg"))
             elif action.text() == "Save image":
+                action.setShortcut(QKeySequence("Ctrl+S"))
                 action.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
                 action.triggered.connect(self.imageviewer.saveImage)
             elif action.text() == "Copy image":
+                action.setShortcut(QKeySequence.Copy)
                 action.setIcon(FigD.Icon("system/imageviewer/copy_image.svg"))
             elif action.text() == "Copy image address":
+                action.setShortcut(QKeySequence("Ctrl+Shift+C"))
                 action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
             elif action.text() == "Inspect":
-                action.setIcon(FigD.Icon("system/imageviewer/dev_tools.svg"))
+                self.inspect_action = action
+                action.setVisible(False) # hide original aspect action.
+                wrappedInspectAction = menu.addAction("Inspect")
+                wrappedInspectAction.setShortcut(QKeySequence("Ctrl+Shift+I"))
+                if wrappedInspectAction.isEnabled():
+                    wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
+                else:
+                    wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
+                wrappedInspectAction.triggered.connect(
+                    self.inspectTriggered
+                ) 
+        # additional ImageViewer actions.
+        menu.addSeparator()
+        menu.addAction("Zoom in")
+        menu.addAction("Zoom out")
+        menu.addAction("Original size")
+        menu.addSeparator()
+        menu.addAction("Rotate 90 clockwise")
+        menu.addAction("Rotate 90 anti-clockwise")
+        menu.addSeparator()
+        menu.addAction("Flip horizontally")
+        menu.addAction("Flip vertically")
+
+        return menu
+
+    def contextMenuEvent(self, event):
+        self.menu = self.createContextMenu()
+        data = self.page().contextMenuData()
+        self.menu.popup(event.globalPos())
         # elif data.mediaType() == 0:
         #     for action in self.menu.actions():
         #         print(action.text())

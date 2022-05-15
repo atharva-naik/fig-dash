@@ -11,7 +11,7 @@ from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QEvent
-from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea
 
 
 class DashWidgetGroupBtnStyler:
@@ -378,22 +378,101 @@ class FigDWindow(QMainWindow):
         self.setCentralWidget(widget)
         self.installEventFilter(self)
         self.titlebar = None
-        self.shortcuts_pane = self.createShorcutsPane()
+        self.shortcuts_pane = self.createShortcutsPane()
 
     def printShortcuts(self):
         for action in self.findChildren(QAction):
             print(type(action), action.text(), action.toolTip(), [x.toString() for x in action.shortcuts()])
 
-    def createShorcutsPane(self) -> QWidget:
+    def createShortcutLine(self, shortcut: str, action: str) -> QWidget:
+        line = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        line.setLayout(layout)
+        line.setStyleSheet("background: transparent;") 
+        keys = shortcut.split("+")
+        for key in keys[:-1]:
+            keyBtn = QToolButton()
+            keyBtn.setStyleSheet("""
+            QToolButton {
+                color: #aaa;
+                padding-top: 4px;
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-bottom: 4px;
+                font-size: 16px;
+                border-radius: 6px;
+                background: #484848;
+            }""")
+            keyBtn.setText(key)
+            layout.addWidget(keyBtn, 0, Qt.AlignLeft | Qt.AlignVCenter)
+            # add plus as a label
+            plus = QLabel()
+            plus.setStyleSheet("""
+            QLabel {
+                color: #aaa;
+                background: transparent;
+            }""")
+            plus.setText("+")
+            layout.addWidget(plus, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        keyBtn = QToolButton()
+        keyBtn.setStyleSheet("""
+        QToolButton {
+            color: #aaa;
+            padding-top: 4px;
+            padding-left: 8px;
+            padding-right: 8px;
+            padding-bottom: 4px;
+            font-size: 16px;
+            border-radius: 6px;
+            background: #484848;
+        }""")
+        keyBtn.setText(keys[-1])
+        layout.addWidget(keyBtn, 0, Qt.AlignLeft | Qt.AlignVCenter)
+        layout.addStretch(1)
+        # add description text for the action.
+        description = QLabel()
+        description.setStyleSheet("""
+        QLabel {
+            color: #fff;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro';
+            background: transparent;
+        }""")
+        description.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        description.setText(action)
+        layout.addWidget(description)
+
+        return line
+
+    def createShortcutsPane(self) -> QMainWindow:
         window = QMainWindow()
         window.setAttribute(Qt.WA_TranslucentBackground)
         window.setWindowFlags(Qt.Popup)
-        shortcuts_widget = QWidget()
+        shortcuts_widget = QScrollArea()
         shortcuts_widget.setStyleSheet("""
         QWidget {
             border-radius: 20px;
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         }""")
+        shortcuts_list = QWidget()
+        shortcuts_list.setStyleSheet("""
+        color: #eee;
+        background: transparent;""")
+        vboxlayout = QVBoxLayout()
+        shortcuts_list.setLayout(vboxlayout)
+        for action in self.findChildren(QAction):
+            shortcuts = [shortcut.toString() for shortcut in action.shortcuts()]
+            if len(shortcuts) == 0: continue
+            for shortcut in shortcuts:
+                print(shortcut)
+                vboxlayout.addWidget(
+                    self.createShortcutLine(
+                        shortcut,
+                        action.text(),
+                    )
+                )
+        shortcuts_widget.setWidget(shortcuts_list)
         window.setCentralWidget(shortcuts_widget)
 
         return window

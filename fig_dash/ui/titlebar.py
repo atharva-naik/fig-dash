@@ -371,10 +371,10 @@ class TitleBarShortcutsBtn(QToolButton):
         pos = event.globalPos()
         x, y = pos.x(), pos.y()
         window =  self.titlebar.window
-        shortcuts_pane = window.shortcuts_pane
-        shortcuts_pane.move(x, y)
-        shortcuts_pane.show()
-        print(window.printShortcuts())
+        window.shortcuts_pane = window.createShortcutsPane()
+        window.shortcuts_pane.move(x, y)
+        window.shortcuts_pane.show()
+        # print(window.printShortcuts())
         # self.menu.popup(event.globalPos())
 
 class TitleBarMinimizeBtn(QToolButton):
@@ -812,7 +812,9 @@ class WindowTitleBar(QToolBar):
             print("\x1b[34;1mtitle_widget:\x1b[0m", title_widget)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.closeBtn)
+        self.addWidget(self.initBlank(3))
         self.addWidget(self.minimizeBtn)
+        self.addWidget(self.initBlank(3))
         self.addWidget(self.maximizeBtn)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.viewSourceBtn)
@@ -828,9 +830,10 @@ class WindowTitleBar(QToolBar):
         # self.addWidget(self.title)
         self.addWidget(self.accentColorBtn)
         self.addWidget(self.initBlank(10))
+        self.addWidget(self.shortcutsBtn)
+        self.addWidget(self.initBlank(10))
         self.addWidget(self.title)
         self.addWidget(self.initBlank(10))
-        self.addWidget(self.shortcutsBtn)
         self.addWidget(self.settingsBtn)
         self.addWidget(self.initBlank())
         self.addWidget(self.ribbonCollapseBtn)
