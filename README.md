@@ -14,7 +14,7 @@ An intelligent workspace, with a chromium browser instance at the centerstage an
 ## Screenshots
 Screenshots/showcase 
 1. Homepage
-![Homepage](https://github.com/atharva-naik/fig-dash/blob/main/showcase/homepage.png?raw=true)
+![Homepage](https://github.com/atharva-naik/fig-dash/blob/main/showcase/homepage1.png?raw=true)
 
 ## Helpful links
 Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter) <br>

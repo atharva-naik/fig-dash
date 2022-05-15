@@ -1069,7 +1069,6 @@ class TitleBar(QToolBar):
             tip="view the source of the webpage.",
             size=(18,18),
         )
-        print("viewSourceBtn:", self.callbacks.get("viewSourceBtn"))
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",
