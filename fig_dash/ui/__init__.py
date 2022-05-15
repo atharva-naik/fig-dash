@@ -11,7 +11,7 @@ from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QEvent
-from PyQt5.QtWidgets import QApplication, QWidget, QMainWindow, QLabel, QToolButton, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon
 
 
 class DashWidgetGroupBtnStyler:
@@ -54,6 +54,7 @@ def styleContextMenu(menu, accent_color: str="yellow"):
     }
     QMenu#FigDMenu::item:selected {
     	color: #fff; 
+        border-radius: 5px;
     	background-color: {{ ACCENT_COLOR }}; 
     }
     QMenu#FigDMenu:separator {
@@ -229,6 +230,52 @@ class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
         super(FigDAppContainer, self).__init__(*args, **kwargs)
         self.active_window_ptr = None
+        # tray_icon = args.get("icon", "lol")
+        # create tray menu.
+        self.trayMenu = self.initTrayMenu()
+
+    def createTrayIcon(self, tray_icon: str):
+        # tray icon button.
+        self.trayIcon = QSystemTrayIcon(FigD.Icon(tray_icon), self)
+        self.trayIcon.setContextMenu(self.trayMenu)
+        self.trayIcon.show()
+
+    def initTrayMenu(self) -> QMenu:
+        """create context menu for system tray icon.
+
+        Returns:
+            QMenu: context menu object.
+        """
+        # actions for tray icon context menu.
+        self.showAction = QAction("Open")
+        self.quitAction = QAction("Quit")
+        self.logsAction = QAction("Get logs")
+        self.supportAction = QAction("Collect support files")
+        self.settingsAction = QAction("Settings")
+        # add icons.
+        self.showAction.setIcon(FigD.Icon("tray/open.svg"))
+        self.quitAction.setIcon(FigD.Icon("tray/close.svg"))
+        self.logsAction.setIcon(FigD.Icon("tray/logs.svg"))
+        self.supportAction.setIcon(FigD.Icon("tray/logs.svg"))
+        self.settingsAction.setIcon(FigD.Icon("tray/settings.svg"))
+        # connect functions to actions.
+        self.showAction.triggered.connect(self.showActiveWindow)
+        self.quitAction.triggered.connect(self.quit)
+        # tray icon menu.
+        trayMenu = QMenu()
+        trayMenu.addAction(self.logsAction)
+        trayMenu.addAction(self.supportAction)
+        trayMenu.addSeparator()
+        trayMenu.addAction(self.settingsAction)
+        trayMenu.addSeparator()
+        trayMenu.addAction(self.showAction)
+        trayMenu.addAction(self.quitAction)
+
+        return trayMenu
+
+    def showActiveWindow(self):
+        window = QApplication.activeWindow()
+        window.show()
 
     def notify(self, obj, event):
         if isinstance(obj, FigDWindow):
@@ -242,6 +289,80 @@ class FigDAppContainer(QApplication):
         return super(FigDAppContainer, self).notify(obj, event)
 
 
+class FigDTabWidget(QTabWidget):
+    def __init__(self):
+        super(FigDTabWidget, self).__init__()
+        self.setStyleSheet("""
+        QTabWidget {
+            color: #fff;
+            border: 0px;
+            font-family: 'Be Vietnam Pro';
+            background: transparent;
+        }
+        QTabWidget::pane {
+            border: 0px;
+            background: transparent;
+        }
+        QTabBar {
+            border: 0px;
+            background: transparent;
+        }
+        QTabBar::close-button {
+            background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        QTabBar::close-button:hover {
+            background: url("/home/atharva/GUI/fig-dash/resources/icons/close-active.png");
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        QTabBar::tab {
+            border: 0px;
+            color: #fff;
+
+            margin-left: 1px;
+            margin-right: 1px;
+
+            padding-top: 5px;
+            padding-left: 9px;
+            padding-right: 5px;
+            padding-bottom: 5px;
+
+            font-size: 17px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            max-width: 300px;
+            background: #000;
+        }
+        QTabBar::tab:hover {
+            color: #fff;
+            background: #323232;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
+        }
+        QTabBar::tab:selected {
+            color: #eee;
+            border: 0px;
+            background: #323232;
+            font-weight: bold;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); */
+            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
+            padding-top: 5px;
+            padding-left: 9px;
+            padding-right: 5px;
+            padding-bottom: 5px;
+            margin-left: 1px;
+            margin-right: 1px;
+            font-size: 17px;
+            font-weight: bold;
+        }""")
+        self.setTabBarAutoHide(True)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+
 class FigDWindow(QMainWindow):
     def __init__(self, widget, **args):
         # self.layout.insertWidget(0, titlebar)
@@ -250,13 +371,32 @@ class FigDWindow(QMainWindow):
         title = args.get("title", "FigD wrapped widget")
         winIcon = args.get("icon", "system/clipboard/window_icon.png")
         self.__win_icon_size = args.get("size", (30,30))
+        self.setWindowTitle(title)
         self.setWindowIcon(FigD.Icon(winIcon))
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setWindowTitle(title)
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCentralWidget(widget)
         self.installEventFilter(self)
         self.titlebar = None
+        self.shortcuts_pane = self.createShorcutsPane()
+
+    def printShortcuts(self):
+        for action in self.findChildren(QAction):
+            print(type(action), action.text(), action.toolTip(), [x.toString() for x in action.shortcuts()])
+
+    def createShorcutsPane(self) -> QWidget:
+        window = QMainWindow()
+        window.setAttribute(Qt.WA_TranslucentBackground)
+        window.setWindowFlags(Qt.Popup)
+        shortcuts_widget = QWidget()
+        shortcuts_widget.setStyleSheet("""
+        QWidget {
+            border-radius: 20px;
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+        }""")
+        window.setCentralWidget(shortcuts_widget)
+
+        return window
     # def focusInEvent(self, event):
     #     if self.titlebar: self.titlebar.activate()
     #     super(FigDWindow, self).focusInEvent(event)
@@ -268,6 +408,9 @@ class FigDWindow(QMainWindow):
         #     border-radius: 20px;
         #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         # }""")
+    def showShortcutList(self):
+        self.shortcuts_pane.show()
+    
     def connectTitleBar(self, titlebar):
         self.titlebar = titlebar
         self.titlebar.setWindowIcon(
@@ -300,17 +443,24 @@ def wrapFigDWindow(widget: QWidget, **args):
         FigD.font("BeVietnamPro-Regular.ttf")
     )
     # arguments.
+    icon = args.get("icon")
     name = args.get("name", "-")
+    title = args.get("title", "")
     width = args.get("width", 960)
     height = args.get("height", 800)
+    add_tabs = args.get("add_tabs", True)
+    animated = args.get("animated", False)
     show_titlebar = args.get("titlebar", True)
     accent_color = args.get("accent_color", "red")
     titlebar_callbacks = args.get("titlebar_callbacks", {})
     # create the titlebar.
     titlebar = WindowTitleBar(
         background=accent_color, 
-        callbacks=titlebar_callbacks
+        callbacks=titlebar_callbacks,
+        title_widget=args.get("title_widget"),
     )
+    if animated: titlebar.setAnimatedTitle(title)
+    else: titlebar.setTitle(title)
     try:
         titlebar.ribbonCollapseBtn.clicked.connect(widget.menu.toggle)
     except Exception as e: print(e)
@@ -382,7 +532,12 @@ def wrapFigDWindow(widget: QWidget, **args):
     layout.setContentsMargins(0, 0, 0, 0)
     # build layout.
     layout.addWidget(titlebar)
-    layout.addWidget(widget)
+    if add_tabs:
+        tabwidget = FigDTabWidget()
+        tabwidget.addTab(widget, name)
+        layout.addWidget(tabwidget)
+    else:
+        layout.addWidget(widget)
     centralWidget.setLayout(layout)
 
     window = FigDWindow(widget=centralWidget, **args)
@@ -390,6 +545,8 @@ def wrapFigDWindow(widget: QWidget, **args):
     window.connectTitleBar(titlebar)
     # style application tooltips
     app = QApplication.instance()
+    if icon is not None:
+        app.createTrayIcon(tray_icon=icon)
     app.setStyleSheet("""
     QToolTip {
         color: #fff;

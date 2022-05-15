@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import sys
-from turtle import title
-from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 import jinja2
 import datetime
 from typing import Union
 # fig-dash imports.
-from fig_dash.ui import styleContextMenu, wrapFigDWindow
 from fig_dash.assets import FigD
+from fig_dash.ui import FigDAppContainer, styleContextMenu, wrapFigDWindow
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports
 from PyQt5.QtGui import QColor, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
@@ -157,26 +156,27 @@ def test_clipboard():
     FigD("/home/atharva/GUI/fig-dash/resources")
     # create the clipboard UI widget.
     accent_color = FigDAccentColorMap["clipboard"]
-    app = QApplication(sys.argv)
+    app = FigDAppContainer(sys.argv)
     clipboard = DashClipboardUI(accent_color=accent_color)
     # wrap it in a FigDWindow
     window = wrapFigDWindow(clipboard, size=(25,25), 
                             icon="system/clipboard/logo.png", 
                             title="Clipboard Viewer", width=900,
-                            height=250, accent_color=accent_color)
+                            height=250, accent_color=accent_color,
+                            add_tabs=False)
     # show the app window.
     window.show()
     # run the application!
     app.exec()
 
 def launch_clipboard():
-    clipboard = DashClipboardUI(accent_color=accent_color)
     icon = FigDSystemAppIconMap["clipboard"]
     accent_color = FigDAccentColorMap["clipboard"]
+    clipboard = DashClipboardUI(accent_color=accent_color)
     window = wrapFigDWindow(clipboard, size=(25,25), width=900,
                             title="Clipboard Viewer", height=250,
                             icon=icon, accent_color=accent_color,
-                            name="clipboard")
+                            name="clipboard", add_tabs=False)
     window.show()
 
 

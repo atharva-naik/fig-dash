@@ -55,6 +55,7 @@ class SystemAppLauncherSearchBar(QLineEdit):
         completer.setModel(stringModel)
         self.setCompleter(completer)
         self.setMinimumWidth(600)
+        self.setClearButtonEnabled(True)
 
 
 class DashSystemAppLauncher(QWidget): 
@@ -127,11 +128,15 @@ def start_system_app_launcher():
     app = FigDAppContainer(sys.argv)
     app_launcher = DashSystemAppLauncher()
     # wrap it in a FigDWindow
+    def blank(): pass
     icon = FigDSystemAppIconMap["app_launcher"]
     accent_color = FigDAccentColorMap["app_launcher"]
     window = wrapFigDWindow(app_launcher, title="System App Launcher", 
                             accent_color=accent_color, icon=icon,
-                            name="app_launcher")
+                            name="app_launcher", add_tabs=False,
+                            titlebar_callbacks={
+                                "viewSourceBtn": blank(),
+                            })
     # show the app window.
     window.show()
     # run the application!

@@ -13,7 +13,7 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
@@ -4481,6 +4481,7 @@ class ImageViewerWebView(DebugWebView):
     def __init__(self, *args, imageviewer=None, **kwargs):
         super(ImageViewerWebView, self).__init__(*args, **kwargs)
         self.imageviewer = imageviewer
+        self.accent_color = "yellow"
 
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
@@ -4495,29 +4496,30 @@ class ImageViewerWebView(DebugWebView):
         data = self.page().contextMenuData()
         # print("MediaType:", data.mediaType())       
         # update palette.
-        self.menu.setAttribute(Qt.WA_TranslucentBackground)
-        self.menu.setStyleSheet(jinja2.Template("""
-		QMenu {
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-			color: #fff;
-			padding: 10px;
-			border-radius: 15px;
-		}
-		QMenu::item:selected {
-			color: #fff; 
-			background-color: {{ ACCENT_COLOR }}; 
-		}
-		QMenu:separator {
-			background: #292929;
-		}""").render(ACCENT_COLOR=self.accent_color))
-        palette = self.menu.palette()
-        palette.setColor(QPalette.Base, QColor(48,48,48))
-        palette.setColor(QPalette.Text, QColor(125,125,125))
-        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-        palette.setColor(QPalette.Window, QColor(255,255,255))
-        palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        self.menu.setPalette(palette)
+        self.menu = styleContextMenu(self.menu, accent_color=self.accent_color)
+        # self.menu.setAttribute(Qt.WA_TranslucentBackground)
+        # self.menu.setStyleSheet(jinja2.Template("""
+		# QMenu {
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+		# 	color: #fff;
+		# 	padding: 10px;
+		# 	border-radius: 15px;
+		# }
+		# QMenu::item:selected {
+		# 	color: #fff; 
+		# 	background-color: {{ ACCENT_COLOR }}; 
+		# }
+		# QMenu:separator {
+		# 	background: #292929;
+		# }""").render(ACCENT_COLOR=self.accent_color))
+        # palette = self.menu.palette()
+        # palette.setColor(QPalette.Base, QColor(48,48,48))
+        # palette.setColor(QPalette.Text, QColor(125,125,125))
+        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+        # # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+        # palette.setColor(QPalette.Window, QColor(255,255,255))
+        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # self.menu.setPalette(palette)
         
         self.menu.popup(event.globalPos())
 		# # apply rounding mask.

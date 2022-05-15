@@ -658,3 +658,14 @@ def test_menu():
 
 if __name__ == "__main__":
     test_menu()
+## Tasks to be done (num_classes, num_inputs):
+# 1. XNLI (3, )
+# 2. PAWS-X (2, )
+# 3. NC (news) (10, )
+# 4. QADSM (ads) (2, )
+# 5. WP (rel)
+# 6. QAM
+
+# python run_hf_bert.py -t -tp data/product_augmented/back/emanual_balanced_review_hijack_train.tsv -vp data/product_augmented/back/emanual_balanced_review_hijack_val.tsv -d "cuda:0" -e EManual_RoBERTa_pb_win_p -bp roberta-base -tkp "~/roberta-base-tok" --win_p
+
+# python run_hf_bert.py -wp -tep data/product_augmented/back/emanual_balanced_review_hijack_test.tsv -d "cuda:1" -e EManual_RoBERTa_pb_win_p -bp roberta-base -tkp "~/roberta-base-tok"

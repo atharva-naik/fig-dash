@@ -6,6 +6,7 @@
 import os
 from typing import *
 from dataclasses import dataclass
+# from fig_dash.api.system.file.applications import FigDIconMap
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui import wrapFigDWindow, FigDAppContainer
@@ -133,9 +134,10 @@ def start_system_app_launcher():
     app = FigDAppContainer(sys.argv)
     app_launcher = DashAppLauncher()
     # wrap it in a FigDWindow
+    # icon = FigDIconMap["app_launcher"]
     # accent_color = FigDAccentColorMap["app_launcher"]
     window = wrapFigDWindow(app_launcher, title="App Launcher and Store", 
-                            accent_color="black", icon=icon,
+                            accent_color=accent_color, icon=icon,
                             name="app_launcher")
     # show the app window.
     window.show()

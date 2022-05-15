@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 # the fig-dash fileviewer is known as the "orchard".
 import os
-from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 import jinja2
 import socket
 import getpass
@@ -14,10 +13,12 @@ from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
-from fig_dash.ui import wrapFigDWindow, styleContextMenu
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
+from fig_dash.ui import wrapFigDWindow, styleContextMenu, FigDAppContainer
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
+from PyQt5.QtWebEngineWidgets import QWebEnginePage
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QFontDatabase, QPalette
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QFileSystemWatcher
 from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
@@ -931,7 +932,6 @@ class FileViewerWebView(DebugWebView):
     def __init__(self, accent_color="yellow"):
         super(FileViewerWebView, self).__init__()
         self.orchardMenu = QMenu()
-        self.orchardMenu.setStyleSheet("background: #292929; color: #fff;")
         self.orchardMenu.addAction("New Folder")
         self.orchardMenu.addAction("New File")
         self.orchardMenu.addSeparator()
@@ -942,22 +942,41 @@ class FileViewerWebView(DebugWebView):
         self.orchardMenu.addSeparator()
         self.orchardMenu.addAction("Properties")
 
-        self.itemMenu = QMenu()
-        self.itemMenu.setStyleSheet("background: #292929; color: #fff;")
-        self.itemMenu.addAction("Open")
-        self.itemMenu.addAction("Open With")
-        self.itemMenu.addSeparator()
-        self.itemMenu.addAction("Cut")
-        self.itemMenu.addAction("Copy")
-
+        self.accent_color = accent_color
         self.orchardMenu = styleContextMenu(
             self.orchardMenu, 
             accent_color=accent_color
         )
+
+    def initItemMenu(self, mimetype="folder"):
+        self.itemMenu = QMenu()
+        self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "Open With default")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "Open With")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction("Cut")
+        self.itemMenu.addAction(FigD.Icon("browser/copy.svg"), "Copy")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction("Move To...")
+        self.itemMenu.addAction("Copy To...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/link.svg"), "Make Link")
+        self.itemMenu.addAction("Rename...")
+        # if mimetype == ""
+            # self.itemMenu.addAction("Set as Wallpaper")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction(FigD.Icon("tabbar/trash.svg"), "Move to Trash")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction("Revert to Previous Version...")
+        self.itemMenu.addAction("Compress...")
+        self.itemMenu.addAction("Email...")
+        self.itemMenu.addSeparator()
+        self.itemMenu.addAction("Properties") 
         self.itemMenu = styleContextMenu(
             self.itemMenu, 
-            accent_color=accent_color
+            accent_color=self.accent_color
         )
+
+        return self.itemMenu       
 
     def dragEnterEvent(self, e):
         e.ignore()
@@ -967,10 +986,13 @@ class FileViewerWebView(DebugWebView):
     def contextMenuEvent(self, event):
         '''show the orchared context menu (not specific to a selected item)'''
         data = self.page().contextMenuData()
+        print(data)
         # print(dir(event))
         if data.mediaType() == 0:
             self.orchardMenu.popup(event.globalPos())
         elif data.mediaType() == 1:
+            # print(self.widget.selected_item)
+            self.itemMenu = self.initItemMenu()
             self.itemMenu.popup(event.globalPos())
 
     def connectWidget(self, widget):
@@ -2612,6 +2634,7 @@ class FileViewerKeyPressSearch(QLineEdit):
 class FileViewerWidget(QMainWindow):
     def __init__(self, parent: Union[None, QWidget]=None, 
                  logo: Union[None, str, QIcon]=None, 
+                 dangle_folderbar: bool=False,
                  zoom_factor: float=1.35, **args):
         super(FileViewerWidget, self).__init__(parent)
         accent_color = args.get("accent_color", "blue")
@@ -2653,7 +2676,7 @@ class FileViewerWidget(QMainWindow):
         self.webview.page().setWebChannel(self.channel)
         
         self.folderbar = FileViewerFolderBar()
-        self.folderbar.setFixedHeight(34)
+        self.folderbar.setFixedHeight(30)
         # self.folderbar.hide()
         self.sidebar = FileViewerSideBar()
         self.sideArea = wrapInScrollArea(self.sidebar)
@@ -2687,7 +2710,8 @@ class FileViewerWidget(QMainWindow):
         # add widgets to layout.
         self.layout.insertWidget(0, self.webview.splitter, 0)
         self.layout.insertWidget(0, self.foldersearchbar, 0, Qt.AlignCenter)
-        self.layout.insertWidget(0, self.folderbar, 0)
+        if not dangle_folderbar:
+            self.layout.insertWidget(0, self.folderbar, 0)
         # if args.get("parentless", False):
         #     self.menuArea = self.wrapInScrollArea(self.menu)
         #     self.menuArea.setFixedHeight(130)
@@ -2897,6 +2921,15 @@ class FileViewerWidget(QMainWindow):
         print(f"\x1b[32;1mcreated new folder: {path}\x1b[0m")
 
         return path
+
+    def viewSource(self):
+        """view source of the current view."""
+        try: 
+            self.webview.page().triggerAction(
+                QWebEnginePage.ViewSource
+            )
+        except Exception as e: 
+            print("\x1b[33;1mui::system::fileviewer::FileViewerWidget.viewSource\x1b[0m", e)
 
     def open(self, folder: str="~"):
         '''open a file/folder location.'''
@@ -3208,7 +3241,7 @@ class FileViewerWidget(QMainWindow):
 def test_fileviewer():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
-    app = QApplication(sys.argv)
+    app = FigDAppContainer(sys.argv)
     # fileviewer = FileViewerWidget(
     #     clipboard=app.clipboard(),
     #     background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
@@ -3238,7 +3271,7 @@ def test_fileviewer():
     fileviewer = FileViewerWidget(
         clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True,
+        font_color="#fff", parentless=True, dangle_folderbar=True,
         accent_color=accent_color,
     )
     # open path.
@@ -3247,9 +3280,12 @@ def test_fileviewer():
     except IndexError: 
         path = os.path.expanduser("~")
     fileviewer.open(path)
-    window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
-                            icon=icon, width=800, height=600, 
-                            name="fileviewer")
+    window = wrapFigDWindow(fileviewer, icon=icon, width=800,
+                            height=600, accent_color=accent_color,
+                            name="fileviewer", titlebar_callbacks={
+                                "viewSourceBtn": fileviewer.viewSource,
+                            }, title_widget=fileviewer.folderbar)
+                            #, title=f"fileviewer: {path}")
     spacer1 = QWidget()
     spacer1.setStyleSheet("background: transparent")
     spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -3279,9 +3315,9 @@ def launch_fileviewer(app, path: Union[str, None]=None):
         font_color="#fff", parentless=True, accent_color=accent_color
     )
     # open path.
-    if path: fileviewer.open(path)
+    if path is not None: 
+        fileviewer.open(path)
     else: fileviewer.open("~")
-    fileviewer.open(path)
 
     window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
                             icon=icon, width=800, height=600, 

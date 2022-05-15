@@ -11,7 +11,7 @@ from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel
-from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter
+from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea
 # title_bar_style = '''
 # QToolBar {
 #     margin: 0px; 
@@ -98,6 +98,11 @@ QToolButton {
     border-bottom-right-radius: 8px;
 }''')
 
+window_title_ctrl_btn_style = '''
+QToolButton {
+    border-radius: 11px; 
+    font-family: Helvetica;
+}'''
 window_title_btn_style = '''
 QToolButton {
     border-radius: 11px; 
@@ -147,6 +152,59 @@ def styleContextMenu(menu, accent_color: str="yellow"):
     menu.setPalette(palette)
 
     return menu
+
+def resize_text(text, length=10):
+    return (text+" "*(length-len(text)))[:length]
+
+def rotate_text(text, step=0):
+    return text[-step:]+text[:-step]
+
+class TitleBarAnimatedLabel(QLabel):
+    def __init__(self, parent: Union[QWidget, None]=None):
+        """Animated title bar widget
+        Args:
+            text (str): initial text for animated title bar
+            timing (int, optional): time interval of every update. Defaults to 100.
+            parent (Union[QWidget, None], optional): parent of QLabel. Defaults to None.
+        """
+        super(TitleBarAnimatedLabel, self).__init__(parent)
+        self.MAX = 24
+        self.step_ctr = 0
+        self.timing = 200
+        self.raw_text = ""
+        self.init_text = resize_text(self.raw_text, self.MAX)
+        self.animation_timer = QTimer()
+        self.animation_timer.timeout.connect(
+            self.shiftTitle
+        )
+        # self.animation_timer.start(timing)
+        # self.setText(self.init_text)
+    def setAnimatedText(self, text: str, timing: int=200):
+        self.init_text = resize_text(text, self.MAX)
+        self.timing = timing
+        self.raw_text = text
+        self.animation_timer.stop()
+        self.animation_timer.start(timing)
+
+    def setText(self, text: str):
+        self.setAlignment(Qt.AlignCenter)
+        super(TitleBarAnimatedLabel, self).setText(text)
+
+    def resizeEvent(self, event):
+        # print("width =", self.width())
+        # self.animation_timer.stop()
+        # self.animation_timer.start(self.timing)
+        self.step_ctr = 0
+        self.MAX = int(self.width()*24/218)
+        self.init_text = resize_text(self.raw_text, self.MAX)
+        super(TitleBarAnimatedLabel, self).resizeEvent(event)
+
+    def shiftTitle(self):
+        self.step_ctr = (self.step_ctr+1)%self.MAX
+        self.setText(rotate_text(
+            self.init_text,
+            self.step_ctr
+        ))
 
 
 class TabSearchBar(QLineEdit):
@@ -272,8 +330,9 @@ class TitleBarCloseBtn(QToolButton):
         self.setIcon(FigD.Icon(
             "titlebar/close_large.svg"
         ))
+        self.isDisabled = False
         self.setIconSize(QSize(*size))
-        self.setStyleSheet(window_title_btn_style)
+        self.setStyleSheet(window_title_ctrl_btn_style)
         if callback is not None:
             self.clicked.connect(callback)
         self.menu = QMenu()
@@ -283,16 +342,40 @@ class TitleBarCloseBtn(QToolButton):
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/close_large_hover.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/close_large_hover.svg"))
         super(TitleBarCloseBtn, self).enterEvent(event)
 
     def leaveEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/close_large.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/close_large.svg"))
         super(TitleBarCloseBtn, self).leaveEvent(event)
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
 
+
+class TitleBarShortcutsBtn(QToolButton):
+    def __init__(self, titlebar=None,
+                 size: Tuple[int,int]=(22,22)):
+        super(TitleBarShortcutsBtn, self).__init__()
+        self.setToolTip("show window shortcuts")
+        self.setIcon(FigD.Icon(
+            "titlebar/shortcuts.png"
+        ))
+        self.titlebar = titlebar
+        self.setIconSize(QSize(*size))
+        self.setStyleSheet(window_title_btn_style)
+
+    def contextMenuEvent(self, event):
+        pos = event.globalPos()
+        x, y = pos.x(), pos.y()
+        window =  self.titlebar.window
+        shortcuts_pane = window.shortcuts_pane
+        shortcuts_pane.move(x, y)
+        shortcuts_pane.show()
+        print(window.printShortcuts())
+        # self.menu.popup(event.globalPos())
 
 class TitleBarMinimizeBtn(QToolButton):
     def __init__(self, callback=None, 
@@ -302,8 +385,9 @@ class TitleBarMinimizeBtn(QToolButton):
         self.setIcon(FigD.Icon(
             "titlebar/minimize_large.svg"
         ))
+        self.isDisabled = False
         self.setIconSize(QSize(*size))
-        self.setStyleSheet(window_title_btn_style)
+        self.setStyleSheet(window_title_ctrl_btn_style)
         if callback is not None:
             self.clicked.connect(callback)
         self.menu = QMenu()
@@ -312,11 +396,13 @@ class TitleBarMinimizeBtn(QToolButton):
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/minimize_large_hover.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/minimize_large_hover.svg"))
         super(TitleBarMinimizeBtn, self).enterEvent(event)
 
     def leaveEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/minimize_large.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/minimize_large.svg"))
         super(TitleBarMinimizeBtn, self).leaveEvent(event)
 
     def contextMenuEvent(self, event):
@@ -331,8 +417,9 @@ class TitleBarMaximizeBtn(QToolButton):
         self.setIcon(FigD.Icon(
             "titlebar/maximize_large.svg"
         ))
+        self.isDisabled = False
         self.setIconSize(QSize(*size))
-        self.setStyleSheet(window_title_btn_style)
+        self.setStyleSheet(window_title_ctrl_btn_style)
         if callback is not None:
             self.clicked.connect(callback)
         self.menu = QMenu()
@@ -343,12 +430,53 @@ class TitleBarMaximizeBtn(QToolButton):
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/maximize_large_hover.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/maximize_large_hover.svg"))
         super(TitleBarMaximizeBtn, self).enterEvent(event)
 
     def leaveEvent(self, event):
-        self.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
+        if not self.isDisabled:
+            self.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
         super(TitleBarMaximizeBtn, self).leaveEvent(event)
+
+    def contextMenuEvent(self, event):
+        self.menu.popup(event.globalPos())
+
+
+class TitleBarRibbonCollapseBtn(QToolButton):
+    def __init__(self, callback=None, 
+                 size: Tuple[int,int]=(22,22), 
+                 accent_color: str="yellow"):
+        super(TitleBarRibbonCollapseBtn, self).__init__()
+        self.setToolTip("collapse the ribbon menu")
+        self.setIcon(FigD.Icon(
+            "titlebar/widgets_bar.svg"
+        ))
+        self.setIconSize(QSize(*size))
+        self.setStyleSheet(
+            title_btn_style_l.render(
+                BACKGROUND=accent_color
+        ))
+        if callback is not None:
+            self.clicked.connect(callback)
+        self.menu = QMenu()
+        self.menu.addAction(
+            FigD.Icon("titlebar/hide.svg"),
+            "Hide menu",
+        )
+        self.menu.addAction(
+            FigD.Icon("titlebar/widgets_bar.svg"), 
+            "Show simplified\nribbon"
+        )
+        self.menu = styleContextMenu(self.menu, accent_color)
+
+    def enterEvent(self, event):
+        # self.setIcon(FigD.Icon("titlebar/maximize_large_hover.svg"))
+        super(TitleBarRibbonCollapseBtn, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        # self.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
+        super(TitleBarRibbonCollapseBtn, self).leaveEvent(event)
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
@@ -532,7 +660,8 @@ class ZoomSlider(QSlider):
 
 class WindowTitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None, 
-                 background: str="#292929", callbacks: dict={}):
+                 background: str="#292929", title_widget=None, 
+                 callbacks: dict={}):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
@@ -599,40 +728,53 @@ class WindowTitleBar(QToolBar):
             efs_icon="titlebar/exit_fullscreen.svg", 
             style="r", background=background,
         )
-        self.ribbonCollapseBtn = self.initTitleBtn(
-            "titlebar/widgets_bar.svg", 
-            tip="collapse the ribbon menu",
-            style="l", 
-            c=callbacks.get("ribbonCollapseBtn")
+        self.ribbonCollapseBtn = TitleBarRibbonCollapseBtn(
+            callback=callbacks.get("ribbonCollapseBtn"),
+            accent_color=background,
         )
         gray = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #3f3f3f, stop : 0.091 #494949, stop : 0.182 #545454, stop : 0.273 #5f5f5f, stop : 0.364 #6a6a6a, stop : 0.455 #757575, stop : 0.545 #808080, stop : 0.636 #8c8c8c, stop : 0.727 #989898, stop : 0.818 #a4a4a4, stop : 0.909 #b0b0b0, stop : 1.0 #bcbcbc)"""
         self.accentColorBtn = self.initTitleBtn(
             "titlebar/accent_color.png",
             tip="pick a new accent color",
-            background=gray, style="l"
+            # background=gray, style="l"
         )
         self.settingsBtn = self.initTitleBtn(
             "titlebar/settings.svg",
             tip="open window settings",
-            background=gray, style="r"
+            # background=gray, style="r"
         )
-        self.shortcutsBtn = self.initTitleBtn(
-            "titlebar/shortcuts.png",
-            tip="show window shortcuts",
-            background=gray, style="c"
-        )
-
+        self.shortcutsBtn = TitleBarShortcutsBtn(titlebar=self)
+        # zoom slider
         self.zoomSlider = ZoomSlider()
+        # wrapper for maintaining background color.
+        zoomSliderWrapper = QWidget()
+        # zoomSliderWrapper.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        zoomSliderWrapper.setFixedHeight(27)
+        zoomSliderWrapper.setFixedWidth(100)
+        zoomSliderWrapper.setObjectName("ZoomSliderWrapper")
+        zoomSliderLayout = QVBoxLayout()
+        zoomSliderLayout.setSpacing(0)
+        zoomSliderLayout.setContentsMargins(0, 0, 0, 0)
+        zoomSliderWrapper.setStyleSheet(jinja2.Template("""
+        QWidget#ZoomSliderWrapper {
+            background: {{ BACKGROUND }};
+        }""").render(BACKGROUND=background))
+        zoomSliderLayout.addWidget(self.zoomSlider)
+        zoomSliderWrapper.setLayout(zoomSliderLayout)
+
         self.zoomLabel = QLineEdit()
         self.zoomLabel.setText("125")
-        self.zoomLabel.setStyleSheet("""
+        self.zoomLabel.setFixedHeight(27)
+        self.zoomLabel.setStyleSheet(jinja2.Template("""
         QLineEdit {
+            color: #fff; 
+            border: 0px;
             padding: 1px;
-            color: #fff; /* #34b4eb; #39a4e7; */
             font-size: 16px;
             font-weight: bold;
-            background: transparent;
-        }""")
+            background: {{ BACKGROUND }};
+            /* #34b4eb; #39a4e7; */
+        }""").render(BACKGROUND=background))
         if "qlineargradient" in background:
             sliderHandleColor = self.background.split(":")[-1].strip()
             sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
@@ -648,20 +790,31 @@ class WindowTitleBar(QToolBar):
         # self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
 
-        # window title
-        self.title = QLabel()
-        # self.title.setText("fig-dash: a dashboard for Python developers")
-        self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
-        # self.title.setAlignment(Qt.AlignCenter)
-        self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        # # window title
+        # self.title = QLabel()
+        # # self.title.setText("fig-dash: a dashboard for Python developers")
+        # self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
+        # # self.title.setAlignment(Qt.AlignCenter)
+        # self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
         # to display window icon.
         self.windowIcon = QLabel()
-
-        self.addWidget(self.initBlank(5))
+        self.title_widget = title_widget
+        if title_widget is None:
+            self.title = self.initSpacer(text="PlaceholderText()")
+        else:
+            self.title = QScrollArea()
+            self.title.setStyleSheet("""background-color: transparent;""")
+            self.title.setWidgetResizable(True)
+            self.title.setWidget(self.title_widget)
+            self.title.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            self.title.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+            print("\x1b[34;1mtitle_widget:\x1b[0m", title_widget)
+        self.addWidget(self.initBlank(10))
         self.addWidget(self.closeBtn)
         self.addWidget(self.minimizeBtn)
         self.addWidget(self.maximizeBtn)
-        self.addWidget(self.initBlank())
+        self.addWidget(self.initBlank(10))
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.devToolsBtn)
@@ -669,12 +822,14 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.printBtn)
         self.addWidget(self.zoomOutBtn)
         self.addWidget(self.zoomLabel)
-        self.addWidget(self.zoomSlider)
+        self.addWidget(zoomSliderWrapper)
         self.addWidget(self.zoomInBtn)
-        self.addWidget(self.initSpacer(30))
-        self.addWidget(self.title)
-        self.addWidget(self.initSpacer())
+        self.addWidget(self.initBlank(10))
+        # self.addWidget(self.title)
         self.addWidget(self.accentColorBtn)
+        self.addWidget(self.initBlank(10))
+        self.addWidget(self.title)
+        self.addWidget(self.initBlank(10))
         self.addWidget(self.shortcutsBtn)
         self.addWidget(self.settingsBtn)
         self.addWidget(self.initBlank())
@@ -703,6 +858,14 @@ class WindowTitleBar(QToolBar):
     #     except Exception as e:
     #         print(e)
     #         return False
+    def setAnimatedTitle(self, title: str, timing: int=100):
+        if self.title_widget is None:
+            self.title.setAnimatedText(title, timing=timing)
+
+    def setTitle(self, title: str):
+        if self.title_widget is None:
+            self.title.setText(title)
+
     def resetSliderPalette(self):
         if "qlineargradient" in self.background:
             sliderHandleColor = self.background.split(":")[-1].strip()
@@ -728,12 +891,18 @@ class WindowTitleBar(QToolBar):
         self.closeBtn.setIcon(FigD.Icon("titlebar/close_large.svg"))
         self.maximizeBtn.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
         self.minimizeBtn.setIcon(FigD.Icon("titlebar/minimize_large.svg"))
+        self.closeBtn.isDisabled = False
+        self.maximizeBtn.isDisabled = False
+        self.minimizeBtn.isDisabled = False
 
     def deactivate(self):
         icon = "titlebar/disabled_large.svg"
         self.closeBtn.setIcon(FigD.Icon(icon))
         self.maximizeBtn.setIcon(FigD.Icon(icon))
         self.minimizeBtn.setIcon(FigD.Icon(icon))
+        self.closeBtn.isDisabled = True
+        self.maximizeBtn.isDisabled = True 
+        self.minimizeBtn.isDisabled = True
 
     def maximize(self):
         parent = self.window
@@ -743,8 +912,19 @@ class WindowTitleBar(QToolBar):
             else:
                 parent.showMaximized()
 
-    def initSpacer(self, width=None):
-        spacer = QWidget()
+    def initSpacer(self, width=None, text: str=""):
+        spacer = TitleBarAnimatedLabel(text)
+        spacer.setText(text)
+        spacer.setStyleSheet("""
+        QLabel {
+            color: #eee;
+            font-size: 17px;
+            border-radius: 7px;
+            background: transparent;
+            font-family: 'Be Vietnam Pro';
+        }""")
+        spacer.setFixedHeight(27)
+        # spacer.setAlignment(Qt.AlignCenter)
         if width:
             spacer.setMinimumWidth(width)
             spacer.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
@@ -757,7 +937,17 @@ class WindowTitleBar(QToolBar):
         self.window = window
         self.closeBtn.clicked.connect(window.close)
         self.minimizeBtn.clicked.connect(window.showMinimized)
-        self.window_name = self.window.appName
+        try:
+            self.window_name = self.window.appName
+        except Exception as e:
+            snippet = "self.window_name = self.window.appName"
+            print(f"ui::titlebar::WindowTitleBar.connectWindow: {snippet}", e)
+        # try: 
+        #     self.shortcutsBtn.clicked.connect(self.window.showShortcutList)
+        # except Exception as e:
+        #     snippet = "self.shortcutsBtn.clicked.connect(self.window.showShortcutList)"
+        #     print(f"ui::titlebar::WindowTitleBar.connectWindow: {snippet}", e)
+
         # self.findBtn.clicked.connect(self.tabs.triggerFind)
         # self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         # self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
@@ -805,7 +995,9 @@ class WindowTitleBar(QToolBar):
         elif style == "c": btn.setStyleSheet(
             title_btn_style_c.render(BACKGROUND=BACKGROUND)
         )
-        else: btn.setStyleSheet(window_title_btn_style)
+        else:
+            # print("using default style") 
+            btn.setStyleSheet(window_title_btn_style)
 
         return btn
 
@@ -969,7 +1161,11 @@ class TitleBar(QToolBar):
         # window title
         self.title = QLabel()
         # self.title.setText("fig-dash: a dashboard for Python developers")
-        self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
+        self.title.setStyleSheet("""
+        color: #fff; 
+        font-family: 'Be Vietnam Pro', sans-serif; 
+        font-weight: bold;
+        font-size: 16px;""")
         # self.title.setAlignment(Qt.AlignCenter)
         self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         # lang settings.
