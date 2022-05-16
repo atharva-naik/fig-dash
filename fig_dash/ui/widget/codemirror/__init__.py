@@ -5,15 +5,17 @@ import os
 os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = '0.0.0.0:5000'
 import sys
 import jinja2
-from typing import Union, Dict
+from typing import *
 # Qt imports.
 from PyQt5.QtWebEngineWidgets import QWebEngineView 
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QUrl
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QComboBox, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui import FigDAppContainer, wrapFigDWindow, styleContextMenu, DashWidgetGroup
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap, FigDSystemAppIconMap
 
 
 class CodeMirrorBtn(QToolButton): 
@@ -255,38 +257,93 @@ class CodeMirrorCodeToolbar(QWidget):
         self.webview.page().runJavaScript("toggleDifferences()")
 
 
+class CodeMirrorMenu(DashWidgetGroup):
+    def __init__(self, webview, parent: Union[QWidget, None]=None):
+        from fig_dash.ui.widget.codemirror.theme import CMTheme
+        from fig_dash.ui.widget.codemirror.mode import CMMimeTypeToLang
+
+        self.modes = CMMimeTypeToLang
+        super(CodeMirrorMenu, self).__init__(parent=parent, name="View")
+        self.viewtoolbar = CodeMirrorViewToolbar(
+            themes=CMTheme, 
+            webview=webview
+        )
+        self.codetoolbar = CodeMirrorCodeToolbar(
+            modes=self.modes, 
+            webview=webview
+        )
+        self.viewtoolbar.setMaximumHeight(30)
+        self.codetoolbar.setMaximumHeight(30)
+        self.addWidget(self.viewtoolbar)
+        self.addWidget(self.codetoolbar)
+
+    def toggle(self):
+        if self.isVisible(): 
+            self.hide()
+        else: self.show()
+
+
+class CodeMirrorWebView(DebugWebView):
+    def __init__(self, *args, accent_color: str="red", **kwargs):
+        super(CodeMirrorWebView, self).__init__(*args, **kwargs)
+        self.accent_color = accent_color
+        self.action_shortcut_map = {
+            "Undo": QKeySequence.Undo,
+            "Redo": QKeySequence("Ctrl+Y"),
+            "Cut": QKeySequence.Cut,
+            "Copy": QKeySequence.Copy,
+            "Paste": QKeySequence.Paste,
+            "Select all": QKeySequence.SelectAll,
+            "Inspect": QKeySequence("Ctrl+Shift+I"),
+        }
+        self.action_icon_map = {
+            "Undo": "widget/spreadsheet/undo.svg",
+            "Redo": "widget/spreadsheet/redo.svg",
+            "Cut": "browser/cut.svg",
+            "Copy": "browser/copy.svg",
+            "Paste": "browser/paste.svg",
+            "Select all": "browser/select_all.png",
+            "Inspect": "titlebar/dev_tools.svg",
+        }
+
+    def contextMenuEvent(self, event):
+        self.contextMenu = self.page().createStandardContextMenu()
+        for action in self.contextMenu.actions():
+            shortcut_keyseq = self.action_shortcut_map.get(action.text())
+            action_icon = self.action_icon_map.get(action.text())
+            if shortcut_keyseq:
+                action.setShortcut(shortcut_keyseq)
+            if action_icon:
+                action.setIcon(FigD.Icon(action_icon))
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+        self.contextMenu.popup(event.globalPos())
+
+
 class CodeMirrorEditor(QWidget):
     '''codemirror code editor.'''
     def __init__(self, parent: Union[None, QWidget]=None,
-                 zoom_factor: float=1.35):
+                 zoom_factor: float=1.35, accent_color="red"):
         super(CodeMirrorEditor, self).__init__(parent)
-        from fig_dash.ui.widget.codemirror.mode import CMMimeTypeToLang
         from fig_dash.ui.widget.codemirror.theme import CMTheme
+        from fig_dash.ui.widget.codemirror.mode import CMMimeTypeToLang
 
         self.zoom_factor = zoom_factor
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
-
         self.mimetype_to_lang = CMMimeTypeToLang
-        self.webview = DebugWebView()
+        self.webview = CodeMirrorWebView(accent_color=accent_color)
         self.webview.setHtml("CM Editor not loaded")
         self.modes = CMMimeTypeToLang
-        self.viewtoolbar = CodeMirrorViewToolbar(
-            themes=CMTheme, 
-            webview=self.webview
-        )
-        self.codetoolbar = CodeMirrorCodeToolbar(
-            modes=self.modes, 
-            webview=self.webview
-        )
         self.statusbar = CodeMirrorStatus(self.webview)
         self.statusbar.setMaximumHeight(30)
         self.themes = CMTheme
-        self.layout.addWidget(self.viewtoolbar)
-        self.viewtoolbar.setMaximumHeight(30)
-        self.layout.addWidget(self.codetoolbar)
-        self.codetoolbar.setMaximumHeight(30)
+        self.menu = CodeMirrorMenu(webview=self.webview)
+        self.menu.setFixedHeight(120)
+        self.menu.hide()
+        # self.layout.addWidget(self.viewtoolbar)
+        # self.layout.addWidget(self.codetoolbar)
+        self.layout.addWidget(self.menu)
         self.layout.addWidget(self.webview.splitter)
         self.layout.addWidget(self.statusbar)
         # self.layout.addStretch(1)
@@ -438,21 +495,47 @@ class CodeMirrorEditor(QWidget):
     def setMode(self, mimetype: str="text"):
         lang = self.mimetype_to_lang[mimetype]
         exec(f"from fig_dash.ui.widget.codemirror.mode.{lang} import {lang.upper()}JS")
-
-
-def test_code_mirror():
+# def test_code_mirror():
+#     import sys
+#     import time
+#     FigD("/home/atharva/GUI/fig-dash/resources")
+#     app = QApplication(sys.argv)
+#     cm = CodeMirrorEditor()
+#     cm.show()
+#     s = time.time()
+#     cm.buildEditor(merge_mode=False)
+#     print(f"built code-mirror editor in {time.time()-s}s")
+#     cm.saveEditor("cm-editor.html")
+#     app.exec()
+def test_codemirror():
     import sys
     import time
     FigD("/home/atharva/GUI/fig-dash/resources")
-    app = QApplication(sys.argv)
-    cm = CodeMirrorEditor()
-    cm.show()
+    app = FigDAppContainer(sys.argv)
+    # accent color and css grad color.
+    icon = FigDSystemAppIconMap["codeeditor"]
+    accent_color = FigDAccentColorMap["codeeditor"]
+    cm = CodeMirrorEditor(accent_color=accent_color)
+    # cm.show()
+    window = wrapFigDWindow(cm, title="Code Editor", 
+                            icon=icon, accent_color=accent_color)
+    window.show()
     s = time.time()
     cm.buildEditor(merge_mode=False)
     print(f"built code-mirror editor in {time.time()-s}s")
-    cm.saveEditor("cm-editor.html")
+    # cm.saveEditor("cm-editor.html")
     app.exec()
+
+def launch_codemirror(app):
+    # accent color and css grad color.
+    icon = FigDSystemAppIconMap["codeeditor"]
+    accent_color = FigDAccentColorMap["codeeditor"]
+    cm = CodeMirrorEditor(accent_color=accent_color)
+    cm.buildEditor(merge_mode=False)
+    window = wrapFigDWindow(cm, title="Code Editor", 
+                            icon=icon, accent_color=accent_color)
+    window.show()
 
 
 if __name__ == "__main__":
-    test_code_mirror()
+    test_codemirror()

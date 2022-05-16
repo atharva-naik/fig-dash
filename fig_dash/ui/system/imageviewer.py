@@ -18,7 +18,7 @@ from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wra
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
-from PyQt5.QtWidgets import QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
+from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 
 ViewerJSPluginCSS = r"""/*!
@@ -4482,7 +4482,8 @@ class ImageViewerWebView(DebugWebView):
     def __init__(self, *args, imageviewer=None, **kwargs):
         super(ImageViewerWebView, self).__init__(*args, **kwargs)
         self.imageviewer = imageviewer
-        self.accent_color = "yellow"
+        self.accent_color = "yellow" 
+        self.shortcut_mapper = {}
         # self.menu = self.createContextMenu()
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
@@ -4494,7 +4495,19 @@ class ImageViewerWebView(DebugWebView):
         self.inspect_action.trigger()
         print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
 
+    def activateShortcut(self, action: QAction):
+        # def printMapper(d):
+        #     dmap = {}
+        #     for k,v in d.items():
+        #         dmap[k] = v.text()
+        #     print(dmap)
+        for keySeq in action.shortcuts():
+            if keySeq.toString() in self.shortcut_mapper: continue
+            self.shortcut_mapper[keySeq.toString()] = QShortcut(keySeq, self)
+            self.shortcut_mapper[keySeq.toString()].activated.connect(action.trigger)
+        # printMapper(self.shortcut_mapper)
     def createContextMenu(self) -> QMenu:
+        self.contextMenuActions = []
         menu = self.page().createStandardContextMenu()
         menu.setObjectName("ImageViewerContextMenu")
         background_blur = BackgroundBlurEffect()
@@ -4504,6 +4517,9 @@ class ImageViewerWebView(DebugWebView):
         # data = self.page().contextMenuData()
         menu = styleContextMenu(menu, accent_color=self.accent_color)
         for action in menu.actions():
+            # buddself.addAction(action)
+            # self.contextMenuActions.append(action)
+            # self.contextMenuActions[-1].setShortcutContext(Qt.WidgetWithChildrenShortcut)
             if action.text() == "Save page":
                 action.setIcon(FigD.Icon("system/imageviewer/save_page.svg"))
                 action.setShortcut(QKeySequence("Ctrl+Shift+S"))
@@ -4526,12 +4542,12 @@ class ImageViewerWebView(DebugWebView):
                 action.setShortcut(QKeySequence.Refresh)
                 action.setIcon(FigD.Icon("system/imageviewer/reload.svg"))
             elif action.text() == "Save image":
-                action.setShortcut(QKeySequence("Ctrl+S"))
+                action.setShortcut(QKeySequence.Save)
                 action.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
                 action.triggered.connect(self.imageviewer.saveImage)
             elif action.text() == "Copy image":
                 action.setShortcut(QKeySequence.Copy)
-                action.setIcon(FigD.Icon("system/imageviewer/copy_image.svg"))
+                action.setIcon(FigD.Icon("browser/copy.svg"))
             elif action.text() == "Copy image address":
                 action.setShortcut(QKeySequence("Ctrl+Shift+C"))
                 action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
@@ -4547,17 +4563,32 @@ class ImageViewerWebView(DebugWebView):
                 wrappedInspectAction.triggered.connect(
                     self.inspectTriggered
                 ) 
+            self.activateShortcut(action)
+        # js snippets.
+        zoomInJS = 'document.getElementsByClassName("viewer-zoom-in")[0].click();'
+        zoomOutJS = 'document.getElementsByClassName("viewer-zoom-out")[0].click();'
+        origSizeJS = 'document.getElementsByClassName("viewer-one-to-one")[0].click();'
+        rotateACJS = 'document.getElementsByClassName("viewer-rotate-left")[0].click();'
+        rotateCCJS = 'document.getElementsByClassName("viewer-rotate-right")[0].click();'
+        flipHJS = 'document.getElementsByClassName("viewer-flip-horizontal")[0].click();'
+        flipVJS = 'document.getElementsByClassName("viewer-flip-vertical")[0].click();'
         # additional ImageViewer actions.
         menu.addSeparator()
-        menu.addAction("Zoom in")
-        menu.addAction("Zoom out")
-        menu.addAction("Original size")
+        menu.addAction(FigD.Icon("titlebar/zoom_in.svg"), "Zoom in", lambda: self.page().runJavaScript(zoomInJS))
+        menu.addAction(FigD.Icon("titlebar/zoom_out.svg"), "Zoom out", lambda: self.page().runJavaScript(zoomOutJS))
+        menu.addAction("Original size", lambda: self.page().runJavaScript(origSizeJS))
         menu.addSeparator()
-        menu.addAction("Rotate 90 clockwise")
-        menu.addAction("Rotate 90 anti-clockwise")
+        menu.addAction(
+			FigD.Icon("system/imageviewer/rotate_cc.svg"), "Rotate 90° clockwise", 
+			lambda: self.page().runJavaScript(rotateCCJS)
+		)
+        menu.addAction(
+			FigD.Icon("system/imageviewer/rotate_ac.svg"), "Rotate 90° anti-clockwise", 
+			lambda: self.page().runJavaScript(rotateACJS)
+		)
         menu.addSeparator()
-        menu.addAction("Flip horizontally")
-        menu.addAction("Flip vertically")
+        menu.addAction(FigD.Icon("system/imageviewer/flip_horizontal.svg"), "Flip horizontally", lambda: self.page().runJavaScript(flipHJS))
+        menu.addAction(FigD.Icon("system/imageviewer/flip_vertical.svg"), "Flip vertically", lambda: self.page().runJavaScript(flipVJS))
 
         return menu
 
@@ -4804,7 +4835,7 @@ def launch_imageviewer(app):
 		accent_color=accent_color,
 		titlebar_callbacks={
 			"viewSourceBtn": imageviewer.viewSource,
-            "ribbonCollapseBtn": menu.toggle,
+            # "ribbonCollapseBtn": menu.toggle,
 		}
 	)
     window.show()
@@ -4820,7 +4851,7 @@ def test_imageviewer():
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
     menu = ImageViewerMenu()
-    menu.hide()
+    # menu.hide()
     # accent color and css grad color.
     accent_color = FigDAccentColorMap["imageviewer"]
     grad_colors = extract_colors_from_qt_grad(accent_color)
@@ -4843,7 +4874,7 @@ def test_imageviewer():
 		accent_color=accent_color, name="imageviewer",
 		titlebar_callbacks={
 			"viewSourceBtn": imageviewer.viewSource,
-            "ribbonCollapseBtn": menu.toggle,
+            # "ribbonCollapseBtn": menu.toggle,
 		}
 	)
     window.show()

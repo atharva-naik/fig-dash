@@ -8,10 +8,11 @@ from pathlib import Path
 from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow#, extract_colors_from_qt_grad, create_css_grad
 # all system imports.
 from fig_dash.ui.system.clipboard import launch_clipboard
 from fig_dash.ui.system.fileviewer import launch_fileviewer
+from fig_dash.ui.widget.codemirror import launch_codemirror
 from fig_dash.ui.system.imageviewer import launch_imageviewer
 # PyQt5 imports.
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QPalette
@@ -24,6 +25,7 @@ FIgDSystemAppLauncherMap = {
     "fileviewer": launch_fileviewer,
     "imageviewer": launch_imageviewer,
     "videoplayer": blank,
+    "codeeditor": launch_codemirror,
 }
 ROW_SIZE = 4
 

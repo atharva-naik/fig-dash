@@ -1758,7 +1758,7 @@ class XdgOpenDropdown(QComboBox):
 
     def xdgOpen(self, file: str):
         '''use xdg-open on a specific file'''
-        os.system(f"xdg-open {file}")
+        os.system(f'xdg-open "{file}"')
 
     def gtkLaunch(self, app: str, file: str=""):
         '''do a gtk launch of a specific application with or without a specific file.'''
@@ -2813,7 +2813,7 @@ class FileViewerWidget(QMainWindow):
         mimetype = self.mime_database.mimeTypeForFile(path).name()
         print(f"{path}: calling xdg-open for {mimetype} files")
         url = QUrl.fromLocalFile(path).toString()
-        os.system(f"xdg-open {url}")
+        os.system(f'xdg-open "{url}"')
 
     def listFiles(self, path: str, **args):
         listed_and_full_paths_files = []

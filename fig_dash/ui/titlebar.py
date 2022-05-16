@@ -775,12 +775,12 @@ class WindowTitleBar(QToolBar):
             background: {{ BACKGROUND }};
             /* #34b4eb; #39a4e7; */
         }""").render(BACKGROUND=background))
-        if "qlineargradient" in background:
+        if "qlineargradient" in background or "qconicalgradient" in background:
             sliderHandleColor = self.background.split(":")[-1].strip()
             sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
             sliderHandleColor = sliderHandleColor.strip()
         else: 
-            sliderHandleColor = background
+            sliderHandleColor = "white"
         self.zoomSlider.connectLabel(self.zoomLabel)
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(0,0,0,0))
@@ -835,7 +835,7 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.title)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.settingsBtn)
-        self.addWidget(self.initBlank())
+        self.addWidget(self.initBlank(10))
         self.addWidget(self.ribbonCollapseBtn)
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())

@@ -53,7 +53,7 @@ def styleContextMenu(menu, accent_color: str="yellow"):
     	border-radius: 15px;
     }
     QMenu#FigDMenu::item:selected {
-    	color: #fff; 
+    	color: #292929; 
         border-radius: 5px;
     	background-color: {{ ACCENT_COLOR }}; 
     }
