@@ -4,6 +4,9 @@
 # This sucks right now. Need to improve it!
 import os
 import sys
+import socket
+import getpass
+import pathlib
 from typing import *
 from ansi2html import Ansi2HTMLConverter
 # fig dash imports.
@@ -28,15 +31,17 @@ def contract_path(path):
     return path.replace(os.path.expanduser("~"), "~")
 
 class TerminalCommandInput(QLineEdit):
-    def __init__(self, path: str="", parent: Union[None, QWidget]=None):
+    def __init__(self, path: str="", accent_color: str="gray", 
+                 parent: Union[None, QWidget]=None):
         super(TerminalCommandInput, self).__init__(parent)
+        self.accent_color = accent_color
         # create actions.
         searchAction = self.addAction(
-            FigD.Icon("browser/search.svg"), 
+            FigD.Icon("system/terminal/lambda.png"), 
             QLineEdit.LeadingPosition
         )
         copyAction = self.addAction(
-            FigD.Icon("browser/copy.svg"), 
+            FigD.Icon("system/terminal/copy.svg"), 
             QLineEdit.TrailingPosition
         )
         copyAction.triggered.connect(self.copyCommand)
@@ -44,8 +49,9 @@ class TerminalCommandInput(QLineEdit):
         QLineEdit {
             color: #fff;
             padding: 5px;
-            background: #292929;
             border-radius: 5px;
+            background: transparent;
+            /* background: #292929; */
         }""")
         self.setPlaceholderText("Type command to be executed. Use ↑ and ↓ to navigate history")
         self.updateCompleter(path)
@@ -54,6 +60,7 @@ class TerminalCommandInput(QLineEdit):
         self.cmd_history = []
         self.curr_idx = -1
         self._backup_text = ""
+        self.menu = self.createStandardContextMenu()
 
     def appendCommand(self, cmd: str):
         self.cmd_history.append(cmd)
@@ -85,26 +92,45 @@ class TerminalCommandInput(QLineEdit):
         if event.key() == Qt.Key_Tab:
             print("tab pressed", self.text())
             return
-        elif event.key() == Qt.Key_Up:
+        elif event.key() in [Qt.Key_Up, Qt.Key_Down]:
             if self.curr_idx == len(self.cmd_history):
                 self._backup_text = self.text()
-            if self.curr_idx >= 0: 
-                self.curr_idx = max(self.curr_idx-1, 0)
+            if self.curr_idx >= 0:
+                if event.key() == Qt.Key_Up: 
+                    self.curr_idx = max(self.curr_idx-1, 0)
+                    # print(f"previous item: {cmd_history[self.curr_idx]}")
+                elif event.key() == Qt.Key_Down:
+                    self.curr_idx = min(self.curr_idx+1, len(self.cmd_history))
+                    # print(f"next item: {cmd_history[self.curr_idx]}")
                 cmd_history = self.cmd_history+[self._backup_text]
                 self.setText(cmd_history[self.curr_idx])
-                # print(f"previous item: {cmd_history[self.curr_idx]}")
-        elif event.key() == Qt.Key_Down:
-            if self.curr_idx == len(self.cmd_history):
-                self._backup_text = self.text()
-            if self.curr_idx >= 0: 
-                self.curr_idx = min(self.curr_idx+1, len(self.cmd_history))
-                cmd_history = self.cmd_history+[self._backup_text]
-                self.setText(cmd_history[self.curr_idx])
-                # print(f"next item: {cmd_history[self.curr_idx]}")
         super(TerminalCommandInput, self).keyPressEvent(event)
+
+    def contextMenuEvent(self, event): 
+        self.menu = self.createStandardContextMenu()
+        self.menu = styleContextMenu(self.menu, self.accent_color)
+        self.menu.popup(event.globalPos())
 
     def reset(self, path):
         pass
+
+
+class TerminalPathLabel(QTextEdit):
+    def __init__(self, parent: Union[QWidget, None]=None):
+        super(TerminalPathLabel, self).__init__(parent=parent)
+        self.setStyleSheet("""
+        QTextEdit {
+            color: #fff;
+            background: transparent;
+        }""")
+        self.setReadOnly(True)
+        self.setFixedHeight(25)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+    def setText(self, text):
+        text = contract_path(text)
+        text = f"<span style='color: #ff0032; font-weight: bold;'>&nbsp;└─── </span><span style='color: #ddff80; font-weight: bold;'>{getpass.getuser()}@{socket.gethostname()}</span>:<span style='color: #44fc94; font-weight: bold'>{text}</span>"
+        super(TerminalPathLabel, self).setHtml(text)
 
 
 class TerminalCommandOutput(QPlainTextEdit):
@@ -140,14 +166,18 @@ class RedirectShellContainer(QWidget):
         super(RedirectShellContainer, self).__init__(parent)
         path = os.path.expanduser(path)
         self.path = path
+        os.chdir(path)
+        self.input = TerminalCommandInput(path=path, accent_color=accent_color)
         self.output = TerminalCommandOutput(accent_color=accent_color)
-        self.input = TerminalCommandInput(path=path)
+        self.pathLabel = TerminalPathLabel()
+        self.pathLabel.setText(path)
         self.input.returnPressed.connect(self.runCommand)
         self.vboxlayout = QVBoxLayout()
         self.vboxlayout.setContentsMargins(5, 5, 5, 5)
         self.vboxlayout.setSpacing(0)
         self.vboxlayout.addWidget(self.output)
         self.vboxlayout.addWidget(self.input)
+        self.vboxlayout.addWidget(self.pathLabel)
         self.output_formatter = Ansi2HTMLConverter()
         self.setLayout(self.vboxlayout)
 
@@ -156,6 +186,28 @@ class RedirectShellContainer(QWidget):
         self.input.appendCommand(cmd)
         if cmd == "clear":
             self.output.clearOutput()
+        elif cmd.startswith("cd"):
+            path = cmd.split("cd")[-1].strip()
+            if path == "..":
+                path = str(pathlib.Path(self.path).parent)
+            elif path.startswith("/"): pass
+            else:
+                path = os.path.join(self.path, path)
+            if not os.path.isdir(path):
+                ansi = f"bash: cd: {path}: Not a directory"
+                html = self.output_formatter.convert(ansi)
+                self.output.appendHtml(html)                
+            elif os.path.exists(path): # print(path)
+                os.chdir(path)
+                self.path = path
+                self.pathLabel.setText(self.path)
+            else:
+                ansi = f"\x1b[31;1mbash: {path}\x1b[0m" 
+                html = self.output_formatter.convert(ansi)
+                self.output.appendHtml(html)
+        elif cmd == "exit":
+            # TODO: change this to tab close.
+            QApplication.instance().quit()
         else:
             stdouterr = os.popen(cmd).read()
             ansi = "".join(stdouterr) # print(ansi)
@@ -314,8 +366,6 @@ class DashTerminalWidget(QWidget):
         self.vboxlayout.setContentsMargins(0, 0, 0, 0)
         self.vboxlayout.setSpacing(0)
         self.logWindow = self._gnome_terminal.logWindow
-        # self.CtrlB = QShortcut(QKeySequence("Ctrl+B"), self)
-        # self.CtrlB.activated.connect(self._gnome_terminal.logWindow.toggle)
         # build layout.
         self.vboxlayout.addWidget(self.menu)
         self.vboxlayout.addWidget(self.gnome_terminal)
