@@ -10,6 +10,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 from fig_dash.ui import DashWidgetGroup, FigDAppContainer, wrapFigDWindow#, extract_colors_from_qt_grad, create_css_grad
 # all system imports.
+from fig_dash.ui.system.terminal import launch_terminal
 from fig_dash.ui.system.clipboard import launch_clipboard
 from fig_dash.ui.system.fileviewer import launch_fileviewer
 from fig_dash.ui.widget.codemirror import launch_codemirror
@@ -26,6 +27,7 @@ FIgDSystemAppLauncherMap = {
     "imageviewer": launch_imageviewer,
     "videoplayer": blank,
     "codeeditor": launch_codemirror,
+    "terminal": launch_terminal,
 }
 ROW_SIZE = 4
 
@@ -100,7 +102,7 @@ class DashSystemAppLauncher(QWidget):
                 color: #fff; 
                 border-radius: 10px;
                 background: #484848;
-                font-family: Be Vietnam Pro;
+                font-family: 'Be Vietnam Pro', sans-serif;
             }
             QToolButton:hover {
                 border: 0px;

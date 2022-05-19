@@ -605,13 +605,15 @@ def test_screenshot_ui():
     screenshot_ui.show()
     app.exec()
 
-def launch_screenshot_ui(app):
+def launch_screenshot_ui():
+    app = QApplication.instance()
     screen_rect = app.desktop().screenGeometry()
     w, h = screen_rect.width()//2, screen_rect.height()//2
     screenshot_ui = DashScreenshotUI(app=app)
     screenshot_ui.move(w, h)
     screenshot_ui.show()
-    app.exec()
+
+    return screenshot_ui
 
 
 if __name__ == "__main__":

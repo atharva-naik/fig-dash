@@ -229,6 +229,9 @@ class DashWidgetGroup(QWidget):
 class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
         super(FigDAppContainer, self).__init__(*args, **kwargs)
+        QFontDatabase.addApplicationFont(
+            FigD.font("BeVietnamPro-Regular.ttf")
+        )
         self.active_window_ptr = None
         # tray_icon = args.get("icon", "lol")
         # create tray menu.

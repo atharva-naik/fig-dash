@@ -31,3 +31,4 @@ Qt5 Rich text editor: [Axel Erfurt's Github gist](https://gist.github.com/Axel-E
 Weather data: [wttr.in](https://github.com/chubin/wttr.in) <br>
 Javascript rich text editor: [quill.js](https://quilljs.com/) <br>
 icons: [flaticon.com](https://www.flaticon.com/) <br>
+3D weather icons: [uifreebies 3D weather icons](https://uifreebies.net/icon/3d-weather-icons-free)

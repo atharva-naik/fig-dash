@@ -940,6 +940,9 @@ class WindowTitleBar(QToolBar):
         self.window = window
         self.closeBtn.clicked.connect(window.close)
         self.minimizeBtn.clicked.connect(window.showMinimized)
+        for action in self.closeBtn.menu.actions():
+            if action.text() == "Hide":
+                action.triggered.connect(window.hide)
         try:
             self.window_name = self.window.appName
         except Exception as e:
