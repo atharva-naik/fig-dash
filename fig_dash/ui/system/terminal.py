@@ -8,17 +8,21 @@ from typing import *
 from ansi2html import Ansi2HTMLConverter
 # fig dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import FigDAppContainer, styleContextMenu, wrapFigDWindow
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports.
 from PyQt5.QtGui import QIcon, QColor, QWindow, QTextFormat, QKeySequence#, QFont, QImage, QPixmap, QKeySequence#, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QTimer, QProcess, QStringListModel, pyqtSlot
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QHBoxLayout, QMenu, QCompleter
 
+# ribbon menu for DashTerminalMenu.
+class DashTerminalMenu(DashWidgetGroup):
+    def __init__(self, parent: Union[QWidget, None]=None):
+        super(DashTerminalMenu, self).__init__(parent)
+
 
 class DashWebTerminal(QWidget):
     pass
-
 
 def contract_path(path):
     return path.replace(os.path.expanduser("~"), "~")
@@ -43,10 +47,17 @@ class TerminalCommandInput(QLineEdit):
             background: #292929;
             border-radius: 5px;
         }""")
-        self.setPlaceholderText("Type command to be executed")
+        self.setPlaceholderText("Type command to be executed. Use ↑ and ↓ to navigate history")
         self.updateCompleter(path)
         self.setMinimumWidth(600)
         self.setClearButtonEnabled(True)
+        self.cmd_history = []
+        self.curr_idx = -1
+        self._backup_text = ""
+
+    def appendCommand(self, cmd: str):
+        self.cmd_history.append(cmd)
+        self.curr_idx = len(self.cmd_history)
 
     def copyCommand(self):
         cmd = self.text().strip()
@@ -74,6 +85,22 @@ class TerminalCommandInput(QLineEdit):
         if event.key() == Qt.Key_Tab:
             print("tab pressed", self.text())
             return
+        elif event.key() == Qt.Key_Up:
+            if self.curr_idx == len(self.cmd_history):
+                self._backup_text = self.text()
+            if self.curr_idx >= 0: 
+                self.curr_idx = max(self.curr_idx-1, 0)
+                cmd_history = self.cmd_history+[self._backup_text]
+                self.setText(cmd_history[self.curr_idx])
+                # print(f"previous item: {cmd_history[self.curr_idx]}")
+        elif event.key() == Qt.Key_Down:
+            if self.curr_idx == len(self.cmd_history):
+                self._backup_text = self.text()
+            if self.curr_idx >= 0: 
+                self.curr_idx = min(self.curr_idx+1, len(self.cmd_history))
+                cmd_history = self.cmd_history+[self._backup_text]
+                self.setText(cmd_history[self.curr_idx])
+                # print(f"next item: {cmd_history[self.curr_idx]}")
         super(TerminalCommandInput, self).keyPressEvent(event)
 
     def reset(self, path):
@@ -81,6 +108,7 @@ class TerminalCommandInput(QLineEdit):
 
 
 class TerminalCommandOutput(QPlainTextEdit):
+    """The output area for terminal command output"""
     def __init__(self, path: str="", accent_color: str="gray", 
                  parent: Union[None, QWidget]=None):
         super(TerminalCommandOutput, self).__init__(parent)
@@ -88,10 +116,17 @@ class TerminalCommandOutput(QPlainTextEdit):
         QPlainTextEdit {
             color: #fff;
             padding: 5px;
-            background: #292929;
+            background: transparent;
+            /* background: rgba(41, 41, 41, 0.8); */
         }""")
         self.accent_color = accent_color
         self.menu = self.createStandardContextMenu()
+    
+    def clearOutput(self):
+        """
+        Clear the QPlainTextEdit (similar to clear command on a terminal)
+        """
+        self.setPlainText("")
 
     def contextMenuEvent(self, event): 
         self.menu = self.createStandardContextMenu()
@@ -105,25 +140,28 @@ class RedirectShellContainer(QWidget):
         super(RedirectShellContainer, self).__init__(parent)
         path = os.path.expanduser(path)
         self.path = path
-        self.textedit = TerminalCommandOutput(accent_color=accent_color)
+        self.output = TerminalCommandOutput(accent_color=accent_color)
         self.input = TerminalCommandInput(path=path)
         self.input.returnPressed.connect(self.runCommand)
         self.vboxlayout = QVBoxLayout()
         self.vboxlayout.setContentsMargins(5, 5, 5, 5)
         self.vboxlayout.setSpacing(0)
-        self.vboxlayout.addWidget(self.textedit)
+        self.vboxlayout.addWidget(self.output)
         self.vboxlayout.addWidget(self.input)
         self.output_formatter = Ansi2HTMLConverter()
         self.setLayout(self.vboxlayout)
 
     def runCommand(self):
         cmd = self.input.text().strip()
-        stdouterr = os.popen(cmd).read()
-        ansi = "".join(stdouterr)
-        print(ansi)
-        html = self.output_formatter.convert(ansi)
-        print(html)
-        self.textedit.appendHtml(html)
+        self.input.appendCommand(cmd)
+        if cmd == "clear":
+            self.output.clearOutput()
+        else:
+            stdouterr = os.popen(cmd).read()
+            ansi = "".join(stdouterr) # print(ansi)
+            html = self.output_formatter.convert(ansi) # print(html)
+            self.output.appendHtml(html)
+        self.input.setText("")
         # print(cmd)
 
 class GnomeShellContainer(QWidget):
@@ -245,6 +283,7 @@ class DashGnomeTerminal(QSplitter):
         else: 
             self.gnomeShellUI = self.gnomeShell
         self.logWindow = TerminalLogWindow() 
+        self.logWindow.hide()
         # self.logWindow.hide()
         self.addWidget(self.gnomeShellUI)
         self.addWidget(self.logWindow)
