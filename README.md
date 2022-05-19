@@ -24,6 +24,8 @@ Screenshots/showcase
 ![Image Viewer](https://github.com/atharva-naik/fig-dash/blob/main/showcase/imageviewer.png?raw=true)
 5. Clipboard Viewer.
 ![Clipboard Viewer](https://github.com/atharva-naik/fig-dash/blob/main/showcase/clipboard.png?raw=true)
+5. Terminal.
+![Terminal](https://github.com/atharva-naik/fig-dash/blob/main/showcase/terminal.png?raw=true)
 
 ## Helpful links
 Plotting audio: [earthinversion's voice plotter](https://github.com/earthinversion/voicePlotter) <br>
