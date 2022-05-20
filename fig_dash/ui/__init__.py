@@ -9,7 +9,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
-from PyQt5.QtGui import QFontDatabase, QColor, QPalette
+from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon
 from PyQt5.QtCore import Qt, QSize, QEvent
 from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea
 
@@ -42,6 +42,49 @@ QToolTip {
 }""")
 DASH_WIDGET_GROUP = jinja2.Template("""
 """)
+TEXT_EDIT_CONTEXT_MENU_MAP = {
+    "Select All	Ctrl+A": (
+        FigD.icon("textedit/select_all.png"), 
+        FigD.icon("textedit/select_all_disabled.png")
+    ),
+    "Cu&t	Ctrl+X": (
+        FigD.icon("textedit/cut.svg"),
+        FigD.icon("textedit/cut_disabled.svg")
+    ),
+    "&Copy	Ctrl+C": (
+        FigD.icon("textedit/copy.svg"),
+        FigD.icon("textedit/copy_disabled.svg")
+    ),
+    "&Undo	Ctrl+Z": (
+        FigD.icon("textedit/undo.svg"),
+        FigD.icon("textedit/undo_disabled.svg")
+    ),
+    "&Redo	Ctrl+Shift+Z": (
+        FigD.icon("textedit/redo.svg"),
+        FigD.icon("textedit/redo_disabled.svg")
+    ),
+    "&Paste	Ctrl+V": (
+        FigD.icon("textedit/paste.svg"),
+        FigD.icon("textedit/paste_disabled.svg")
+    ),
+    "Delete": (
+        FigD.icon("textedit/delete.svg"),
+        FigD.icon("textedit/delete_disabled.svg")
+    ),
+}
+
+def styleTextEditMenuIcons(menu):
+    """substitute TextEdit/ LineEdit icons for consistent styling."""
+    for action in menu.actions():
+        print(action.text())
+        icon, icon_disabled = TEXT_EDIT_CONTEXT_MENU_MAP.get(action.text(), ("",""))
+        if action.isEnabled(): 
+            action.setIcon(QIcon(icon))
+        else: 
+            action.setIcon(QIcon(icon_disabled))
+
+    return menu
+
 def styleContextMenu(menu, accent_color: str="yellow"):
     menu.setAttribute(Qt.WA_TranslucentBackground)
     menu.setObjectName("FigDMenu")

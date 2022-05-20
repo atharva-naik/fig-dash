@@ -7,11 +7,12 @@ import sys
 import socket
 import getpass
 import pathlib
+import subprocess
 from typing import *
 from ansi2html import Ansi2HTMLConverter
 # fig dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow, styleTextEditMenuIcons
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports.
 from PyQt5.QtGui import QIcon, QColor, QWindow, QTextFormat, QKeySequence#, QFont, QImage, QPixmap, QKeySequence#, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
@@ -48,18 +49,19 @@ class TerminalCommandInput(QLineEdit):
         self.setStyleSheet("""
         QLineEdit {
             color: #fff;
-            padding: 5px;
+            padding: 0px;
             border-radius: 5px;
             background: transparent;
             /* background: #292929; */
         }""")
         self.setPlaceholderText("Type command to be executed. Use ↑ and ↓ to navigate history")
-        self.updateCompleter(path)
+        self.resetCompleter(path)
         self.setMinimumWidth(600)
         self.setClearButtonEnabled(True)
         self.cmd_history = []
         self.curr_idx = -1
         self._backup_text = ""
+        self.completion_paths = []
         self.menu = self.createStandardContextMenu()
 
     def appendCommand(self, cmd: str):
@@ -71,18 +73,54 @@ class TerminalCommandInput(QLineEdit):
         QApplication.clipboard().setText(cmd)
 
     def updateCompleter(self, path):
+        # initialize with the current list of completion paths.
+        completion_paths = self.completion_paths
         self.qcompleter = QCompleter()
-        completion_paths = []
+        # add commands.
         for file in os.listdir(path):
-            completion_paths.append(f"cd {file}")
+            # absolute and contracted paths.
             abs_path = os.path.join(path, file)
-            completion_paths.append(f"cd {abs_path}")
             contracted_path = contract_path(abs_path)
-            completion_paths.append(f"cd {contracted_path}")
+            # append the completion paths for current folder.
+            completion_paths.append(f"cd {file}")
             completion_paths.append(f"ls {file}")
+            # append the absolute completion paths.
+            completion_paths.append(f"cd {abs_path}")
             completion_paths.append(f"ls {abs_path}")
+            # append the contracted completion paths ("HOME"/"USER" directory is replaced with "~").
+            completion_paths.append(f"cd {contracted_path}")
             completion_paths.append(f"ls {contracted_path}")
+        # create string list model.
         stringModel = QStringListModel(completion_paths)
+        # save the current set of paths in the object.
+        self.completion_paths = completion_paths
+        # reset the completer and the string model for the completer.
+        self.qcompleter.setCompletionMode(QCompleter.InlineCompletion)
+        self.qcompleter.setModel(stringModel)
+        self.setCompleter(self.qcompleter)
+
+    def resetCompleter(self, path):
+        completion_paths = []
+        self.qcompleter = QCompleter()
+        # add commands.
+        for file in os.listdir(path):
+            # absolute and contracted paths.
+            abs_path = os.path.join(path, file)
+            contracted_path = contract_path(abs_path)
+            # append the completion paths for current folder.
+            completion_paths.append(f"cd {file}")
+            completion_paths.append(f"ls {file}")
+            # append the absolute completion paths.
+            completion_paths.append(f"cd {abs_path}")
+            completion_paths.append(f"ls {abs_path}")
+            # append the contracted completion paths ("HOME"/"USER" directory is replaced with "~").
+            completion_paths.append(f"cd {contracted_path}")
+            completion_paths.append(f"ls {contracted_path}")
+        # create string list model.
+        stringModel = QStringListModel(completion_paths)
+        # save the current set of paths in the object.
+        self.completion_paths = completion_paths
+        # reset the completer and the string model for the completer.
         self.qcompleter.setCompletionMode(QCompleter.InlineCompletion)
         self.qcompleter.setModel(stringModel)
         self.setCompleter(self.qcompleter)
@@ -109,6 +147,7 @@ class TerminalCommandInput(QLineEdit):
     def contextMenuEvent(self, event): 
         self.menu = self.createStandardContextMenu()
         self.menu = styleContextMenu(self.menu, self.accent_color)
+        self.menu = styleTextEditMenuIcons(self.menu)
         self.menu.popup(event.globalPos())
 
     def reset(self, path):
@@ -121,6 +160,10 @@ class TerminalPathLabel(QTextEdit):
         self.setStyleSheet("""
         QTextEdit {
             color: #fff;
+            margin: 0px;
+            padding: 0px;
+            font-size: 17px;
+            /* background: black; */
             background: transparent;
         }""")
         self.setReadOnly(True)
@@ -129,7 +172,7 @@ class TerminalPathLabel(QTextEdit):
         # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
     def setText(self, text):
         text = contract_path(text)
-        text = f"<span style='color: #ff0032; font-weight: bold;'>&nbsp;└─── </span><span style='color: #ddff80; font-weight: bold;'>{getpass.getuser()}@{socket.gethostname()}</span>:<span style='color: #44fc94; font-weight: bold'>{text}</span>"
+        text = f"<span style='color: #ff0032; font-weight: bold;'>&nbsp; └─── </span><span style='color: #ddff80; font-weight: bold;'>{getpass.getuser()}@{socket.gethostname()}</span>:<span style='color: #44fc94; font-weight: bold'>{text}</span>"
         super(TerminalPathLabel, self).setHtml(text)
 
 
@@ -157,6 +200,7 @@ class TerminalCommandOutput(QPlainTextEdit):
     def contextMenuEvent(self, event): 
         self.menu = self.createStandardContextMenu()
         self.menu = styleContextMenu(self.menu, self.accent_color)
+        self.menu = styleTextEditMenuIcons(self.menu)
         self.menu.popup(event.globalPos())
 
 
@@ -172,14 +216,24 @@ class RedirectShellContainer(QWidget):
         self.pathLabel = TerminalPathLabel()
         self.pathLabel.setText(path)
         self.input.returnPressed.connect(self.runCommand)
+        self.input.textChanged.connect(self.expandPaths)
+        # create VBoxLayout.
         self.vboxlayout = QVBoxLayout()
         self.vboxlayout.setContentsMargins(5, 5, 5, 5)
         self.vboxlayout.setSpacing(0)
+        # build VBoxLayout.
         self.vboxlayout.addWidget(self.output)
         self.vboxlayout.addWidget(self.input)
         self.vboxlayout.addWidget(self.pathLabel)
+        
         self.output_formatter = Ansi2HTMLConverter()
         self.setLayout(self.vboxlayout)
+
+    def expandPaths(self):
+        cmd = self.input.text().strip()
+        if cmd.split()[0].strip() == "cd":
+            path = " ".join(cmd.split()[1:]).strip()
+            print(os.path.exists(path))
 
     def runCommand(self):
         cmd = self.input.text().strip()
@@ -209,9 +263,17 @@ class RedirectShellContainer(QWidget):
             # TODO: change this to tab close.
             QApplication.instance().quit()
         else:
-            stdouterr = os.popen(cmd).read()
-            ansi = "".join(stdouterr) # print(ansi)
-            html = self.output_formatter.convert(ansi) # print(html)
+            # stdouterr = os.popen(cmd).read()
+            p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = p.communicate()
+            stdout = stdout.decode("utf-8")
+            stderr = stderr.decode("utf-8")
+            # print("out:", stdout, "error:", stderr)
+            if stderr == "":
+                ansi = "".join(stdout)
+            else:
+                ansi = "\x1b[31;1m"+"".join(stderr)+"\x1b[0m"
+            html = self.output_formatter.convert(ansi)
             self.output.appendHtml(html)
         self.input.setText("")
         # print(cmd)

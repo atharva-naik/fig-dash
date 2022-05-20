@@ -13,6 +13,25 @@ from PyQt5.QtGui import QColor, QFont, QFontDatabase
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QWidget, QScrollArea, QMenu, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
 
+# Clipboard SearchBar.
+class DashClipboardSearchBar(QLineEdit):
+    def __init__(self, accent_color: str="purple", 
+                 parent: Union[QWidget, None]=None):
+        super(DashClipboardSearchBar, self).__init__(parent=parent)
+        self.menu = self.createStandardContextMenu()
+        self.accent_color = accent_color
+        self.setPlaceholderText("Search Clipboard!")
+        self.setStyleSheet("""
+        QLineEdit {
+            color: #fff;
+            background: #292929;
+        }""")
+
+    def contextMenuEvent(self, event):
+        self.menu = self.createStandardContextMenu()
+        self.menu = styleContextMenu(self.menu, self.accent_color)
+        self.menu.popup(event.globalPos())
+
 # Clipboard UI.
 class DashClipboardUI(QWidget):
     def __init__(self, accent_color="purple"):
@@ -20,6 +39,7 @@ class DashClipboardUI(QWidget):
         QApplication.clipboard().dataChanged.connect(
             self.onDataChanged
         )
+        self.accent_color = accent_color
         # layout.
         self.layout = QVBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
@@ -41,7 +61,6 @@ class DashClipboardUI(QWidget):
         #     border-radius: 20px;
         #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         # }""")
-        self.accent_color = accent_color
         self.history = []
 
     def contextMenuEvent(self, event):
@@ -116,13 +135,15 @@ class DashClipboardUI(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         searcharea.setLayout(layout)
 
-        searchbar = QLineEdit()
-        searchbar.setPlaceholderText("Search Clipboard!")
-        searchbar.setStyleSheet("""
-        QLineEdit {
-            color: #fff;
-            background: #292929;
-        }""")
+        searchbar = DashClipboardSearchBar(
+            accent_color=self.accent_color,
+        )
+        # searchbar.setPlaceholderText("Search Clipboard!")
+        # searchbar.setStyleSheet("""
+        # QLineEdit {
+        #     color: #fff;
+        #     background: #292929;
+        # }""")
         layout.addWidget(searchbar)
 
         return searcharea
