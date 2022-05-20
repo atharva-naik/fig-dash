@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import os
+import re
 import bs4
 import sys
 import json
@@ -30,6 +31,17 @@ filterPane.setAttribute("style", "bottom:0;left:0;overflow:hidden;position:absol
 viewerCanvas.appendChild(filterPane);
 console.log("filter pane creation was successfull");
 """
+IMAGEVIEWER_BACKDROP_REGEX_MAP = {
+	"blur": "blur\(.*?px\)",
+	"sepia": "sepia\(.*?\%\)",
+	"invert": "invert\(.*?\%\)",
+	"opacity": "opacity\(.*?\%\)",
+	"contrast": "contrast\(.*?\%\)",
+	"saturate": "saturate\(.*?\%\)",
+	"grayscale": "grayscale\(.*?\%\)",
+	"brightness": "brightness\(.*?\%\)",
+	"hue-rotate": "hue-rotate\(.*?deg\)",
+}
 # hue-rotate, drop-shadow.
 # IMAGEVIEWER_BLUR_FILTER_JS = r""""""
 # IMAGEVIEWER_BRIGHTNESS_FILTER_JS = r""""""
@@ -616,6 +628,7 @@ class ImageViewerFilterSlider(QWidget):
 		QLineEdit {
 			font-size: 16px;
 		}""")
+		self.readout.returnPressed.connect(self.setEffect)
 		self.readout.setMaximumWidth(40)
 		# display icon.
 		self.icon = QLabel()
@@ -662,14 +675,31 @@ class ImageViewerFilterSlider(QWidget):
 		palette.setColor(QPalette.Highlight, QColor(sliderHandleColor))
 		self.slider.setPalette(palette)
 
-	def _js_effect_applicator(self, currentStyle: str):
-		print(currentStyle)
-		if self.webview is not None:
-			self.webview.page().runJavaScript(currentStyle)
+	def _js_effect_applicator(self, backdropFilter: str):
+		"""apply backdrop-filter effect using js."""
+		if self.webview is None: return
+		regex = IMAGEVIEWER_BACKDROP_REGEX_MAP[self.role]
 		if self.role == "blur":
-			currentStyle = currentStyle.replace("blur(0px)", f"blur({self.slider.value()}px")
-		self.webview.page().runJavaScript(f"""document.getElementById("filterPane").setAttribute("style", '{currentStyle}');""")
-		# currentStyle
+			newValue = f"blur({self.slider.value()}px)"
+		elif self.role in ["opacity", "brightness", "contrast", "grayscale", "invert", "saturate", "sepia"]:
+			newValue = f"{self.role}({self.slider.value()}%)"
+		elif self.role == "hue-rotate":
+			newValue = f"hue-rotate({self.slider.value()}deg)"
+		backdropFilter = re.sub(regex, newValue, backdropFilter)
+		jscode = f'filterPane.style.backdropFilter = "{backdropFilter}";'
+		self.webview.page().runJavaScript(jscode)
+# 			currentStyle = currentStyle.replace("blur(0px)", f"blur({self.slider.value()}px)")
+# 		jscode = f"""var styleString = "{currentStyle.strip()}"
+# document.getElementById("filterPane").setAttribute("style", styleString);"""
+# 		print(jscode)
+# 		self.webview.page().runJavaScript(jscode)
+	def setEffect(self):
+		try: 
+			value = float(self.readout.text())
+			self.slider.setValue(value)
+		except Exception as e:
+			scopeStr = "\x1b[31;1mui::system::imageviewer::ImageViewerFilterSlider.setEffect:\x1b[0m"
+			print(scopeStr, e)
 
 	def updateEffect(self, value):
 		global FILTER_OPERATION_DETECTED
@@ -680,10 +710,9 @@ class ImageViewerFilterSlider(QWidget):
 			self.webview.page().runJavaScript(filterPaneJS)
 		if self.webview is not None:
 			self.webview.page().runJavaScript(
-				'document.getElementById("filterPane").getAttribute("style")', 
+				'filterPane.style.backdropFilter', 
 				self._js_effect_applicator
 			)
-			# self.webview.page().runJavaScript(self.js_callback_code)
 
 
 class ImageViewerFiltersPanel(QWidget):
@@ -1240,8 +1269,9 @@ def test_imageviewer():
     window.show()
 
     try: openpath = sys.argv[1]
-    except IndexError: 
-        openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+    except IndexError:
+        openpath = "~/Pictures/Elena_Sama.jpg" 
+        # openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     imageviewer.open(openpath)
     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
