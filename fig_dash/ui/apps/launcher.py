@@ -4,6 +4,7 @@
 # combined app launcher and store.
 
 import os
+import json
 from typing import *
 from dataclasses import dataclass
 # from fig_dash.api.system.file.applications import FigDIconMap
@@ -13,8 +14,8 @@ from fig_dash.ui import styleContextMenu, wrapFigDWindow, FigDAppContainer
 # all app imports
 from fig_dash.ui.apps.screenshot.screenshot import launch_screenshot_ui
 # PyQt5 imports.
-from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QPalette
-from PyQt5.QtCore import Qt, QSize, QStringListModel, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase
+from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QPalette, QDrag
+from PyQt5.QtCore import Qt, QSize, QStringListModel, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QMimeData
 from PyQt5.QtWidgets import QWidget, QMenu, QAction, QScrollArea, QShortcut, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QToolButton, QSizePolicy, QVBoxLayout, QHBoxLayout, QGridLayout, QLineEdit, QCompleter, QTabWidget, QGraphicsDropShadowEffect
 
 def blank(): pass
@@ -23,18 +24,24 @@ AccentColorMap = {
     # "screenshot": "",
     "colorpicker": "qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.0 #cf4067, stop : 0.091 #d03d69, stop : 0.182 #d2366f, stop : 0.273 #d32b79, stop : 0.364 #d31b88, stop : 0.455 #ce0b9c, stop : 0.545 #c40ab2, stop : 0.636 #b31bc9, stop : 0.727 #9b2cde, stop : 0.818 #7f39ef, stop : 0.909 #6341fb, stop : 1.0 #5544ff)",
     "paint": "qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.0 #ffa400, stop : 0.091 #ffa104, stop : 0.182 #ff970f, stop : 0.273 #ff891c, stop : 0.364 #fd7728, stop : 0.455 #f96333, stop : 0.545 #f14f3d, stop : 0.636 #e83b46, stop : 0.727 #de284e, stop : 0.818 #d41653, stop : 0.909 #cd0657, stop : 1.0 #ca0058)",
+    "citationhelper": "qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.0 #171a34, stop : 0.091 #27253f, stop : 0.182 #37314b, stop : 0.273 #473e57, stop : 0.364 #574b63, stop : 0.455 #67586f, stop : 0.545 #78667b, stop : 0.636 #887488, stop : 0.727 #988395, stop : 0.818 #a892a2, stop : 0.909 #b9a2b0, stop : 1.0 #c9b2be)",
+    "library": "qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.0 #4d0000, stop : 0.091 #5c1108, stop : 0.182 #6a210d, stop : 0.273 #793011, stop : 0.364 #863f14, stop : 0.455 #934f17, stop : 0.545 #a05f1b, stop : 0.636 #ab701f, stop : 0.727 #b58225, stop : 0.818 #bf932c, stop : 0.909 #c7a535, stop : 1.0 #ceb83f)",
 }
 AppTitleMap = {
     "gradient_creator": """Gradient\nCreator""",
     "screenshot": "Screenshot",
-    "colorpicker": "Color Picker",
-    "paint": "Paint",    
+    "colorpicker": "Color\nPicker",
+    "paint": "Paint",
+    "citationhelper": "Cite This",    
+    "library": "Library",
 }
 AppLauncherMap = {
     "gradient_creator": blank,
     "colorpicker": blank,    
     "screenshot": launch_screenshot_ui,
     "paint": blank,
+    "citationhelper": blank,
+    "library": blank,
 }
 AppLauncherLayout = {
     "Creative Tools": [
@@ -43,13 +50,18 @@ AppLauncherLayout = {
         "colorpicker",    
     ],
     "screenshot": None,
-    # "paint": None,
+    "Reading Tools": [
+        "citationhelper",
+        "library",
+    ]
 }
 AppIconMap = {
     "gradient_creator": FigD.icon("apps/gradient_creator/logo.png"),
     "screenshot": FigD.icon("apps/screenshot/logo.png"),
     "colorpicker": FigD.icon("apps/colorpicker/logo.png"),
-    "paint": FigD.icon("apps/paint/logo.png")
+    "paint": FigD.icon("apps/paint/logo.png"),
+    "citationhelper": FigD.icon("apps/citationhelper/logo.png"),
+    "library": FigD.icon("apps/library/logo.png"),
 }
 APPS_LAUNCHED = []
 APPS_LAUNCHER_ROW_SIZE = 3
@@ -62,28 +74,52 @@ class DashAppInfo:
     icon_size: int # size of the icon.
     isgrouped: bool # is the app inside a group?
 
+    @classmethod
+    def fromjsonstr(cls, jsonstr):
+        jsonobj = json.loads(jsonstr)
+        return cls(
+            name=jsonobj["name"],
+            size=jsonobj["size"],
+            icon_size=jsonobj["icon_size"],
+            isgrouped=jsonobj["isgrouped"],
+        )
+
+    def tojsonstr(self):
+        return json.dumps({
+            "name": self.name, 
+            "size": self.size,
+            "icon_size": self.icon_size,
+            "isgrouped": self.isgrouped,
+        })
 
 class DashAppBtn(QToolButton):
     def __init__(self, info: DashAppInfo, 
-                parent: Union[QWidget, None]=None):
+                 parent: Union[QWidget, None]=None):
         super(DashAppBtn, self).__init__(parent)
+        self.__mouseMovePos = None
+        self.__mousePressPos = None
         self.info = info
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.setText(AppTitleMap[info.name])
         self.setIcon(FigD.Icon(AppIconMap[info.name]))
         accent_color = AccentColorMap.get(info.name, "gray")
+        if "qlineargradient" in accent_color or "qconicalgradient" in accent_color:
+            border_color = accent_color.split(":")[-1].strip()
+            border_color = border_color.split()[-1].split(")")[0]
+            border_color = border_color.strip()
+        else: border_color = "gray"
         if info.isgrouped:
             self.setStyleSheet("""
             QToolButton {
                 color: #fff; 
                 padding: 5px;
-                font-size: 15px;
+                font-size: 16px;
                 border-radius: 10px;
                 background: transparent;
                 font-family: 'Be Vietnam Pro', sans-serif;
             }
             QToolButton:hover {
-                border: 0px;
+                border: 1px solid """+border_color+""";
                 color: #292929;
                 font-weight: bold;
                 background: """+accent_color+""";
@@ -99,7 +135,7 @@ class DashAppBtn(QToolButton):
                 font-family: 'Be Vietnam Pro', sans-serif;
             }
             QToolButton:hover {
-                border: 0px;
+                border: 1px solid """+border_color+""";
                 color: #292929;
                 font-weight: bold;
                 background: """+accent_color+""";
@@ -127,6 +163,48 @@ class DashAppBtn(QToolButton):
         self.menu.addSeparator()
         self.menu = styleContextMenu(self.menu, accent_color)
 
+    def mousePressEvent(self, event):
+        self.__mouseMovePos = None
+        self.__mousePressPos = None
+        if event.button() == Qt.LeftButton:
+            self.__mouseMovePos = event.globalPos()
+            self.__mousePressPos = event.globalPos()
+        super(DashAppBtn, self).mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if event.buttons() == Qt.LeftButton:
+            currPos = self.mapToGlobal(self.pos())
+            globalPos = event.globalPos()
+            diff = globalPos - self.__mouseMovePos
+            newPos = self.mapFromGlobal(currPos + diff)
+            self.move(newPos)
+            self.__mouseMovePos = globalPos
+            print("dragging started")
+            drag = QDrag(self)
+            mimeData = QMimeData()
+            mimeData.setText(self.info.tojsonstr())
+            drag.setMimeData(mimeData)
+            drag.setPixmap(self.icon().pixmap(
+                self.info.icon_size, 
+                self.info.icon_size,
+            ))
+            dropAction = drag.exec()
+        super(DashAppBtn, self).mouseMoveEvent(event)
+    # def mousePressEvent(self, event):
+        # if event.button() == Qt.LeftButton and self.icon().geometry().contains(event.pos()):
+        #     print("dragging started")
+        #     drag = QDrag(self)
+        #     mimeData = QMimeData()
+        #     mimeData.setText(self.info.tojsonstr())
+        #     drag.setMimeData(mimeData)
+        #     drag.setPixmap(self.icon().pixmap(
+        #         self.info.icon_size, 
+        #         self.info.icon_size,
+        #     ))
+        #     dropAction = drag.exec()
+            # print(dropAction)
+        # super(DashAppBtn, self).mousePressEvent(event)
+
     def launchApp(self):
         window = self.launch_fn()
         APPS_LAUNCHED.append(window)
@@ -140,6 +218,7 @@ class DashAppGroup(QWidget):
                  parent: Union[QWidget, None]=None,
                  group_name: str="Group"):
         super(DashAppGroup, self).__init__(parent)
+        self.setAcceptDrops(True)
         self.gridlayout = QGridLayout()
         self.gridlayout.setContentsMargins(0, 0, 0, 0)
         self.gridlayout.setSpacing(0)
@@ -155,34 +234,38 @@ class DashAppGroup(QWidget):
         self.vboxlayout.setContentsMargins(0, 0, 0, 0)
         # the name of the group as shown by a QLabel.
         self.label = QLabel(group_name)
-        # self.label.setText(group_name)
         self.label.setAlignment(Qt.AlignCenter)
-        self.label.setStyleSheet("""
-        QLabel {
-            color: #fff;
-            font-size: 19px;
-            background: transparent;
-            font-family: 'Be Vietnam Pro', sans-serif;
-        }""")
+        # self.label.setStyleSheet("""
+        # QLabel {
+        #     color: #fff;
+        #     font-size: 19px;
+        #     background: transparent;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        # }""")
         for i, info in enumerate(info_list):
             self.gridlayout.addWidget(
                 DashAppBtn(info=info),
                 i//2, i%2, 
             )
+        self.gridlayout.addWidget(self.label, 2, 0, 1, 2)
         self.vboxlayout.addWidget(self.gridwidget)
-        self.vboxlayout.addWidget(self.label)
-        self.setFixedHeight(220)
-        self.setFixedWidth(220)
+        self.setFixedHeight(230)
+        self.setFixedWidth(230)
+        # self.setObjectName("DashAppGroup")
         self.setLayout(self.vboxlayout)
-        self.setObjectName("DashAppGroup")
         self.setStyleSheet("""
-        QWidget#DashAppGroup {
+        QWidget {
             color: #fff; 
             padding: 2px;
             font-size: 18px;
-            background: #484848;
+            background: rgba(72, 72, 72, 0.8);
             border-radius: 10px;
             font-family: 'Be Vietnam Pro', sans-serif;            
+        }""")
+        self.label.setStyleSheet("""
+        QLabel {
+            padding-bottom: 5px;
+            background: transparent;
         }""")
         self.menu = QMenu()
         self.menu.addAction(FigD.Icon("apps/add.svg"), "Add app to group")
@@ -193,6 +276,36 @@ class DashAppGroup(QWidget):
         self.menu.addAction(FigD.Icon("apps/rename.svg"), "Rename group")
         self.menu.addAction(FigD.Icon("apps/delete.svg"), "Dissolve group")
         self.menu = styleContextMenu(self.menu, APPS_LAUNCHER_ACCENT_COLOR)
+
+    def dragEnterEvent(self, event):
+        # try: 
+        # print("count:", self.gridlayout.count())
+        item = self.gridlayout.itemAt(3)
+        print("item:", item)
+        if self.gridlayout.count() < 5 and item is None: 
+            event.accept()
+            return
+        widget = item.widget()
+        print("widget:", widget)
+        if self.gridlayout.count() < 5 and not isinstance(widget, DashAppBtn):
+            event.accept()
+        else: event.ignore()
+        # except Exception as e:
+        #     print(e)
+    def dropEvent(self, event):
+        # get button info from mimedata.
+        app_info_jsonstr = event.mimeData().text()
+        # get row and column.
+        row = (self.gridlayout.count()-1) // 2
+        col = (self.gridlayout.count()-1) % 2
+        # get dahs app info
+        info = DashAppInfo.fromjsonstr(app_info_jsonstr)
+        info.size = 100
+        info.icon_size = 50
+        info.isgrouped = True
+        btn = DashAppBtn(info)
+        self.gridlayout.addWidget(btn, row, col)
+        event.source().setParent(None)
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
@@ -255,7 +368,7 @@ class DashAppLauncher(QWidget):
         launcher_widget.setStyleSheet("""
         QWidget {
             border-radius: 20px;
-            background: #292929;
+            /* background: #292929; */
         }""")
         launcher_layout = QGridLayout()
         for i, name in enumerate(AppLauncherLayout):
@@ -273,8 +386,8 @@ class DashAppLauncher(QWidget):
                 launcher_layout.addWidget(group, i//APPS_LAUNCHER_ROW_SIZE, i%APPS_LAUNCHER_ROW_SIZE)
             else:
                 btn = DashAppBtn(info=DashAppInfo(
-                    name=name, size=200,
-                    icon_size=120, isgrouped=False,
+                    name=name, size=230,
+                    icon_size=140, isgrouped=False,
                 ))
                 launcher_layout.addWidget(btn, i//APPS_LAUNCHER_ROW_SIZE, i%APPS_LAUNCHER_ROW_SIZE)
         launcher_widget.setLayout(launcher_layout)

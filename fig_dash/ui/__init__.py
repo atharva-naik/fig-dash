@@ -271,6 +271,10 @@ class DashWidgetGroup(QWidget):
 
 class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
+        if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+            QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+        if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+            QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
         super(FigDAppContainer, self).__init__(*args, **kwargs)
         QFontDatabase.addApplicationFont(
             FigD.font("BeVietnamPro-Regular.ttf")

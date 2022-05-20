@@ -21,6 +21,27 @@ from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFo
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
+FILTER_OPERATION_DETECTED = False
+filterPaneJS = r"""
+var viewerCanvas = document.getElementsByClassName("viewer-canvas")[0];
+var filterPane = document.createElement("p");
+filterPane.id = "filterPane";
+filterPane.setAttribute("style", "bottom:0;left:0;overflow:hidden;position:absolute;right:0;top:0;backdrop-filter:blur(0px) brightness(100%) contrast(100%) drop-shadow(0px 0px 0px black) hue-rotate(0deg) invert(0%) grayscale(0%) opacity(100%) sepia(0%) saturate(100%)")
+viewerCanvas.appendChild(filterPane);
+console.log("filter pane creation was successfull");
+"""
+# hue-rotate, drop-shadow.
+# IMAGEVIEWER_BLUR_FILTER_JS = r""""""
+# IMAGEVIEWER_BRIGHTNESS_FILTER_JS = r""""""
+# IMAGEVIEWER_CONTRAST_FILTER_JS = r""""""
+# IMAGEVIEWER_DROP_SHADOW_FILTER_JS = r""""""
+# IMAGEVIEWER_HUE_ROTATE_FILTER_JS = r""""""
+# IMAGEVIEWER_INVERT_FILTER_JS = r""""""
+# IMAGEVIEWER_GRAYSCALE_FILTER_JS = r""""""
+# IMAGEVIEWER_OPACITY_FILTER_JS = r""""""
+# IMAGEVIEWER_SEPIA_FILTER_JS = r""""""
+# IMAGEVIEWER_SATURATE_FILTER_JS = r""""""
+# blur(0px) brightness(100%) contrast(100%) drop-shadow(0px 0px 0px black) hue-rotate(0deg) invert(0%) grayscale(0%) opacity(100%) sepia(0%) saturate(100%)
 scrollbar_style = '''
 QScrollBar:vertical {
     border: 0px solid #999999;
@@ -555,9 +576,13 @@ class ImageViewerLayers(QWidget):
 
 class ImageViewerFilterSlider(QWidget):
 	def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25),
-				 minm: int=0, maxm: int=50, value: int=100, accent_color: str="",
-				 parent: Union[QWidget, None]=None):
+				 minm: int=0, maxm: int=50, value: int=100, accent_color: str="yellow",
+				 parent: Union[QWidget, None]=None, webview: Union[DebugWebView, None]=None,
+				 role: str="blur"):
+# js_callback_code: Union[str, None]=None):
 		super(ImageViewerFilterSlider, self).__init__(parent)
+		self.webview = webview
+		self.role = role
 		# main layout.
 		self.vboxlayout = QVBoxLayout()
 		self.vboxlayout.setContentsMargins(0, 0, 0, 0)
@@ -637,12 +662,33 @@ class ImageViewerFilterSlider(QWidget):
 		palette.setColor(QPalette.Highlight, QColor(sliderHandleColor))
 		self.slider.setPalette(palette)
 
+	def _js_effect_applicator(self, currentStyle: str):
+		print(currentStyle)
+		if self.webview is not None:
+			self.webview.page().runJavaScript(currentStyle)
+		if self.role == "blur":
+			currentStyle = currentStyle.replace("blur(0px)", f"blur({self.slider.value()}px")
+		self.webview.page().runJavaScript(f"""document.getElementById("filterPane").setAttribute("style", '{currentStyle}');""")
+		# currentStyle
+
 	def updateEffect(self, value):
+		global FILTER_OPERATION_DETECTED
 		self.readout.setText(str(value))
+		if not FILTER_OPERATION_DETECTED:
+			FILTER_OPERATION_DETECTED = True
+			if self.webview is None: return
+			self.webview.page().runJavaScript(filterPaneJS)
+		if self.webview is not None:
+			self.webview.page().runJavaScript(
+				'document.getElementById("filterPane").getAttribute("style")', 
+				self._js_effect_applicator
+			)
+			# self.webview.page().runJavaScript(self.js_callback_code)
 
 
 class ImageViewerFiltersPanel(QWidget):
 	def __init__(self, parent: Union[QWidget, None]=None,
+				 webview: Union[None, DebugWebView]=None,
 				 accent_color: str="yellow"):
 		super(ImageViewerFiltersPanel, self).__init__(parent)
 		self.vboxlayout = QVBoxLayout()
@@ -651,48 +697,58 @@ class ImageViewerFiltersPanel(QWidget):
 		self.blurSlider = ImageViewerFilterSlider(
 			"blur (in px)", icon="system/fileviewer/blur.svg",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
-			accent_color=accent_color,
+			accent_color=accent_color, webview=webview,
+			role="blur"
 		)
 		self.brightnessSlider = ImageViewerFilterSlider(
-			"brightness", icon="system/fileviewer/brightness.svg",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"brightness (in %)", icon="system/fileviewer/brightness.svg",
+			minm=0, maxm=100, value=100, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="brightness"
 		)
 		self.contrastSlider = ImageViewerFilterSlider(
-			"contrast", icon="system/fileviewer/contrast.svg",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
-		)
-		self.dropShadowSlider = ImageViewerFilterSlider(
-			"drop shadow", icon="system/fileviewer/drop_shadow.svg",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"contrast (in %)", icon="system/fileviewer/contrast.svg",
+			minm=0, maxm=100, value=100, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="contrast"
 		)
 		self.grayScaleSlider = ImageViewerFilterSlider(
-			"gray scale", icon="system/fileviewer/grayscale.png",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"gray scale (in %)", icon="system/fileviewer/grayscale.png",
+			minm=0, maxm=100, value=0, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="grayscale"
 		)
 		self.invertSlider = ImageViewerFilterSlider(
-			"invert", icon="system/fileviewer/invert.svg",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"invert (in %)", icon="system/fileviewer/invert.svg",
+			minm=0, maxm=100, value=0, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="invert"
 		)
 		self.opacitySlider = ImageViewerFilterSlider(
-			"opacity", icon="system/fileviewer/opacity.svg",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"opacity (in %)", icon="system/fileviewer/opacity.svg",
+			minm=0, maxm=100, value=100, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="opacity"
 		)
 		self.saturationSlider = ImageViewerFilterSlider(
-			"saturation", icon="system/fileviewer/saturation.png",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"saturation (in %)", icon="system/fileviewer/saturation.png",
+			minm=0, maxm=100, value=100, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="saturate"
 		)
 		self.sepiaSlider = ImageViewerFilterSlider(
-			"sepia", icon="system/fileviewer/sepia.png",
-			minm=0, maxm=100, value=50, icon_size=(20,20),
-			accent_color=accent_color,
+			"sepia (in %)", icon="system/fileviewer/sepia.png",
+			minm=0, maxm=100, value=0, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="sepia"
 		)
+		self.hueRotateSlider = ImageViewerFilterSlider(
+			"hue rotation (in ° )", icon="system/fileviewer/hue.png",
+			minm=0, maxm=180, value=0, icon_size=(20,20),
+			accent_color=accent_color, webview=webview,
+			role="hue-rotate"
+		)
+		# self.dropShadowPicker = ImageViewerDropShadowPicker()
 		self.vboxlayout.addWidget(
 			self.blurSlider, 0, 
 			Qt.AlignCenter | Qt.AlignTop
@@ -725,16 +781,26 @@ class ImageViewerFiltersPanel(QWidget):
 			self.sepiaSlider, 0, 
 			Qt.AlignCenter | Qt.AlignTop
 		)
+		self.vboxlayout.addWidget(
+			self.hueRotateSlider, 0, 
+			Qt.AlignCenter | Qt.AlignTop
+		)
+		# self.vboxlayout.addWidget(
+		# 	self.dropShadowPicker, 0, 
+		# 	Qt.AlignCenter | Qt.AlignTop
+		# )
 		self.vboxlayout.addStretch(1)
 		self.setLayout(self.vboxlayout)
-		# self.vboxlayout.addWidget(self.)
 
+		# self.vboxlayout.addWidget(self.)
 class ImageViewerSidePanel(QTabWidget):
 	def __init__(self, parent: Union[None, QWidget]=None,
+				 webview: Union[None, DebugWebView]=None,
 				 accent_color: str="yellow"):
 		super(ImageViewerSidePanel, self).__init__()
 		self.filters_panel = ImageViewerFiltersPanel(
-			accent_color=accent_color,
+			accent_color=accent_color, 
+			webview=webview,
 		)
 		self.effects_panel = ImageViewerEffectsPanel()
 		self.filetree = ImageViewerFileTree()
@@ -928,7 +994,10 @@ class ImageViewerWidget(QWidget):
         #     color: gray;
         #     background: #000;
         # }""")
-        self.side_panel = ImageViewerSidePanel(accent_color=accent_color)
+        self.side_panel = ImageViewerSidePanel(
+			accent_color=accent_color,
+			webview=self.browser,
+		)
         self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
@@ -1038,7 +1107,7 @@ class ImageViewerWidget(QWidget):
 
     def connectMenu(self, menu: ImageViewerMenu):
         self.menu = menu
-
+        self.menu.hide()
     # def connectTitlebar(self, titlebar: WindowTitleBar):
     #     self.titlebar = titlebar
     #     self.titlebar.findBtn.setParent(None)
