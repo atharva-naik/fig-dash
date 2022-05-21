@@ -809,7 +809,7 @@ class WindowTitleBar(QToolBar):
             self.title.setWidget(self.title_widget)
             self.title.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             self.title.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-            print("\x1b[34;1mtitle_widget:\x1b[0m", title_widget)
+            # print("\x1b[34;1mtitle_widget:\x1b[0m", title_widget)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.closeBtn)
         self.addWidget(self.initBlank(3))

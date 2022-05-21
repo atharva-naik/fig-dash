@@ -76,7 +76,7 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
 def styleTextEditMenuIcons(menu):
     """substitute TextEdit/ LineEdit icons for consistent styling."""
     for action in menu.actions():
-        print(action.text())
+        # print(action.text())
         icon, icon_disabled = TEXT_EDIT_CONTEXT_MENU_MAP.get(action.text(), ("",""))
         if action.isEnabled(): 
             action.setIcon(QIcon(icon))

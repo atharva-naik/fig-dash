@@ -1,1 +1,2 @@
+pymupdf
 ansi2html

@@ -6,10 +6,10 @@ import datetime
 from typing import Union
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import FigDAppContainer, styleContextMenu, wrapFigDWindow
+from fig_dash.ui import FigDAppContainer, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports
-from PyQt5.QtGui import QColor, QFont, QFontDatabase
+from PyQt5.QtGui import QColor, QFont, QFontDatabase, QIcon, QImage
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
 from PyQt5.QtWidgets import QWidget, QScrollArea, QMenu, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
 
@@ -30,39 +30,156 @@ class DashClipboardSearchBar(QLineEdit):
     def contextMenuEvent(self, event):
         self.menu = self.createStandardContextMenu()
         self.menu = styleContextMenu(self.menu, self.accent_color)
+        self.menu = styleTextEditMenuIcons(self.menu)
         self.menu.popup(event.globalPos())
+
+# Clipboard Item editing text area.
+class DashClipboardEditArea(QTextEdit):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(DashClipboardEditArea, self).__init__(parent)
+        self.setStyleSheet("""
+        QTextEdit {
+            color: #aaa;
+            margin: 10px;
+            font-size: 17px;
+            background: #292929;
+            border-radius: 10px;
+            border: 1px solid gray;
+            font-family: "Be Vietnam Pro";
+            selection-background-color: purple;
+        }""")
+        self.setText("Use this area to edit clipboard items/copy sections of the text.")
+        
+# Clipboard Item.
+class DashClipboardItem(QWidget):
+    def __init__(self, content: Union[str, QIcon], 
+                 accent_color: str="purple", 
+                 parent: Union[None, QWidget]=None):
+        super(DashClipboardItem, self).__init__(parent)
+        self.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            padding: 10px;
+            border-radius: 5px;
+            background: #484848;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self.content = content
+        self.accent_color = accent_color
+        # create hbox layout.
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setSpacing(0)
+        self.hboxlayout.setContentsMargins(5, 5, 5, 5)
+        # create content area and control panel.
+        self.ctrlPanel = self.initCtrlPanel()
+        self.contentArea = self.initContentArea(content)
+        self.hboxlayout.addWidget(self.contentArea)
+        self.hboxlayout.addWidget(self.ctrlPanel)
+        self.setLayout(self.hboxlayout)
+
+    def initContentArea(self, content) -> Union[QLabel, QTextEdit, QLabel]:
+        if isinstance(content, QImage):
+            contentArea = QLabel()
+            contentArea.setPixmap(content.pixmap(100, 100))
+        elif isinstance(content, str):
+            contentArea = QLabel()
+            contentArea.setText(content)
+        else:
+            contentArea = QTextEdit()
+            contentArea.setHtml(content)
+            contentArea.setReadOnly(True)
+            contentArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        contentArea.setStyleSheet("background: #292929; padding: 10px; border-top-left-radius: 10px; border-bottom-left-radius: 10px;")
+
+        return contentArea
+
+    def initCtrlBtn(self, icon: str) -> QToolButton:
+        btn = QToolButton()
+        btn.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            border-radius: 2px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            background: """+self.accent_color+""";
+        }""")
+        btn.setIcon(FigD.Icon(icon))
+        btn.setIconSize(QSize(40,40))
+
+        return btn
+
+    def initCtrlPanel(self):
+        ctrlPanel = QWidget()
+        ctrlPanel.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            border: 0px;
+            padding: 10px;
+            border-top-right-radius: 10px;
+            border-bottom-right-radius: 10px;
+            background: """+self.accent_color+""";
+            font-family: "Be Vietnam Pro";
+        }""")
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+        layout.addWidget(self.initCtrlBtn("textedit/copy.svg"))
+        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_text.svg"))
+        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_as_html.svg"))
+        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_to_textarea.svg"))
+        layout.addWidget(self.initCtrlBtn("system/clipboard/save.svg"))
+        layout.addStretch(1)
+        ctrlPanel.setLayout(layout)
+        ctrlPanel.setFixedWidth(40)
+
+        return ctrlPanel
 
 # Clipboard UI.
 class DashClipboardUI(QWidget):
-    def __init__(self, accent_color="purple"):
+    def __init__(self, accent_color: str="purple"):
         super(DashClipboardUI, self).__init__()
         QApplication.clipboard().dataChanged.connect(
             self.onDataChanged
         )
         self.accent_color = accent_color
         # layout.
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setObjectName("vboxlayout")
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.vboxlayout.setSpacing(0)
         # search bar.
         self.searchbar = self.initSearchBar()
-        self.layout.addWidget(self.searchbar)
+        self.searchbar.setObjectName("searchbar")
+        self.vboxlayout.addWidget(self.searchbar)
         # central display stack.
         self.stack = self.initStack()
-        self.stackLayout = self.stack.widget().layout()
-        # print(self.stackLayout)
-        self.layout.addWidget(self.stack)
-        self.layout.addStretch(1)
+        self.stackArea = self.wrapInScrollArea(self.stack)
+        self.stackArea.setStyleSheet("""
+        QScrollArea {
+            background: transparent;
+        }""")
+        self.editor = DashClipboardEditArea()
+        # self.stackArea.setMaximumHeight(500)
+        # if isinstance(self.stack, QScrollArea):
+        #     print(self.stack.widget().objectName())
+        #     self.stackLayout = self.stack.widget().layout()
+        # elif isinstance(self.stack, QWidget):
+        #     self.stackLayout = self.stack.layout()
+        self.vboxlayout.addWidget(self.stackArea)
+        self.vboxlayout.addWidget(self.editor)
+        # self.vboxlayout.addStretch(1)
         # set layout.
-        self.setLayout(self.layout)
         self.setObjectName("DashClipboardUI")
+        self.setLayout(self.vboxlayout)
+        self.history = []
+
         # self.setStyleSheet("""
         # QWidget#DashClipboardUI {
         #     border-radius: 20px;
         #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         # }""")
-        self.history = []
-
     def contextMenuEvent(self, event):
         self.menu = QMenu()
         self.menu.addAction(FigD.Icon("system/clipboard/clear.svg"), "Clear")
@@ -72,10 +189,12 @@ class DashClipboardUI(QWidget):
 
     def wrapInScrollArea(self, widget):
         scrollArea = QScrollArea()
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setObjectName("wrapInScrollArea("+widget.objectName()+")")
         scrollArea.setWidget(widget)
-        scrollArea.setAttribute(Qt.WA_TranslucentBackground)
         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # scrollArea.setAttribute(Qt.WA_TranslucentBackground)
         scrollArea.setStyleSheet("""
         QScrollArea {
             background-position: center;
@@ -117,33 +236,23 @@ class DashClipboardUI(QWidget):
             border: 0px;
             background: transparent;
         }""")
+        stack.setObjectName("Stack")
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
+        self.stackLayout = layout
         stack.setLayout(layout)
-        stack.setStyleSheet("""
-        QWidget {
-            border: 0px;
-            background: transparent;
-        }""")
 
-        return self.wrapInScrollArea(stack)
+        return stack
 
     def initSearchBar(self):
         searcharea = QWidget()
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
         searcharea.setLayout(layout)
-
         searchbar = DashClipboardSearchBar(
             accent_color=self.accent_color,
         )
-        # searchbar.setPlaceholderText("Search Clipboard!")
-        # searchbar.setStyleSheet("""
-        # QLineEdit {
-        #     color: #fff;
-        #     background: #292929;
-        # }""")
         layout.addWidget(searchbar)
 
         return searcharea
@@ -153,17 +262,10 @@ class DashClipboardUI(QWidget):
         text = QApplication.clipboard().text()
         self.append(text)
 
-    def initClipboardItem(self, text: str):
-        item = QTextEdit()
-        item.setText(text)
-        item.setStyleSheet("""
-        QTextEdit {
-            color: #fff;
-            border: 0px;
-            border-radius: 5px;
-            background: #484848;
-        }""")
-
+    def initClipboardItem(self, item: Union[str, QImage]):
+        item = DashClipboardItem(item, accent_color=self.accent_color)
+        self.history.append(item)
+        # item.setFixedHeight(100)
         return item
 
     def append(self, text: str):
@@ -171,7 +273,7 @@ class DashClipboardUI(QWidget):
         self.history.append(text)
         clipboard_item = self.initClipboardItem(text)
         self.stackLayout.insertWidget(0, clipboard_item)
-
+        # print([c.objectName() for c in self.children()])
 def test_clipboard():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
@@ -203,182 +305,3 @@ def launch_clipboard():
 
 if __name__ == "__main__":
     test_clipboard()
-# class DashClipboardUI(QMainWindow):
-#     def __init__(self):
-#         super(DashClipboardUI, self).__init__()
-#         QApplication.clipboard().dataChanged.connect(
-#             self.onDataChanged
-#         )
-#         self.clipboard_ui = self.initCentralWidget()
-#         self.setCentralWidget(self.clipboard_ui)
-#         self.history = []
-
-#     def wrapInScrollArea(self, widget):
-#         scrollArea = QScrollArea()
-#         scrollArea.setWidget(widget)
-#         scrollArea.setAttribute(Qt.WA_TranslucentBackground)
-#         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#         # scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#         scrollArea.setStyleSheet("""
-#         QScrollArea {
-#             background-position: center;
-#             background: transparent;
-#             border: 0px;
-#         }
-#         QScrollBar:vertical {
-#             border: 0px solid #999999;
-#             width: 15px;    
-#             margin: 0px 0px 0px 0px;
-#             background-color: rgba(255, 255, 255, 0);
-#         }
-#         QScrollBar::handle:vertical {         
-#             min-height: 0px;
-#             border: 0px solid red;
-#             border-radius: 0px;
-#             background-color: transparent;
-#         }
-#         QScrollBar::handle:vertical:hover {         
-#             background-color: rgba(255, 255, 255, 0.5);
-#         }
-#         QScrollBar::add-line:vertical {       
-#             height: 0px;
-#             subcontrol-position: bottom;
-#             subcontrol-origin: margin;
-#         }
-#         QScrollBar::sub-line:vertical {
-#             height: 0 px;
-#             subcontrol-position: top;
-#             subcontrol-origin: margin;
-#         }""")
-
-#         return scrollArea
-
-#     def initStack(self):
-#         stack = QWidget()
-#         stack.setStyleSheet("""
-#         QWidget {
-#             border: 0px;
-#             background: transparent;
-#         }""")
-#         layout = QVBoxLayout()
-#         layout.setContentsMargins(10, 10, 10, 10)
-#         layout.setSpacing(10)
-#         stack.setLayout(layout)
-#         stack.setStyleSheet("""
-#         QWidget {
-#             border: 0px;
-#             background: transparent;
-#         }""")
-
-#         return self.wrapInScrollArea(stack)
-
-#     def initSearchBar(self):
-#         searcharea = QWidget()
-#         layout = QVBoxLayout()
-#         layout.setContentsMargins(10, 10, 10, 10)
-#         searcharea.setLayout(layout)
-
-#         searchbar = QLineEdit()
-#         searchbar.setPlaceholderText("Search Clipboard!")
-#         searchbar.setStyleSheet(
-#         """QLineEdit {
-#             color: #fff;
-#             background: #292929;
-#         }""")
-#         layout.addWidget(searchbar)
-
-#         return searcharea
-
-#     def initCentralWidget(self):
-#         centralWidget = QWidget()
-#         # layout.
-#         self.layout = QVBoxLayout()
-#         self.layout.setContentsMargins(0, 0, 0, 0)
-#         self.layout.setSpacing(0)
-#         # search bar.
-#         self.searchbar = self.initSearchBar()
-#         self.layout.addWidget(self.searchbar)
-#         # central display stack.
-#         self.stack = self.initStack()
-#         self.stackLayout = self.stack.widget().layout()
-#         print(self.stackLayout)
-#         self.layout.addWidget(self.stack)
-#         self.layout.addStretch(1)
-
-#         centralWidget.setLayout(self.layout)
-#         centralWidget.setObjectName("ClipboardViewerWidget")
-#         centralWidget.setStyleSheet("""
-#         QWidget#ClipboardViewerWidget {
-#             border-radius: 20px;
-#             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-#         }""")
-
-#         return centralWidget
-
-#     def onDataChanged(self):
-#         # print(i)
-#         text = QApplication.clipboard().text()
-#         self.append(text)
-
-#     def connectTitlebar(self, titlebar: WindowTitleBar):
-#         self.titlebar = titlebar
-#         self.titlebar.connectWindow(self)
-
-#     def initClipboardItem(self, text: str):
-#         item = QTextEdit()
-#         item.setText(text)
-#         item.setStyleSheet("""
-#         QTextEdit {
-#             color: #fff;
-#             border: 0px;
-#             border-radius: 5px;
-#             background: #484848;
-#         }""")
-
-#         return item
-
-#     def append(self, text: str):
-#         print(f"\x1b[31;1mui.system.clipboard::DashClipboardUI::append\x1b[0m({text})")
-#         self.history.append(text)
-#         clipboard_item = self.initClipboardItem(text)
-#         self.stackLayout.insertWidget(0, clipboard_item)
-
-# def test_clipboard_ui():
-#     import sys
-#     FigD("/home/atharva/GUI/fig-dash/resources")
-#     app = QApplication(sys.argv)
-#     app.setStyleSheet("""
-#     QToolTip {
-#         color: #fff;
-#         border: 0px;
-#         padding-top: -1px;
-#         padding-left: 5px;
-#         padding-right: 5px;
-#         padding-bottom: -1px;
-#         font-size:  17px;
-#         background: #000;
-#         font-family: 'Be Vietnam Pro', sans-serif;
-#     }""")
-#     screen_rect = app.desktop().screenGeometry()
-#     w, h = screen_rect.width()//2, screen_rect.height()//2
-#     # create and reposition clipboard UI.
-#     clipboard_ui = DashClipboardUI()
-#     # add the custom window titlebar.
-#     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #390b56, stop : 0.091 #420d64, stop : 0.182 #4c0f72, stop : 0.273 #561181, stop : 0.364 #601390, stop : 0.455 #6a169f, stop : 0.545 #7418ae, stop : 0.636 #7f1abe, stop : 0.727 #891cce, stop : 0.818 #941ede, stop : 0.909 #9f20ee, stop : 1.0 #aa22ff);")
-#     # titlebar.setStyleSheet("background: #292929; color: #fff;")
-#     clipboard_ui.layout.insertWidget(0, titlebar)
-#     clipboard_ui.connectTitlebar(titlebar)
-#     # set window icon, title and flags.
-#     clipboard_ui.setWindowIcon(FigD.Icon("system/clipboard/window_icon.png"))
-#     clipboard_ui.setWindowTitle("Clipboard Viewer")
-#     clipboard_ui.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-#     clipboard_ui.setAttribute(Qt.WA_TranslucentBackground)
-#     titlebar.setWindowIcon(
-#         clipboard_ui.windowIcon(), 
-#         size=(25,25)
-#     )
-#     # reposition window and show UI.
-#     clipboard_ui.move(w, h)
-#     clipboard_ui.show()
-    
-#     app.exec()
