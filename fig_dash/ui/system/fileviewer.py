@@ -15,14 +15,14 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-from fig_dash.ui import wrapFigDWindow, styleContextMenu, FigDAppContainer
+from fig_dash.ui import wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEnginePage
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QPalette
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QThread, QFileSystemWatcher
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QShortcut, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
 # filweviewer widget.
 
 # IMPORTANT: URL to share page on 
@@ -2120,10 +2120,26 @@ class FileViewerWidget(QMainWindow):
         browserBtn = self.menu.opengroup.browserBtn
         browserBtn.clicked.connect(self.openFileInWebView)
         # # shortcuts.
-        self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
+        self.SelectAll = FigDShortcut(
+            QKeySequence.SelectAll, self, 
+            "Select all files/folders"
+        )
         self.SelectAll.activated.connect(self.selectAll)
-        self.BackSpace = QShortcut(QKeySequence("Backspace"), self)
+        self.BackSpace = FigDShortcut(
+            QKeySequence("Backspace"), self,
+            "Go back to parent folder"
+        )
         self.BackSpace.activated.connect(self.openParent)
+        self.CtrlH = FigDShortcut(
+            QKeySequence("Ctrl+H"), self,
+            "Toggle hidden files/folders"
+        )
+        self.CtrlH.activated.connect(self.toggleHiddenFiles)
+        self.CtrlShiftF = FigDShortcut(
+            QKeySequence("Ctrl+Shift+F"), self,
+            "Open file explorer search bar"
+        )
+        self.CtrlShiftF.activated.connect(self.foldersearchbar.show)
         # self.SelectAll.setEnabled(False)
     
         # add the dev tools button to the view group.
@@ -2170,7 +2186,10 @@ class FileViewerWidget(QMainWindow):
         self.sidebar.connectWidget(self)
         # connect Esc key shortcut to Esc handler.
         self.webview.Esc.setEnabled(False)
-        self.EscKey = QShortcut(QKeySequence("Esc"), self)
+        self.EscKey = FigDShortcut(
+            QKeySequence("Esc"), self,
+            "Unselect selected files/folders"
+        )
         self.EscKey.activated.connect(self.EscHandler)
 
     def EscHandler(self):
@@ -2774,7 +2793,7 @@ def test_fileviewer():
     try: 
         path = os.path.expanduser(sys.argv[1])
     except IndexError: 
-        path = os.path.expanduser("~/Downloads/PDFs")
+        path = os.path.expanduser("~")
     fileviewer.open(path)
     window = wrapFigDWindow(fileviewer, icon=icon, width=800,
                             height=600, accent_color=accent_color,

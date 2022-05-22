@@ -11,8 +11,10 @@ from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports
 from PyQt5.QtGui import QColor, QFont, QFontDatabase, QIcon, QImage
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
-from PyQt5.QtWidgets import QWidget, QScrollArea, QMenu, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
+from PyQt5.QtWidgets import QWidget, QScrollArea, QSplitter, QMenu, QTabWidget, QToolBar, QLabel, QPushButton, QToolButton, QSizePolicy, QLineEdit, QTextEdit, QHBoxLayout, QVBoxLayout, QAction, QCalendarWidget, QGraphicsDropShadowEffect, QApplication, QMainWindow
 
+
+CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD = False
 # Clipboard SearchBar.
 class DashClipboardSearchBar(QLineEdit):
     def __init__(self, accent_color: str="purple", 
@@ -49,7 +51,7 @@ class DashClipboardEditArea(QTextEdit):
             selection-background-color: purple;
         }""")
         self.setText("Use this area to edit clipboard items/copy sections of the text.")
-        
+
 # Clipboard Item.
 class DashClipboardItem(QWidget):
     def __init__(self, content: Union[str, QIcon], 
@@ -74,8 +76,8 @@ class DashClipboardItem(QWidget):
         # create content area and control panel.
         self.ctrlPanel = self.initCtrlPanel()
         self.contentArea = self.initContentArea(content)
-        self.hboxlayout.addWidget(self.contentArea)
         self.hboxlayout.addWidget(self.ctrlPanel)
+        self.hboxlayout.addWidget(self.contentArea)
         self.setLayout(self.hboxlayout)
 
     def initContentArea(self, content) -> Union[QLabel, QTextEdit, QLabel]:
@@ -90,7 +92,7 @@ class DashClipboardItem(QWidget):
             contentArea.setHtml(content)
             contentArea.setReadOnly(True)
             contentArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        contentArea.setStyleSheet("background: #292929; padding: 10px; border-top-left-radius: 10px; border-bottom-left-radius: 10px;")
+        contentArea.setStyleSheet("background: #292929; padding: 10px; border-top-right-radius: 10px; border-bottom-right-radius: 10px;")
 
         return contentArea
 
@@ -117,24 +119,47 @@ class DashClipboardItem(QWidget):
             color: #fff;
             border: 0px;
             padding: 10px;
-            border-top-right-radius: 10px;
-            border-bottom-right-radius: 10px;
+            border-top-left-radius: 10px;
+            border-bottom-left-radius: 10px;
             background: """+self.accent_color+""";
             font-family: "Be Vietnam Pro";
         }""")
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
-        layout.addWidget(self.initCtrlBtn("textedit/copy.svg"))
-        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_text.svg"))
-        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_as_html.svg"))
-        layout.addWidget(self.initCtrlBtn("system/clipboard/copy_to_textarea.svg"))
-        layout.addWidget(self.initCtrlBtn("system/clipboard/save.svg"))
+        # create control buttons.
+        self.copyBtn = self.initCtrlBtn("textedit/copy.svg")
+        self.copyTextBtn = self.initCtrlBtn("system/clipboard/copy_text.svg") 
+        self.copyAsHTMLBtn = self.initCtrlBtn("system/clipboard/copy_as_html.svg")
+        self.copyToTextareaBtn = self.initCtrlBtn("system/clipboard/copy_to_textarea.svg")
+        self.saveBtn = self.initCtrlBtn("system/clipboard/save.svg")
+        self.deleteBtn = self.initCtrlBtn("system/clipboard/delete.svg")
+        # connect to slots.
+        self.copyBtn.clicked.connect(self.copyItemContent)
+        # build control panel layout.
+        layout.addWidget(self.copyBtn)
+        layout.addWidget(self.copyTextBtn)
+        layout.addWidget(self.copyAsHTMLBtn)
+        layout.addWidget(self.copyToTextareaBtn)
+        layout.addWidget(self.saveBtn)
+        layout.addWidget(self.deleteBtn)
+        # add stretch to control panel.
         layout.addStretch(1)
+        # set layout
         ctrlPanel.setLayout(layout)
         ctrlPanel.setFixedWidth(40)
 
         return ctrlPanel
+
+    def copyItemContent(self):
+        """
+        copy item content as it is, (text, image or html) as it is. 
+        TODO: Find a way to not put it on the clipboard UI.
+        """
+        global CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD
+        CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD = True
+        if isinstance(self.content, str):
+            QApplication.clipboard().setText(self.content)
 
 # Clipboard UI.
 class DashClipboardUI(QWidget):
@@ -160,15 +185,15 @@ class DashClipboardUI(QWidget):
         QScrollArea {
             background: transparent;
         }""")
+        # self.stackArea.setMinimumHeight(150)
         self.editor = DashClipboardEditArea()
-        # self.stackArea.setMaximumHeight(500)
-        # if isinstance(self.stack, QScrollArea):
-        #     print(self.stack.widget().objectName())
-        #     self.stackLayout = self.stack.widget().layout()
-        # elif isinstance(self.stack, QWidget):
-        #     self.stackLayout = self.stack.layout()
-        self.vboxlayout.addWidget(self.stackArea)
-        self.vboxlayout.addWidget(self.editor)
+        # self.editor.setMinimumHeight(100)
+        self.stack_editor_splitter = QSplitter(Qt.Vertical)
+        self.stack_editor_splitter.addWidget(self.stackArea)
+        self.stack_editor_splitter.addWidget(self.editor)
+        self.stack_editor_splitter.setSizes([200,200])
+        self.vboxlayout.addWidget(self.stack_editor_splitter)
+        # self.vboxlayout.addWidget(self.editor)
         # self.vboxlayout.addStretch(1)
         # set layout.
         self.setObjectName("DashClipboardUI")
@@ -241,6 +266,7 @@ class DashClipboardUI(QWidget):
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(10)
         self.stackLayout = layout
+        self.stackLayout.addStretch(1)
         stack.setLayout(layout)
 
         return stack
@@ -269,10 +295,14 @@ class DashClipboardUI(QWidget):
         return item
 
     def append(self, text: str):
-        print(f"\x1b[31;1mui.system.clipboard::DashClipboardUI::append\x1b[0m({text})")
+        global CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD
+        # print(f"\x1b[31;1mui.system.clipboard::DashClipboardUI::append\x1b[0m({text})")
         self.history.append(text)
-        clipboard_item = self.initClipboardItem(text)
-        self.stackLayout.insertWidget(0, clipboard_item)
+        if CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD:
+            CLIPBOARD_COPY_ITEM_BUT_DONT_RECORD = False
+        else:
+            clipboard_item = self.initClipboardItem(text)
+            self.stackLayout.insertWidget(0, clipboard_item)
         # print([c.objectName() for c in self.children()])
 def test_clipboard():
     import sys
@@ -285,7 +315,7 @@ def test_clipboard():
     window = wrapFigDWindow(clipboard, size=(25,25), 
                             icon="system/clipboard/logo.png", 
                             title="Clipboard Viewer", width=900,
-                            height=250, accent_color=accent_color,
+                            height=400, accent_color=accent_color,
                             add_tabs=False)
     # show the app window.
     window.show()
@@ -297,7 +327,7 @@ def launch_clipboard():
     accent_color = FigDAccentColorMap["clipboard"]
     clipboard = DashClipboardUI(accent_color=accent_color)
     window = wrapFigDWindow(clipboard, size=(25,25), width=900,
-                            title="Clipboard Viewer", height=250,
+                            title="Clipboard Viewer", height=400,
                             icon=icon, accent_color=accent_color,
                             name="clipboard", add_tabs=False)
     window.show()

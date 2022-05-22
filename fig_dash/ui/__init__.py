@@ -9,9 +9,17 @@ from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
-from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon
+from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QEvent
-from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea, QShortcut
+
+
+class FigDShortcut(QShortcut):
+    def __init__(self, keyseq: QKeySequence, 
+                 parent: Union[None, QWidget]=None,
+                 description: str="description"):
+        super(FigDShortcut, self).__init__(keyseq, parent)
+        self.description = description
 
 
 class DashWidgetGroupBtnStyler:
@@ -74,7 +82,7 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
 }
 
 def styleTextEditMenuIcons(menu):
-    """substitute TextEdit/ LineEdit icons for consistent styling."""
+    """substitute TextEdit/LineEdit icons for consistent styling."""
     for action in menu.actions():
         # print(action.text())
         icon, icon_disabled = TEXT_EDIT_CONTEXT_MENU_MAP.get(action.text(), ("",""))
@@ -432,8 +440,13 @@ class FigDWindow(QMainWindow):
 
     def printShortcuts(self):
         for action in self.findChildren(QAction):
-            print(type(action), action.text(), action.toolTip(), [x.toString() for x in action.shortcuts()])
-
+            shortcuts = [s.toString() for s in action.shortcuts()]
+            if len(shortcuts) == 0: continue
+            print(action.text(), shortcuts)
+        # print all the shortcuts.
+        for shortcut in self.findChildren(QShortcut):
+            print(shortcut.key().toString()) 
+            # print(type(action), action.text(), action.toolTip(), [x.toString() for x in action.shortcuts()])
     def createShortcutLine(self, shortcut: str, action: str) -> QWidget:
         line = QWidget()
         layout = QHBoxLayout()
@@ -515,16 +528,23 @@ class FigDWindow(QMainWindow):
             shortcuts = [shortcut.toString() for shortcut in action.shortcuts()]
             if len(shortcuts) == 0: continue
             for shortcut in shortcuts:
-                print(shortcut)
                 vboxlayout.addWidget(
                     self.createShortcutLine(
                         shortcut,
                         action.text(),
                     )
                 )
+        for shortcut in self.findChildren(QShortcut):
+            if isinstance(shortcut, FigDShortcut):
+                vboxlayout.addWidget(
+                    self.createShortcutLine(
+                        shortcut.key().toString(),
+                        shortcut.description,
+                    )
+                )
         shortcuts_widget.setWidget(shortcuts_list)
         window.setCentralWidget(shortcuts_widget)
-
+        # self.printShortcuts()
         return window
     # def focusInEvent(self, event):
     #     if self.titlebar: self.titlebar.activate()
