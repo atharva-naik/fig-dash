@@ -1,7 +1,0 @@
-<svg viewBox="0 0 20 20">
-    <circle cx="10" cy="10" r="10" fill="#ff605c" fill-opacity="0"/>
-    <circle cx="10" cy="10" r="9" fill="#292929"/>
-    <circle cx="10" cy="10" r="8" fill="#ff605c"/>
-    <line x1="6.5" y1="6.5" x2="13.5" y2="13.5" stroke="#292929" stroke-width="1.5"/>
-    <line x1="6.5" y1="13.5" x2="13.5" y2="6.5" stroke="#292929" stroke-width="1.5"/>
-</svg>

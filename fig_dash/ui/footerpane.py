@@ -1,1 +1,0 @@
-# footer pane contains shells, processes display, logs etc.

@@ -1,4 +1,0 @@
-chime
-psutil
-pydpkg
-pulsectl

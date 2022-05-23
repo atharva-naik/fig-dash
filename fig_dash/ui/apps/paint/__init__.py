@@ -1,1 +1,0 @@
-# a basic QPainter based paint application to make simple images.
