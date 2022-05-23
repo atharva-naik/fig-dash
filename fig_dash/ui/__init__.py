@@ -11,7 +11,7 @@ from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QEvent
-from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea, QShortcut
+from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit
 
 
 class FigDShortcut(QShortcut):
@@ -122,6 +122,94 @@ def styleContextMenu(menu, accent_color: str="yellow"):
 
     return menu
 
+# dash slider (has a label to directly enter values).
+class DashSlider(QWidget):
+		def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25), minm: int=0, maxm: int=50, value: int=100, accent_color: str="yellow", parent: Union[QWidget, None]=None):
+				super(DashSlider, self).__init__(parent)
+				# main layout.
+				self.vboxlayout = QVBoxLayout()
+				self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+				self.vboxlayout.setSpacing(0)
+				# upper widget with hboxlayout.
+				self.hboxlayout = QHBoxLayout()
+				self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+				self.hboxlayout.setSpacing(0)
+				# slider widget.
+				self.slider = QSlider(Qt.Horizontal)
+				self.slider.setMinimum(minm)
+				self.slider.setMaximum(maxm)
+				self.slider.setValue(value)
+				self.slider.setMinimumWidth(200)
+				self.slider.valueChanged.connect(self.updateEffect)
+		
+				self.label = QLabel(text)
+				self.label.setStyleSheet("""
+				QLabel {
+						color: #fff;
+						font-size: 17px;
+				}""")
+				# slider readout.
+				self.readout = QLineEdit()
+				self.readout.setText(str(value))
+				self.readout.setStyleSheet("""
+				QLineEdit {
+                        color: #fff;
+						font-size: 16px;
+				}""")
+				self.readout.returnPressed.connect(self.setEffect)
+				self.readout.setMaximumWidth(40)
+				# display icon.
+				self.icon = QLabel()
+				self.icon.setPixmap(
+						FigD.Icon(icon).pixmap(
+								QSize(*icon_size)
+				))
+				# hboxwidget.
+				self.hboxwidget = QWidget()
+				self.hboxwidget.setLayout(self.hboxlayout)
+				# build hboxlayout.
+				self.hboxlayout.addWidget(self.icon)
+				self.hboxlayout.addWidget(self.readout)
+				self.hboxlayout.addWidget(self.slider)
+				self.hboxlayout.addStretch(1)
+				self.vboxlayout.addWidget(self.hboxwidget, 0, Qt.AlignCenter)
+				self.vboxlayout.addWidget(self.label, 0, Qt.AlignCenter)
+				self.vboxlayout.addStretch(1)
+				self.setObjectName("DashSlider")
+				self.setStyleSheet("""
+				QWidget#DashSlider {
+						color: #fff;
+						font-family: 'Be Vietnam Pro';
+						background: transparent;
+				}""")
+				self.setLayout(self.vboxlayout)
+				# set slider palette color.
+				background = accent_color
+				if "qlineargradient" in background:
+						sliderHandleColor = background.split(":")[-1].strip()
+						sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
+						sliderHandleColor = sliderHandleColor.strip()
+				else: 
+						sliderHandleColor = background
+				palette = QPalette()
+				palette.setColor(QPalette.Window, QColor(0,255,255))
+				palette.setColor(QPalette.Button, QColor(sliderHandleColor))
+				palette.setColor(QPalette.Highlight, QColor(sliderHandleColor))
+				self.slider.setPalette(palette)
+
+		def setEffect(self):
+				try: 
+						value = float(self.readout.text())
+						self.slider.setValue(value)
+				except Exception as e:
+						scopeStr = "\x1b[31;1mui::__init__::DashSlider.setEffect:\x1b[0m"
+						print(scopeStr, e)
+
+		def updateEffect(self, value):
+				self.readout.setText(str(value))
+				pass
+
+# dash widget group button.
 class DashWidgetGroupBtn(QToolButton):
     '''Dash Widget button'''
     def __init__(self, parent: Union[None, QWidget]=None, **args):
@@ -687,6 +775,9 @@ def wrapFigDWindow(widget: QWidget, **args):
         layout.addWidget(tabwidget)
     else:
         layout.addWidget(widget)
+    try:
+        layout.addWidget(widget.statusbar)
+    except Exception as e: print(e)
     centralWidget.setLayout(layout)
 
     window = FigDWindow(widget=centralWidget, **args)
@@ -716,5 +807,29 @@ def wrapFigDWindow(widget: QWidget, **args):
     w, h = screen_rect.width()//2, screen_rect.height()//2
     widget.window_ptr = window
     window.move(w, h)
+
+    return window
+
+def styleWindowStatusBar(window: QMainWindow, accent_color: str="green", 
+                         apply_style_sheet: bool=True) -> QMainWindow:
+    """Shifts a windows statusbar from the transparent QMainWindow to the window object.
+    Args:
+        window (QMainWindow): A QMainWindow or FigDWindow object.
+        accent_color (str, optional): Accent color of the window.
+        apply_style_sheet (bool, optional): Whether statusBar style sheet should be updated. Defaults to True.
+
+    Returns:
+        QMainWindow: returns rearranged FigDWindow/QMainWindow object.
+    """
+    assert isinstance(window, QMainWindow), f"window object is of type `{type(window)}`. Expecting QMainWindow type object instead."
+    statusBar = window.statusBar()
+    window.statusbar = statusBar
+    window.centralWidget().layout().addWidget(window.statusbar)
+    window.setStyleSheet("""
+    QStatusBar {
+        color: #fff;
+        font-family: "Be Vietnam Pro";
+        background: transparent;
+    }""")
 
     return window

@@ -6,8 +6,8 @@ import datetime
 from typing import Union
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import FigDAppContainer, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
+from fig_dash.ui import FigDAppContainer, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow
 # PyQt5 imports
 from PyQt5.QtGui import QColor, QFont, QFontDatabase, QIcon, QImage
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer
@@ -136,6 +136,7 @@ class DashClipboardItem(QWidget):
         self.deleteBtn = self.initCtrlBtn("system/clipboard/delete.svg")
         # connect to slots.
         self.copyBtn.clicked.connect(self.copyItemContent)
+        self.deleteBtn.clicked.connect(self.deleteItem)
         # build control panel layout.
         layout.addWidget(self.copyBtn)
         layout.addWidget(self.copyTextBtn)
@@ -150,6 +151,9 @@ class DashClipboardItem(QWidget):
         ctrlPanel.setFixedWidth(40)
 
         return ctrlPanel
+
+    def deleteItem(self):
+        self.hide()
 
     def copyItemContent(self):
         """
@@ -318,7 +322,6 @@ def test_clipboard():
                             height=400, accent_color=accent_color,
                             add_tabs=False)
     # show the app window.
-    window.show()
     # run the application!
     app.exec()
 
