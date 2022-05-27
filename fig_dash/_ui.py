@@ -21,7 +21,7 @@ from fig_dash.ui.dock import DashDockWidget
 from fig_dash.ui.shortcutbar import ShortcutBar
 from fig_dash.ui.widget.ideas import IdeasWidget
 from fig_dash.ui.widget.notifs import NotifsPanel
-from fig_dash.ui.widget.weather import WeatherWidget
+from fig_dash.ui.widget.weather import CurrentWeatherWidget
 # from fig_dash.ui.widget.floatmenu import FloatMenu
 from fig_dash.ui.system.sysutils import SysUtilsBar
 from fig_dash.ui.system.datetime import DashClock, DashCalendar

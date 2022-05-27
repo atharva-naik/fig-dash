@@ -341,6 +341,9 @@ class CodeMirrorEditor(QWidget):
         self.menu = CodeMirrorMenu(webview=self.webview)
         self.menu.setFixedHeight(120)
         self.menu.hide()
+        # view and codet toolbars.
+        self.codetoolbar = self.menu.codetoolbar
+        self.viewtoolbar = self.menu.viewtoolbar
         # self.layout.addWidget(self.viewtoolbar)
         # self.layout.addWidget(self.codetoolbar)
         self.layout.addWidget(self.menu)

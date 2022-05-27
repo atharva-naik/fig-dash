@@ -97,9 +97,6 @@ class ColorPicker(QDialog):
 
         else:
             return self.lastcolor
-
-
-
     ## Update Functions
     def hsvChanged(self):
         h,s,v = (100 - self.ui.hue_selector.y() / 1.85, (self.ui.selector.x() + 6) / 2.0, (194 - self.ui.selector.y()) / 2.0)
@@ -146,9 +143,6 @@ class ColorPicker(QDialog):
             self.ui.alpha.setText(str(alpha))
             self.ui.alpha.selectAll()
         self.alpha = alpha
-
-
-
     ## Internal setting functions
     def setRGB(self, c):
         r,g,b = c
@@ -166,8 +160,6 @@ class ColorPicker(QDialog):
 
     def setAlpha(self, a):
         self.ui.alpha.setText(str(a))
-
-
     ## Color Utility
     def hsv2rgb(self, h_or_color, s = 0, v = 0, a = None):
         if type(h_or_color).__name__ == "tuple":

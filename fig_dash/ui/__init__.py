@@ -11,7 +11,7 @@ from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QEvent
-from PyQt5.QtWidgets import QApplication, QMenu, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit
 
 
 class FigDShortcut(QShortcut):
@@ -32,6 +32,52 @@ class DashWidgetGroupBtnStyler:
 class DashWidgetGroupStyler:
     pass
 
+DASH_WIDGET_SCROLL_AREA = jinja2.Template("""
+QWidget {
+    border: 0px;
+    background: transparent;
+    font-family: 'Be Vietnam Pro';
+    font-size: 16px;
+    color: #fff;
+}
+QScrollArea {
+    border: 0px;
+    background-position: center;
+}
+QScrollBar:vertical {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0.1);
+}
+QScrollBar::handle:vertical {
+    min-height: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    background-color: rgba(255, 255, 255, 0.25);
+}
+QScrollBar::handle:vertical:hover {
+    background-color: rgba(255, 255, 255, 0.6);
+}
+QScrollBar::handle:horizontal {
+    min-height: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    background-color: transparent;
+}
+QScrollBar::handle:horizontal:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::add-line:vertical {
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    height: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}""")
 DASH_WIDGET_GROUP_BTN_STYLESHEET = jinja2.Template("""
 QToolButton {
     color: #fff;
@@ -80,6 +126,21 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/delete_disabled.svg")
     ),
 }
+def extractFromAccentColor(bg, where="back"):
+    if ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="back"):
+        extractedColor = bg.split(":")[-1].strip()
+        extractedColor = extractedColor.split()[-1]
+        extractedColor = extractedColor.split(")")[0]
+        extractedColor = extractedColor.strip()
+    elif ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="front"):
+        extractedColor = bg.split("stop")[1]
+        extractedColor = extractedColor.split("#")[-1]
+        extractedColor = extractedColor.split(",")[0]
+        extractedColor = "#"+extractedColor.strip()
+    else: 
+        extractedColor = "white" 
+
+    return extractedColor
 
 def styleTextEditMenuIcons(menu):
     """substitute TextEdit/LineEdit icons for consistent styling."""
@@ -219,13 +280,17 @@ class DashWidgetGroupBtn(QToolButton):
         icon = args.get("icon")
         text = args.get("text")
         style = args.get("style")
+        self.is_text_button = True
         self.hover_response = "background"
         if icon:
+            self.is_text_button = False
             self.inactive_icon = args["icon"]
             stem, ext = os.path.splitext(Path(args["icon"]))
             self.active_icon = f"{stem}_active{ext}"
             if os.path.exists(FigD.icon(self.active_icon)):
                 self.hover_response = "foreground"
+            else:
+                self.active_icon = FigD.icon(f"{stem}_hover{ext}")
             self.setIcon(FigD.Icon(self.inactive_icon))
         if text: self.setText(args["text"])
         if style: self.setToolButtonStyle(style)
@@ -241,11 +306,13 @@ class DashWidgetGroupBtn(QToolButton):
                 color: #fff;
                 border: 0px;
                 font-size: 14px;
-                background: {{ background }};
+                border-radius: 5px;
+                background: transparent;
             }
             QToolButton:hover {
                 color: #292929;
-                background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220));
+                background: {{ background }};
+                /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
             }
             QToolTip {
                 color: #fff;
@@ -273,12 +340,12 @@ class DashWidgetGroupBtn(QToolButton):
             }''')
 
     def leaveEvent(self, event):
-        if self.hover_response == "foreground":
+        if not self.is_text_button:
             self.setIcon(FigD.Icon(self.inactive_icon))
         super(DashWidgetGroupBtn, self).leaveEvent(event)
 
     def enterEvent(self, event):
-        if self.hover_response == "foreground":
+        if not self.is_text_button and os.path.exists(self.active_icon):
             self.setIcon(FigD.Icon(self.active_icon))
         super(DashWidgetGroupBtn, self).enterEvent(event)
 
@@ -291,6 +358,7 @@ class DashWidgetGroup(QWidget):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
         # layout.setSpacing(0)
+        self.__widget_list = []
         self.group = QWidget()
         self.layout = QHBoxLayout()
         self.layout.setSpacing(0)
@@ -311,6 +379,14 @@ class DashWidgetGroup(QWidget):
 
     def addWidget(self, *args, **kwargs):
         self.layout.addWidget(*args, **kwargs)
+        self.__widget_list.append(args[0])
+
+    def memberAt(self, index: int) -> Union[QWidget, None]:
+        try:
+            return self.__widget_list[index]
+        except IndexError as e:
+            print("ui::__init__::DashWidgetGroup.widgetAt", e)
+            return None
 
     def Label(self, name):
         name = QLabel(name)
@@ -364,7 +440,91 @@ class DashWidgetGroup(QWidget):
     def initBtn(self, **args):
         return DashWidgetGroupBtn(self, **args)
 
+# dash widget ribbon menu.
+class DashRibbonMenu(QWidget):
+    def __init__(self, group_names: List[str]=[], 
+                 parent: Union[None, QWidget]=None):
+        super(DashRibbonMenu, self).__init__(parent)
+        self.separators = []
+        # create the scoll area.
+        self.__scroll_area = QScrollArea()
+        self.__scroll_area.setWidgetResizable(True)
+        self.__scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.__scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.__scroll_area.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        # create Ribbon Menu main layout.
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(1)
+        # group names and group widget map/
+        self.__group_names = group_names
+        self.__group_widget_map = {}
+        for name in self.__group_names[:-1]:
+            self.__group_widget_map[name] = DashWidgetGroup(parent=parent, name=name)
+            self.hboxlayout.addWidget(self.__group_widget_map[name])
+            self.hboxlayout.addWidget(self.addSeparator())
+        name = self.__group_names[-1]
+        self.__group_widget_map[name] = DashWidgetGroup(parent=parent, name=name)
+        self.hboxlayout.addWidget(self.__group_widget_map[name])
+        self.hboxlayout.addStretch(1)
+        # create main widget and set it's layout.
+        self.main_widget = QWidget()
+        self.main_widget.setLayout(self.hboxlayout)
+        self.__scroll_area.setWidget(self.main_widget)
+        # init and build vboxlayout.
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.vboxlayout.setSpacing(0)
+        self.vboxlayout.addWidget(self.__scroll_area)
+        # set layout.
+        self.setLayout(self.vboxlayout)
 
+    def addSeparator(self, height: int=110):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #292929;''')
+        sep.setLineWidth(1)
+        sep.setMaximumHeight(110)
+        self.separators.append(sep)
+
+        return sep
+
+    def setFixedHeight(self, height: int):
+        for sep in self.separators:
+            sep.setMaximumHeight(height-2*10)
+        super(DashRibbonMenu, self).setFixedHeight(height)
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+    def widgetGroupAt(self, group_name: str=""):
+        return self.__group_widget_map[group_name]
+
+    def addWidgetGroup(self, group_name: str="View", 
+                       widgets: List[Tuple[QWidget, dict]]=[]):
+        widget_group = self.__group_widget_map[group_name]
+        for widget, args in widgets:
+            if isinstance(widget, QWidget):
+                widget_group.addWidget(widget, **args)
+            elif isinstance(widget, dict):
+                btn = widget_group.initBtn(**widget)
+                widget_group.addWidget(btn, **args)                
+            elif isinstance(widget, list):
+                btnGroup = widget_group.initBtnGroup(btn_args=widget, **args)
+                widget_group.addWidget(btnGroup, 0, Qt.AlignVCenter)
+
+        return widget_group
+
+# dash widget simplified ribbon menu.
+class DashWidgetSimplifiedRibbonMenu(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(DashWidgetSimplifiedRibbonMenu, self).__init__(parent)
+
+# Fig Dashboard app container class.
 class FigDAppContainer(QApplication):
     def __init__(self, *args, **kwargs):
         if hasattr(Qt, 'AA_EnableHighDpiScaling'):
@@ -685,6 +845,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     title = args.get("title", "")
     width = args.get("width", 960)
     height = args.get("height", 800)
+    _where = args.get("where", "front")
     add_tabs = args.get("add_tabs", True)
     animated = args.get("animated", False)
     show_titlebar = args.get("titlebar", True)
@@ -695,12 +856,26 @@ def wrapFigDWindow(widget: QWidget, **args):
         background=accent_color, 
         callbacks=titlebar_callbacks,
         title_widget=args.get("title_widget"),
+        where=_where,
     )
     if animated: titlebar.setAnimatedTitle(title)
     else: titlebar.setTitle(title)
+    # menu many not exist.
     try:
         titlebar.ribbonCollapseBtn.clicked.connect(widget.menu.toggle)
+        # menu hide action.
+        hide_action = titlebar.ribbonCollapseBtn.hidemenu
+        # connect hide action to menu.hide
+        hide_action.triggered.connect(widget.menu.hide)
     except Exception as e: print(e)
+    # simplifyMenu function may not exist.
+    try:
+        # simplification action.
+        simplify_action = titlebar.ribbonCollapseBtn.simplify
+        # connect simplify action to the simplified menu toggle if it exists.
+        simplify_action.triggered.connect(widget.simplifyMenu)
+    except Exception as e: print(e)
+    # if show_titlebar is false then hide titlebar.
     if not show_titlebar: titlebar.hide()
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")
@@ -783,6 +958,20 @@ def wrapFigDWindow(widget: QWidget, **args):
     window = FigDWindow(widget=centralWidget, **args)
     window.appName = name
     window.connectTitleBar(titlebar)
+    # connect full screen action.
+    try:
+        # full screen action.
+        fullscreen_action = titlebar.maximizeBtn.fullscreen
+        # connect full screen action to show full screen
+        fullscreen_action.triggered.connect(window.showFullScreen)
+    except Exception as e: print(e)
+    # connect exit full screen action.
+    try:
+        # exit full screen action.
+        exit_fullscreen_action = titlebar.maximizeBtn.exit_fullscreen
+        # connect exit full screen action to show normal.
+        exit_fullscreen_action.triggered.connect(window.showNormal)
+    except Exception as e: print(e)
     # style application tooltips
     app = QApplication.instance()
     if icon is not None:
@@ -810,8 +999,9 @@ def wrapFigDWindow(widget: QWidget, **args):
 
     return window
 
-def styleWindowStatusBar(window: QMainWindow, accent_color: str="green", 
-                         apply_style_sheet: bool=True) -> QMainWindow:
+def styleWindowStatusBar(window: QMainWindow, accent_color: Union[str, None]=None, 
+                         apply_style_sheet: bool=True, where: str="back", 
+                         font_color: str="#fff") -> QMainWindow:
     """Shifts a windows statusbar from the transparent QMainWindow to the window object.
     Args:
         window (QMainWindow): A QMainWindow or FigDWindow object.
@@ -825,11 +1015,17 @@ def styleWindowStatusBar(window: QMainWindow, accent_color: str="green",
     statusBar = window.statusBar()
     window.statusbar = statusBar
     window.centralWidget().layout().addWidget(window.statusbar)
-    window.setStyleSheet("""
-    QStatusBar {
-        color: #fff;
-        font-family: "Be Vietnam Pro";
-        background: transparent;
-    }""")
+
+    if apply_style_sheet:
+        if accent_color:
+            fontColor = extractFromAccentColor(accent_color, where=where)
+        else: fontColor = font_color
+        window.statusbar.setStyleSheet("""
+        QStatusBar {
+            color: """+fontColor+""";
+            font-size: 17px;
+            font-family: "Be Vietnam Pro";
+            background: transparent;
+        }""")
 
     return window

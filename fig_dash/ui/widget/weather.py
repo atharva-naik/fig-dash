@@ -1,20 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import datetime
+from operator import ge
 import os
 import json
 import jinja2
+from functools import partial
 from typing import Union, List
 # Qt5 imports.
 from PyQt5.QtGui import QPixmap, QIcon, QMovie, QColor
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal, QThread, QPoint
-from PyQt5.QtWidgets import QLabel, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QToolBar, QSizePolicy, QApplication, QGraphicsDropShadowEffect
+from PyQt5.QtWidgets import QLabel, QMenu, QWidget, QMainWindow, QScrollArea, QSplitter, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QToolBar, QSizePolicy, QApplication, QGraphicsDropShadowEffect
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.api.widget.weather import WeatherEngine
+from fig_dash.ui import FigDAppContainer, styleWindowStatusBar, wrapFigDWindow, DashWidgetGroup, DashRibbonMenu, styleContextMenu, DASH_WIDGET_SCROLL_AREA
 
-
-countries = {
-    "India": "ind.png"
+# icon and flag mappings.
+WEATHER_WIDGET_FLAG_MAP = {
+    "India": "ind.svg",
+    "United States of America": "usa.svg",
+}
+WEATHER_WIDGET_ICON_MAP = {
+    "fog": ("gifs/fog.gif", "gifs/fog.gif"),
+    "smoke": ("cloud/35.png", "cloud/35.png"),
+    "partly cloudy": ("sun/27.png", "moon/15.png"),
+}
+WEATHER_WIDGET_ICON_MAP = {
+    key: (
+        FigD.icon(os.path.join(
+            "widget/weather", p1
+        )),
+        FigD.icon(os.path.join(
+            "widget/weather", p2
+        )),
+    ) for key, (p1, p2) in WEATHER_WIDGET_ICON_MAP.items()
 }
 # weather_emojis = {
 #     "Mist": "", # 1
@@ -30,45 +50,50 @@ countries = {
 #     "Blowing snow": "", # 8
 #     "Patchy snow pour": "", # 9 
 # }
-def fetchIcon(desc):
-    desc = desc.lower()
-    if "haze" in desc:
-        return "widget/weather/fog.gif"
-    elif "mist" in desc:
-        return "widget/weather/fog.gif"
-    elif "fog" in desc:
-        return "widget/weather/fog.gif"
-    elif "sun" in desc:
-        return "widget/weather/sun.gif"
-    elif "clear" in desc:
-        return "widget/weather/sun.gif"
-    elif "cloud" in desc:
-        return "widget/weather/cloudy.png"
-    elif "overcast" in desc:
-        return "widget/weather/cloudy.png"
-    elif "snow" in desc:
-        return "widget/weather/snow.gif"
-    elif "rain" in desc:
-        return "widget/weather/rain.gif"
-    elif "drizzle" in desc:
-        return "widget/weather/rain.gif"
-    else:
-        return desc
-
-
+# def fetchIcon(desc):
+#     desc = desc.lower()
+#     if "haze" in desc:
+#         return "widget/weather/fog.gif"
+#     elif "mist" in desc:
+#         return "widget/weather/fog.gif"
+#     elif "fog" in desc:
+#         return "widget/weather/fog.gif"
+#     elif "sun" in desc:
+#         return "widget/weather/sun.gif"
+#     elif "clear" in desc:
+#         return "widget/weather/sun.gif"
+#     elif "cloud" in desc:
+#         return "widget/weather/cloudy.png"
+#     elif "overcast" in desc:
+#         return "widget/weather/cloudy.png"
+#     elif "snow" in desc:
+#         return "widget/weather/snow.gif"
+#     elif "rain" in desc:
+#         return "widget/weather/rain.gif"
+#     elif "drizzle" in desc:
+#         return "widget/weather/rain.gif"
+#     else:
+#         return desc
 class WeatherAPIFetchWorker(QObject):
     finished = pyqtSignal()
+    urlBuilt = pyqtSignal(str)
     progress = pyqtSignal(str, str)
     def __init__(self):
         self.weather_engine = WeatherEngine()
         super(WeatherAPIFetchWorker, self).__init__()
 
-    def run(self, **units):
+    def run(self, **args):
         # fetch weather data.
-        self.weather_engine()
+        print(args)
+        # get the wttr.in url.
+        url = self.weather_engine.build_query(**args)
+        self.urlBuilt.emit(url)
+        # launch the query.
+        self.weather_engine(**args)
         # get current weather condition.
         weather = self.weather_engine.get_current_condition()
         area = self.weather_engine.get_nearest_area()
+        # print the weather info.
         self.progress.emit(
             json.dumps(weather), 
             json.dumps(area)
@@ -77,11 +102,11 @@ class WeatherAPIFetchWorker(QObject):
 # worker.run(temp='C', precip='mm', pressure='inches', )
 
 weather_widget_style = '''
-QWidget#WeatherWidget {
+QWidget#CurrentWeatherWidget {
     color: #fff;
     padding: 10px;
-    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 0.8), stop : 0.6 rgba(29, 29, 29, 0.6));
-    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 0.8), stop : 0.6 rgba(29, 29, 29, 0.6));
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
 }
 QLabel#Weather {
     color: #fff;
@@ -93,17 +118,130 @@ QToolButton#AreaButton {
     border: 0px;
     background: transparent;
 }'''
-# also add moon phase widgets.
-class WeatherWidget(QWidget):
-    '''weather info, moon phase info and weekly forecast.'''
-    def __init__(self, parent: Union[None, QWidget]=None):
-        super(WeatherWidget, self).__init__(parent)
-        glow_effect = QGraphicsDropShadowEffect()
-        glow_effect.setBlurRadius(30)
-        glow_effect.setOffset(0,0)
-        glow_effect.setColor(QColor(235, 95, 52, 150))
-        self.setGraphicsEffect(glow_effect)
+# weather widget menu
+class WeatherWidgetMenu(DashRibbonMenu):
+    def __init__(self, accent_color: str="orange", 
+                 parent: Union[None, QWidget]=None):
+        super(WeatherWidgetMenu, self).__init__(
+            parent=parent, group_names=[
+                "File", "View", "Search", "Filters"
+            ]
+        )
+        self.addWidgetGroup("File", [
+            ({
+                "text": "Export As", 
+                "tip": "Export all data as a given format",
+                "icon": "widget/weather/save.svg", 
+                "size": (30,30),
+                "style": Qt.ToolButtonTextUnderIcon,
+                "background": accent_color,
+            }, {}),
+            ([
+                {
+                    "icon": "widget/weather/export_json.svg",
+                    "text": "Export JSON",
+                    "tip": "Export current weather as JSON",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "widget/weather/export_csv.svg",
+                    "text": "Export\nForecast CSV",
+                    "tip": "Export forecast data as CSV.",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                }
+            ], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+            }),
+        ])
+        self.addWidgetGroup("View", [
+            ([
+                {
+                    "text": "Wind",
+                    "icon": "widget/weather/wind_speed.svg",
+                    "tip": "Toggle wind group visibility",
+                    "size": (25,25),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "background": accent_color,
+                },
+                {
+                    # "icon": "widget/weather/pressure.png",
+                    "text": "Misc",
+                    "tip": "Toggle visibility of misc group",
+                    "background": accent_color,
+                    # "style": Qt.ToolButtonTextBesideIcon,
+                    # "size": (20,20),
+                },
+            ], {
+               "alignment_flag": Qt.AlignCenter, 
+               "orient": "vertical",
+            }),
+            ([
+                {
+                    "icon": "widget/weather/rain.png",
+                    "text": "Rain",
+                    "tip": "Toggle visibility of rain group",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "widget/weather/location.svg",
+                    "text": "Area",
+                    "tip": "Toggle visibility of additional info (in area)",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+            ], {
+               "alignment_flag": Qt.AlignRight, 
+               "orient": "vertical",
+            }),
+            ({
+                "icon": "widget/floatmenu/weather.png",
+                "text": "Forecast",
+                "tip": "Toggle visibility of weekly forecast",
+                "background": accent_color,
+                "style": Qt.ToolButtonTextUnderIcon,
+                "size": (40,40),
+            }, {})
+        ])
+        self.windBtn = self.widgetGroupAt("View").memberAt(0).btns[0]
+        self.miscBtn = self.widgetGroupAt("View").memberAt(0).btns[1]
+        self.rainBtn = self.widgetGroupAt("View").memberAt(1).btns[0]
+        self.additionalBtn = self.widgetGroupAt("View").memberAt(1).btns[1]
 
+    def connectCurrentWeather(self, widget: QWidget):
+        self.current_weather = widget
+        for type_, suffix in [
+            ("rain","Group"), ("wind","Group"), 
+            ("misc","Group"), ("additional","Info")
+        ]:
+            btn = getattr(self, type_+"Btn")
+            btn.clicked.connect(partial(
+                self.current_weather.toggleGroup,
+                type_+suffix,
+            ))
+# # simplified weather widget.
+# class WeatherWidgetSimpleMenu(DashWidgetGroup):
+#     pass
+
+# also add moon phase widgets.
+class CurrentWeatherWidget(QWidget):
+    '''weather info, moon phase info and weekly forecast.'''
+    def __init__(self, accent_color: str="yellow", 
+                 parent: Union[None, QWidget]=None):
+        super(CurrentWeatherWidget, self).__init__(parent)
+        self.accent_color = accent_color
+        # glow_effect = QGraphicsDropShadowEffect()
+        # glow_effect.setBlurRadius(30)
+        # glow_effect.setOffset(0,0)
+        # glow_effect.setColor(QColor(235, 95, 52, 150))
+        # self.setGraphicsEffect(glow_effect)
         self.apiData = None
         currentWeather = QWidget()
         cwLayout = QVBoxLayout()
@@ -116,7 +254,8 @@ class WeatherWidget(QWidget):
         # add widgets to layout.
         cwLayout.addWidget(self.current_weather)
         cwLayout.addWidget(self.area)
-        self.setObjectName("WeatherWidget")
+        cwLayout.addStretch(1)
+        self.setObjectName("CurrentWeatherWidget")
         # self.setLayout(self.layout)
         self.setStyleSheet(weather_widget_style)
         # add current weather.
@@ -133,23 +272,24 @@ class WeatherWidget(QWidget):
         self.layout.addWidget(forecast)
 
         wrapperWidget = QWidget()
-        wrapperWidget.setObjectName("WeatherWidget")
+        wrapperWidget.setObjectName("CurrentWeatherWidget")
         wrapperWidget.setLayout(self.layout)
         wrapperLayout = QVBoxLayout()
         wrapperLayout.setContentsMargins(0, 0, 0, 0)
         wrapperLayout.addWidget(wrapperWidget)
         self.setLayout(wrapperLayout)
 
-    def update(self):
+    def update(self, **args):
         import time
         s = time.time()
         # create updating thread.
         self.update_thread = QThread()
         # create weather API fetching worker.
         self.fetch_worker = WeatherAPIFetchWorker()
+        self.fetch_worker.urlBuilt.connect(self.showUrl)
         self.fetch_worker.moveToThread(self.update_thread)
         # connect to slots
-        self.update_thread.started.connect(self.fetch_worker.run)
+        self.update_thread.started.connect(partial(self.fetch_worker.run, **args))
         self.update_thread.finished.connect(self.update_thread.deleteLater)
 
         self.fetch_worker.finished.connect(self.update_thread.quit)
@@ -158,6 +298,29 @@ class WeatherWidget(QWidget):
         # start updation thread.
         self.update_thread.start()
         print(f"update request launched in {time.time()-s}s")
+        self.showMessage("    querying wttr.in")
+
+    def showMessage(self, *args, **kwargs) -> None:
+        error_string = "ui::widget::weather.CurrentWeatherWidget.update: weather_widget not connected"
+        try:
+            statusbar = self.weather_widget.statusbar
+            statusbar.showMessage(*args, **kwargs)
+        except AttributeError as e:
+            print(error_string, e)
+
+    def showUrl(self, url: str):
+        self.showMessage("    "+url)
+
+    def connectWeatherWidget(self, weather_widget: QWidget):
+        self.weather_widget = weather_widget
+
+    def toggleGroup(self, group_name: str=""):
+        gagAssertErorr = "DumbProgrammerException:P this group doesn't exist :/"
+        assert group_name in ["rainGroup", "miscGroup", "windGroup", "additionalInfo"], gagAssertErorr
+        group = getattr(self, group_name)
+        if group.isVisible():
+            group.hide()
+        else: group.show()
 
     def initWeather(self):
         weather = QWidget()
@@ -171,14 +334,16 @@ class WeatherWidget(QWidget):
         descLabel = QLabel(f"<span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>{desc}</span>")
         descLabel.setAlignment(Qt.AlignCenter)
         layout.addWidget(descLabel)
-        path = FigD.icon(fetchIcon(""))
-        print(path)
-        self.weatherGif = QMovie(path)
-        tempIcon.setMovie(self.weatherGif)
+        path = FigD.icon("")
+        # self.weatherGif = QMovie(path)
+        # tempIcon.setMovie(self.weatherGif)
+        self.weatherPixmap = QPixmap(path)
+        tempIcon.setPixmap(self.weatherPixmap)
         tempIcon.setAlignment(Qt.AlignCenter)
         tempIcon.setMinimumHeight(150)
         layout.addWidget(tempIcon)
-        self.weatherGif.start()
+        # self.weatherGif.start()
+
         # temperature
         tempLabel = QLabel("<span style='font-size: 40px; font-weight: bold;'>0°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>feels like 0°C</span> <br> observed at 12:00AM</span>") 
         tempLabel.setObjectName("Weather")
@@ -188,6 +353,7 @@ class WeatherWidget(QWidget):
         rainGroup = QWidget()
         rainLayout = QHBoxLayout()
         rainLayout.setContentsMargins(0, 0, 0, 0)
+        rainLayout.addStretch(1)
         rainGroup.setLayout(rainLayout)
         humidity = self.initAreaBtn(
             text=" 0%",
@@ -207,11 +373,15 @@ class WeatherWidget(QWidget):
         rainLayout.addWidget(humidity)
         rainLayout.addWidget(cloudCover)
         rainLayout.addWidget(precipitation)
+        rainLayout.addStretch(1)
+        self.rainGroup = rainGroup
+        self.rainGroup.hide()
         layout.addWidget(rainGroup)
         # wind speed and direction.
         windGroup = QWidget()
         windLayout = QHBoxLayout()
         windLayout.setContentsMargins(0, 0, 0, 0)
+        windLayout.addStretch(1)
         windGroup.setLayout(windLayout)
         windDir = self.initAreaBtn(
             text=" 0°, N",
@@ -225,11 +395,15 @@ class WeatherWidget(QWidget):
         )
         windLayout.addWidget(windSpeed)
         windLayout.addWidget(windDir)
+        windLayout.addStretch(1)
         layout.addWidget(windGroup)
+        self.windGroup = windGroup
+        self.windGroup.hide()
         # pressure, uv
         miscGroup = QWidget()
         miscLayout = QHBoxLayout()
         miscLayout.setContentsMargins(0, 0, 0, 0)
+        miscLayout.addStretch(1)
         miscGroup.setLayout(miscLayout)
         pressure = self.initAreaBtn(
             text=" 0 inches",
@@ -243,6 +417,9 @@ class WeatherWidget(QWidget):
         )
         miscLayout.addWidget(pressure)
         miscLayout.addWidget(uvIndex)
+        miscLayout.addStretch(1)
+        self.miscGroup = miscGroup
+        self.miscGroup.hide()
         layout.addWidget(miscGroup)
         # create referencs for relevant widgets.
         self.tempIcon = tempIcon
@@ -267,12 +444,14 @@ class WeatherWidget(QWidget):
         # region and additional info about country and location
         region = QWidget()
         regionLayout = QHBoxLayout()
+        regionLayout.addStretch(1)
         regionLayout.setContentsMargins(0, 0, 0, 0)
         region.setLayout(regionLayout)
         
         additionalInfo = QWidget()
         additionalInfoLayout = QHBoxLayout()
         additionalInfoLayout.setContentsMargins(0, 0, 0, 0)
+        additionalInfoLayout.addStretch(1)
         additionalInfo.setLayout(additionalInfoLayout)
         # city and region.
         cityAndRegion = self.initAreaBtn(
@@ -284,11 +463,12 @@ class WeatherWidget(QWidget):
         # country.
         country = self.initAreaBtn(
             text=" Country",
-            icon="flags/ind.svg",
-            tip="Country of nearest area"
+            tip="Country of nearest area",
+            icon="",
         )
         country.setIconSize(QSize(30,30))
         regionLayout.addWidget(country)
+        regionLayout.addStretch(1)
         # coordinates.
         coords = self.initAreaBtn(
             text=" (0, 0)",
@@ -303,6 +483,9 @@ class WeatherWidget(QWidget):
             tip="Population count of nearest region"
         )
         additionalInfoLayout.addWidget(population)
+        additionalInfoLayout.addStretch(1)
+        self.additionalInfo = additionalInfo
+        self.additionalInfo.hide()
         # add widgets to layout.
         layout.addWidget(region)
         layout.addWidget(additionalInfo)
@@ -314,18 +497,44 @@ class WeatherWidget(QWidget):
 
         return area
 
-    def mousePressEvent(self, event):
-        self.oldPos = event.globalPos()
+    def contextMenuEvent(self, event):
+        self.contextMenu = QMenu()
+        groupNames = [name+"Group" for name in ["wind", "rain", "misc"]]
+        groupNames.append("additionalInfo")
+        actionNames = [name+" group" for name in ["wind", "rain", "miscellaneous"]]
+        actionNames.append("additional area info")
+        iconList = ["wind_speed.svg", "rain.png", None, "location.svg"]
+        for name, title, icon in zip(groupNames, actionNames, iconList):
+            group = getattr(self, name)
+            if icon:
+                iconObj = FigD.Icon(f"widget/weather/{icon}")
+            else: iconObj = QIcon("")
+            if group.isVisible():
+                self.contextMenu.addAction(
+                    iconObj, f"Hide {title}", 
+                    partial(self.toggleGroup, name)
+                )
+            else:
+                self.contextMenu.addAction(
+                    iconObj, f"Show {title}", 
+                    partial(self.toggleGroup, name)
+                ) 
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+        self.contextMenu.popup(event.globalPos())
+    # def mousePressEvent(self, event):
+    #     self.oldPos = event.globalPos()
 
-    def mouseMoveEvent(self, event):
-        try:
-            delta = QPoint(event.globalPos() - self.oldPos)
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.oldPos = event.globalPos()
-        except Exception as e:
-            print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
+    # def mouseMoveEvent(self, event):
+    #     try:
+    #         delta = QPoint(event.globalPos() - self.oldPos)
+    #         self.move(self.x() + delta.x(), self.y() + delta.y())
+    #         self.oldPos = event.globalPos()
+    #     except Exception as e:
+    #         print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
 
     def reportProgress(self, weather: str, area: str):
+        # show message for 2 secs.
+        self.showMessage(f"    data fetch finished, fetched {len(weather)+len(area)} bytes", msecs=1000) 
         area = json.loads(area)
         weather = json.loads(weather)
         self.apiData = {"area": area, "weather": weather}
@@ -346,12 +555,33 @@ class WeatherWidget(QWidget):
         self.uvIndex.setText(f" uv index: {weather['uv']}")
         self.tempLabel.setText(f"<span style='font-size: 40px; font-weight: bold;'>{weather['temp']['C']}°C</span> <span style='font-size: 16px; color: #eb5f34;'> <br> <span style='font-size: 20px; font-weight: bold; color: gray;'>feels like {weather['feels_like']['C']}°C</span> <br> observed at {weather['observed_at']}</span>")
         self.descLabel.setText(f"<span style='font-size: 20px; font-weight: bold; color: #eb5f34;'>{weather['desc']}</span>")
-        # path = fetchIcon(weather['desc'])
-        path = FigD.icon(fetchIcon('sun'))
-        self.weatherGif = QMovie(path)
-        self.weatherGif.setScaledSize(QSize(150,150))
-        self.tempIcon.setMovie(self.weatherGif)
-        self.weatherGif.start()
+        
+        desc = weather["desc"].lower().strip()
+        print("desc:", desc)
+        path_day, path_night = WEATHER_WIDGET_ICON_MAP.get(desc, ("",""))
+        hour = int(datetime.datetime.now().strftime("%H"))
+        if 6 <= hour <= 12+7:
+            # day weather logo.
+            self.weatherPixmap = QPixmap(path_day).scaledToHeight(
+                150, mode=Qt.SmoothTransformation
+            )
+        else:
+            # night weather logo.
+            self.weatherPixmap = QPixmap(path_night).scaledToHeight(
+                150, mode=Qt.SmoothTransformation
+            )
+        self.tempIcon.setPixmap(self.weatherPixmap)
+
+        countryName = area["country"]
+        countryIcon = WEATHER_WIDGET_FLAG_MAP.get(countryName,'')
+        self.country.setIcon(FigD.Icon(
+            f"flags/{countryIcon}"
+        ))
+        
+        # self.weatherGif = QMovie(path)
+        # self.weatherGif.setScaledSize(QSize(150,150))
+        # self.tempIcon.setMovie(self.weatherGif)
+        # self.weatherGif.start()
         # resize widget.
         w = self.width()
         h = self.height()
@@ -369,6 +599,7 @@ class WeatherWidget(QWidget):
         btn = QToolButton(self)
         btn.setText(text)
         btn.setToolTip(tip)
+        btn.setStatusTip(tip)
         btn.setIcon(FigD.Icon(icon))
         btn.setIconSize(QSize(20,20))
         btn.setObjectName("AreaButton")
@@ -377,15 +608,83 @@ class WeatherWidget(QWidget):
 
         return btn
 
+# final fig-dash weather widget.
+class WeatherWidget(QMainWindow):
+    def __init__(self, accent_color: str="orange", 
+                 parent: Union[None, QWidget]=None):
+        super(WeatherWidget, self).__init__(parent)
+        self.accent_color = accent_color
+        centralWidget = self.initCentralWidget() 
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setCentralWidget(centralWidget)
+
+    def update(self, *args, **kwargs):
+        self.current_weather.update(*args, **kwargs)
+
+    def initCentralWidget(self):
+        # central widget.
+        centralWidget = QWidget()
+        # init layout: contains menu + scroll area.
+        layout = QVBoxLayout()
+        layout.setSpacing(5)
+        layout.setContentsMargins(5, 5, 5, 5)
+        # splitter: current weather + forecast.
+        self.__splitter = QSplitter(Qt.Horizontal)
+        # scroll area.
+        self.__scroll_area = QScrollArea()
+        self.__scroll_area.setWidgetResizable(True)
+        self.__scroll_area.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+        self.__scroll_area.setAttribute(Qt.WA_TranslucentBackground)
+        self.__scroll_area.setWidget(self.__splitter)
+        # init sub widgets.
+        self.current_weather = CurrentWeatherWidget(
+            accent_color=self.accent_color
+        )
+        self.current_weather.connectWeatherWidget(self)
+        self.__splitter.addWidget(self.current_weather)
+
+        self.menu = WeatherWidgetMenu(accent_color=self.accent_color)
+        self.menu.setFixedHeight(120)
+        self.menu.connectCurrentWeather(self.current_weather)
+        # self.simpleMenu = WeatherWidgetSimpleMenu()
+        # self.simpleMenu.hide()
+        # build layout.
+        layout.addWidget(self.menu)
+        # layout.addWidget(self.simpleMenu)
+        layout.addWidget(self.__scroll_area)
+        centralWidget.setLayout(layout)
+
+        return centralWidget
 
 def test_weather_widget():
     import sys, time
     FigD("/home/atharva/GUI/fig-dash/resources")
-    app = QApplication(sys.argv)
+    # figD app container.
+    app = FigDAppContainer(sys.argv)
     s = time.time()
-    weather = WeatherWidget()
-    weather.show()
-    weather.update()
+    # args.
+    where = "front"
+    icon = "widget/weather/logo.png"
+    accent_color = "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e95900, stop : 0.091 #ed6600, stop : 0.182 #f17300, stop : 0.273 #f58000, stop : 0.364 #f88c00, stop : 0.455 #fa9900, stop : 0.545 #fca500, stop : 0.636 #feb100, stop : 0.727 #febe00, stop : 0.818 #ffca00, stop : 0.909 #ffd600, stop : 1.0 #fee200)"
+    # main widget.
+    weather = WeatherWidget(accent_color=accent_color)
+    window = wrapFigDWindow(
+        weather, title="Weather", icon=icon,
+        accent_color=accent_color, width=650,
+        height=500, where=where,
+    )
+    window = styleWindowStatusBar(window, font_color="#eb5f34")
+    # needed just for this widget.
+    try: weather.statusbar = window.statusbar
+    except AttributeError as e: print(e)
+    # show the window.
+    window.show()
+    try:
+        weather.update(region=sys.argv[1])
+    except IndexError as e:
+        print(e)
+        weather.update()
+    # report time needed.
     print(time.time()-s)
     app.exec()
 

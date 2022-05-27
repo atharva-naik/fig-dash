@@ -425,8 +425,11 @@ class TitleBarMaximizeBtn(QToolButton):
         self.menu = QMenu()
         self.menu.addAction("Split View Vertical")
         self.menu.addAction("Split View Horizontal")
-        self.menu.addAction("Full Screen")
+        self.menu.addAction(FigD.Icon("titlebar/fullscreen.svg"), "Show Full Screen")
+        self.menu.addAction(FigD.Icon("titlebar/exit_fullscreen.svg"), "Exit Full Screen")
         accent_color = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #005822, stop : 0.091 #006226, stop : 0.182 #006b2a, stop : 0.273 #00752e, stop : 0.364 #008032, stop : 0.455 #008a36, stop : 0.545 #00943a, stop : 0.636 #009f3e, stop : 0.727 #00a942, stop : 0.818 #00b446, stop : 0.909 #00bf4a, stop : 1.0 #00ca4e)"""
+        self.fullscreen = self.menu.actions()[2]
+        self.exit_fullscreen = self.menu.actions()[3]
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
@@ -468,6 +471,8 @@ class TitleBarRibbonCollapseBtn(QToolButton):
             FigD.Icon("titlebar/widgets_bar.svg"), 
             "Show simplified\nribbon"
         )
+        self.hidemenu = self.menu.actions()[0]
+        self.simplify = self.menu.actions()[1]
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
@@ -661,11 +666,12 @@ class ZoomSlider(QSlider):
 class WindowTitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None, 
                  background: str="#292929", title_widget=None, 
-                 callbacks: dict={}):
+                 callbacks: dict={}, where: str="back"):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
+        print(f"\x1b[33;1mwhere:\x1b[0m {where}")
         self.background = background
         self.setIconSize(QSize(20,20))
         self.setMovable(False)
@@ -775,12 +781,23 @@ class WindowTitleBar(QToolBar):
             background: {{ BACKGROUND }};
             /* #34b4eb; #39a4e7; */
         }""").render(BACKGROUND=background))
-        if "qlineargradient" in background or "qconicalgradient" in background:
-            sliderHandleColor = self.background.split(":")[-1].strip()
-            sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
-            sliderHandleColor = sliderHandleColor.strip()
-        else: 
-            sliderHandleColor = "white"
+        def extractSliderColor(bg, where="back"):
+            if ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="back"):
+                sliderColor = bg.split(":")[-1].strip()
+                sliderColor = sliderColor.split()[-1]
+                sliderColor = sliderColor.split(")")[0]
+                sliderColor = sliderColor.strip()
+            elif ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="front"):
+                sliderColor = bg.split("stop")[1]
+                sliderColor = sliderColor.split("#")[-1]
+                sliderColor = sliderColor.split(",")[0]
+                sliderColor = "#"+sliderColor.strip()
+            else: 
+                sliderColor = "white" 
+
+            return sliderColor
+    
+        sliderHandleColor = extractSliderColor(self.background, where=where)
         self.zoomSlider.connectLabel(self.zoomLabel)
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(0,0,0,0))
@@ -868,22 +885,20 @@ class WindowTitleBar(QToolBar):
     def setTitle(self, title: str):
         if self.title_widget is None:
             self.title.setText(title)
-
-    def resetSliderPalette(self):
-        if "qlineargradient" in self.background:
-            sliderHandleColor = self.background.split(":")[-1].strip()
-            sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
-            sliderHandleColor = sliderHandleColor.strip()
-        else: 
-            sliderHandleColor = self.background
-        self.zoomSlider.connectLabel(self.zoomLabel)
-        palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(0,0,0,0))
-        palette.setColor(QPalette.Button, QColor(sliderHandleColor))
-        palette.setColor(QPalette.Highlight, QColor(255,255,255))
-        print("\x1b[34;1mresetSliderPalette:\x1b[0m", palette)
-        self.zoomSlider.setPalette(palette)
-
+    # def resetSliderPalette(self):
+    #     if "qlineargradient" in self.background:
+    #         sliderHandleColor = self.background.split(":")[-1].strip()
+    #         sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
+    #         sliderHandleColor = sliderHandleColor.strip()
+    #     else: 
+    #         sliderHandleColor = self.background
+    #     self.zoomSlider.connectLabel(self.zoomLabel)
+    #     palette = QPalette()
+    #     palette.setColor(QPalette.Window, QColor(0,0,0,0))
+    #     palette.setColor(QPalette.Button, QColor(sliderHandleColor))
+    #     palette.setColor(QPalette.Highlight, QColor(255,255,255))
+    #     print("\x1b[34;1mresetSliderPalette:\x1b[0m", palette)
+    #     self.zoomSlider.setPalette(palette)
     def setWindowIcon(self, winIcon: QIcon, 
                       size: Tuple[int,int]=(30,30)):
         self.windowIcon.setPixmap(
