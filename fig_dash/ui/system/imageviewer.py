@@ -1065,6 +1065,14 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
+    def _save_image_callback(self, base64_str: str):
+        if self.save_ptr:
+            base64_str = base64_str.split("data:image/png;base64,")[-1]
+            base64_bytes = base64_str.encode("ascii")
+            img_bytes = base64.b64decode(base64_bytes)
+            with open(self.save_ptr, "wb") as fp:
+                fp.write(img_bytes)
+
     def saveImage(self):
         if self.save_ptr is None:
             name = Path(self.path_ptr).name
@@ -1076,12 +1084,11 @@ class ImageViewerWidget(QWidget):
         else: filename = self.save_ptr
         print(filename)
         if filename is not None:
-            js_save_code = """
+            self.browser.page().runJavaScript(IMAGEVIEWER_IMG_EXTRACT_JS+"""
             var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
-            
-			"""
-            # self.page().runJavaScript("")
-            pass
+		    var imgFilter = document.getElementById("filterPane").style.backdropFilter;
+		    var imgBytes = extractImageBytes(imgElement, imgFilter)
+		    imgBytes""", self._save_image_callback)
 
     def _copy_image_callback(self, base64_str: str):
         # self.__copied_image = QImage()
