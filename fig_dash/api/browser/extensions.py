@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::api::browser")
 import os
 import sys
 import json

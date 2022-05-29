@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+print("fig_dash::ui::system::pdfviewer")
 # PDF file viewing tool.
 # general imports.
 import os

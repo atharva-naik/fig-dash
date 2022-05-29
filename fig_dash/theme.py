@@ -1,5 +1,6 @@
-#!/home/atharva/anaconda3/envs/fig-dash/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::theme")
 from fig_dash.assets import FigD
 
 FigDAccentColorMap = {

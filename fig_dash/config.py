@@ -1,5 +1,6 @@
-#!/home/atharva/anaconda3/envs/fig-dash/bin/python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::config")
 import os
 import getpass
 import platform

@@ -1,3 +1,4 @@
+print("fig_dash::ui::js::imageviewer")
 import jinja2
 
 ViewerJSPluginCSS = r"""/*!

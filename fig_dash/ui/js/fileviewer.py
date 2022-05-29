@@ -1,3 +1,4 @@
+print("fig_dash::ui::js::fileviewer")
 import jinja2
 
 ViSelectJS = r'''/*! @viselect/vanilla 3.0.0-beta.13 MIT | https://github.com/Simonwep/selection */

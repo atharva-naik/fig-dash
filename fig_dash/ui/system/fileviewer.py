@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::system::fileviewer")
 # the fig-dash fileviewer is known as the "orchard".
 import os
 import time

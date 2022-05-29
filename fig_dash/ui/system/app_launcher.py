@@ -1,5 +1,6 @@
 #!/home/atharva/anaconda3/envs/fig-dash/bin/python
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::system::app_launcher")
 import os
 import jinja2
 from typing import *

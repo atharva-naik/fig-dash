@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::__init__")
 import os
 import jinja2
 from typing import *

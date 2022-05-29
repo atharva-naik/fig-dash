@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+print("fig_dash::ui::dock")
 # dock (hopefully like latte dock).
 import json
 import jinja2

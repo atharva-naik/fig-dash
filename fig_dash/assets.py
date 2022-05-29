@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::assets")
 '''Asset management for ScriptO'''
 import os
 import jinja2

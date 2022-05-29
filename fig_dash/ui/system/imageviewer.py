@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::system::imageviewer")
 import os
 import re
 import bs4
 import sys
+import time
 import base64
-import jinja2
-import tempfile
 import svgpathtools
 from typing import *
 from pathlib import Path
@@ -14,13 +14,12 @@ from pathlib import Path
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
-from fig_dash.ui.titlebar import WindowTitleBar
 # from fig_dash.ui.effects import BackgroundBlurEffect
 from fig_dash.ui import DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel, QByteArray
-from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
+from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
 filterPaneJS = r"""
@@ -1038,12 +1037,6 @@ class ImageViewerWidget(QWidget):
         # build layout.
         self.browser = ImageViewerWebView(imageviewer=self)
         self.file_watcher.fileChanged.connect(self.browser.reload)
-        # self.statusbar = self.statusBar()
-        # self.statusbar.setStyleSheet("""
-        # QWidget {
-        #     color: gray;
-        #     background: #000;
-        # }""")
         self.side_panel = ImageViewerSidePanel(
 			accent_color=accent_color,
 			webview=self.browser,
@@ -1280,22 +1273,30 @@ def launch_imageviewer(app):
 
 def test_imageviewer():
     FigD("/home/atharva/GUI/fig-dash/resources")
+    s = time.time()
     app = FigDAppContainer(sys.argv)
+    print(f"app created in: {time.time()-s}")
+    s = time.time()
     menu = ImageViewerMenu()
+    print(f"menu created in: {time.time()-s}")
     # menu.hide()
     # accent color and css grad color.
+    s = time.time()
     accent_color = FigDAccentColorMap["imageviewer"]
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
+    print(f"grads & accents in: {time.time()-s}")
     # create imageviewer widget.
+    s = time.time()
     imageviewer = ImageViewerWidget(
 		css_grad=css_grad,
 		accent_color=accent_color,
 	)
+    print(f"ImageViewerWidget created in: {time.time()-s}")
+    s = time.time()
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
     imageviewer.layout.insertWidget(0, menu)
-    # imageviewer.layout.insertWidget(0, titlebar)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
     # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
     # FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::titlebar")
 # titlebar for the main window
 import sys
 import jinja2
 from typing import *
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.api.system.battery import Battery
-from fig_dash.api.system.network import NetworkHandler
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel
@@ -275,6 +274,7 @@ class TabSearchBar(QLineEdit):
 
 class BatteryIndicator(QToolButton):
     def __init__(self, parent: Union[QWidget, None]=None):
+        from fig_dash.api.system.battery import Battery
         super(BatteryIndicator, self).__init__(parent)
         self.level = 0
         self.timer = QTimer()
@@ -539,6 +539,7 @@ class FullScreenBtn(QToolButton):
 
 class WifiBtn(QToolButton):
     def __init__(self, parent: Union[QWidget, None]=None, **kwargs):
+        from fig_dash.api.system.network import NetworkHandler
         super(WifiBtn, self).__init__(parent)
         self.setToolTip("open wifi settings")
         self.setIcon(FigD.Icon("titlebar/wifi_3.svg"))

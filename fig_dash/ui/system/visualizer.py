@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::system::visualizer")
 import os
 import jinja2
 from typing import Union

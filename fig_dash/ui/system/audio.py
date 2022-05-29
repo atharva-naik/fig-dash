@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::system::audio")
 import jinja2
 import platform
 from typing import Union

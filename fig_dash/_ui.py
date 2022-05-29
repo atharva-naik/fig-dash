@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import os
+print("fig_dash::_ui")
 import jinja2
 import getpass
 from typing import *
@@ -12,22 +12,9 @@ from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
 from PyQt5.QtWidgets import QApplication, QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut, QTabWidget
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.menu import DashMenu
 from fig_dash.ui.browser import PageInfo
-from fig_dash.ui.tab import DashTabWidget
-from fig_dash.ui.navbar import DashNavBar
 from fig_dash.ui.titlebar import TitleBar
-from fig_dash.ui.dock import DashDockWidget
-from fig_dash.ui.shortcutbar import ShortcutBar
-from fig_dash.ui.widget.ideas import IdeasWidget
-from fig_dash.ui.widget.notifs import NotifsPanel
-from fig_dash.ui.widget.weather import CurrentWeatherWidget
 # from fig_dash.ui.widget.floatmenu import FloatMenu
-from fig_dash.ui.system.sysutils import SysUtilsBar
-from fig_dash.ui.system.datetime import DashClock, DashCalendar
-
-# imports for installed apps.
-from fig_dash.ui.apps.screenshot import DashScreenshotUI 
 
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
 # from PyQt5.QtGui import QIcon, QKeySequence, QTransform, QFont, QFontDatabase, QMovie, QPixmap, QColor, QPainter
@@ -131,6 +118,7 @@ class AppCloseButton(QToolButton):
 class DatetimeSplitter(QSplitter):
     '''Date, time and notifs panel contained in the splitter'''
     def __init__(self, parent: Union[None, QWidget]=None):
+        from fig_dash.ui.system.datetime import DashClock, DashCalendar
         super(DatetimeSplitter, self).__init__(
             Qt.Vertical,
             parent=parent
@@ -151,6 +139,11 @@ class DatetimeSplitter(QSplitter):
 class DashWindow(QMainWindow):
     '''The main window for fig-dash.'''
     def __init__(self, **kwargs):
+        from fig_dash.ui.dock import DashDockWidget
+        from fig_dash.ui.shortcutbar import ShortcutBar
+        # imports for installed apps. 
+        from fig_dash.ui.apps.screenshot import DashScreenshotUI
+
         super(DashWindow, self).__init__()
         self.browsingHistory = []
         # self.setAttribute(Qt.WA_TranslucentBackground)
@@ -266,6 +259,7 @@ class DashWindow(QMainWindow):
             self.titlebar.fullscreenBtn.toggle()
 
     def initTabWidget(self, open_home=True, **kwargs):
+        from fig_dash.ui.tab import DashTabWidget
         tabs = DashTabWidget(self)
         tabs.partialConnectWindow(self)
         if open_home:
@@ -293,6 +287,12 @@ class DashWindow(QMainWindow):
         # if self.titlebar
 
     def initCentralWidget(self, **kwargs):
+        from fig_dash.ui.menu import DashMenu
+        from fig_dash.ui.navbar import DashNavBar
+        from fig_dash.ui.widget.ideas import IdeasWidget
+        from fig_dash.ui.system.sysutils import SysUtilsBar
+        from fig_dash.ui.widget.weather import WeatherWidget
+
         self.menu = DashMenu(self, **kwargs)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -441,6 +441,7 @@ class DashWindow(QMainWindow):
         super(DashWindow, self).resizeEvent(event)
 
     def initNotifs(self, tabWidget: QWidget=None):
+        from fig_dash.ui.widget.notifs import NotifsPanel
         # notifs panel.
         notifsPanel = NotifsPanel(tabWidget)
         notifsPanel.move(100, 20)

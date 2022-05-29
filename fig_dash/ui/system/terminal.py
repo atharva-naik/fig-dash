@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+print("fig_dash::ui::system::terminal")
 # This sucks right now. Need to improve it!
 import os
 import sys

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::apps::gradient_creator::gradient_creator")
 # Gradient Creator for Qt, CSS and SVG
 import os
 import re

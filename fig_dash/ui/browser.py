@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+print("fig_dash::ui::browser")
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
 import sys
