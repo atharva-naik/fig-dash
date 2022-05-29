@@ -72,6 +72,14 @@ class WeatherEngine:
 
         return current_condition
 
+    def get_weather_forecast(self, data: Union[None, dict]=None):
+        weather = []
+        if data is None:
+            data = self.history[-1]
+        weather = data["weather"]
+
+        return weather
+
     def get_lat_lon(self, data: Union[None, dict]=None):
         '''
         Get the latitude and longitude info from the weather JSON response. 
@@ -103,6 +111,7 @@ class WeatherEngine:
         query = self.build_query(region=region, version=version)
         try:
             data = json.loads(requests.get(query).text)
+            # print(f'apiData: {data}')
             self.history.append(data)
             return data
         except:

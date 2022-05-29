@@ -4,9 +4,9 @@ import os
 import re
 import bs4
 import sys
-import json
-from fig_dash.ui import browser
+import base64
 import jinja2
+import tempfile
 import svgpathtools
 from typing import *
 from pathlib import Path
@@ -15,11 +15,11 @@ from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 from fig_dash.ui.titlebar import WindowTitleBar
-from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+# from fig_dash.ui.effects import BackgroundBlurEffect
+from fig_dash.ui import DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel, QByteArray
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
@@ -42,6 +42,21 @@ IMAGEVIEWER_BACKDROP_REGEX_MAP = {
 	"brightness": "brightness\(.*?\%\)",
 	"hue-rotate": "hue-rotate\(.*?deg\)",
 }
+IMAGEVIEWER_IMG_EXTRACT_JS = r"""
+function extractImageBytes(img, filter) {
+	var canvas = document.createElement('canvas');
+	var context = canvas.getContext('2d');
+	canvas.height = img.naturalHeight;
+	canvas.width = img.naturalWidth;
+	if (typeof context.filter != "undefined") {
+		context.filter = filter;
+	}
+	context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+	var base64String = canvas.toDataURL();
+	
+	return base64String;
+}
+"""
 # hue-rotate, drop-shadow.
 # IMAGEVIEWER_BLUR_FILTER_JS = r""""""
 # IMAGEVIEWER_BRIGHTNESS_FILTER_JS = r""""""
@@ -731,13 +746,13 @@ class ImageViewerFiltersPanel(QWidget):
 		)
 		self.brightnessSlider = ImageViewerFilterSlider(
 			"brightness (in %)", icon="system/fileviewer/brightness.svg",
-			minm=0, maxm=100, value=100, icon_size=(20,20),
+			minm=0, maxm=150, value=100, icon_size=(20,20),
 			accent_color=accent_color, webview=webview,
 			role="brightness"
 		)
 		self.contrastSlider = ImageViewerFilterSlider(
 			"contrast (in %)", icon="system/fileviewer/contrast.svg",
-			minm=0, maxm=100, value=100, icon_size=(20,20),
+			minm=0, maxm=150, value=100, icon_size=(20,20),
 			accent_color=accent_color, webview=webview,
 			role="contrast"
 		)
@@ -749,7 +764,7 @@ class ImageViewerFiltersPanel(QWidget):
 		)
 		self.invertSlider = ImageViewerFilterSlider(
 			"invert (in %)", icon="system/fileviewer/invert.svg",
-			minm=0, maxm=100, value=0, icon_size=(20,20),
+			minm=0, maxm=150, value=0, icon_size=(20,20),
 			accent_color=accent_color, webview=webview,
 			role="invert"
 		)
@@ -884,10 +899,10 @@ class ImageViewerWebView(DebugWebView):
         self.contextMenuActions = []
         menu = self.page().createStandardContextMenu()
         menu.setObjectName("ImageViewerContextMenu")
-        background_blur = BackgroundBlurEffect()
-        background_blur.setEnabled(False)
-        background_blur.setBlurRadius(10)
-        menu.setGraphicsEffect(background_blur)
+        # background_blur = BackgroundBlurEffect()
+        # background_blur.setEnabled(False)
+        # background_blur.setBlurRadius(10)
+        # menu.setGraphicsEffect(background_blur)
         # data = self.page().contextMenuData()
         menu = styleContextMenu(menu, accent_color=self.accent_color)
         for action in menu.actions():
@@ -998,15 +1013,21 @@ class ImageViewerWidget(QWidget):
     """
     def __init__(self, **args):
         super(ImageViewerWidget, self).__init__()
+        self.path_ptr = None
+        self.save_ptr = None
 		# arguments.
         print(args.keys())
         self.svg_data = None
-        self.sources = args.get("sources", {})
         self.css_grad = args.get("css_grad", "gray")
         accent_color = args.get("accent_color", "yellow")
         # connect a mimedatabase.
         self.mime_database = QMimeDatabase()
         self.file_watcher = QFileSystemWatcher()
+		# shortcuts.
+        self.CtrlC = FigDShortcut(QKeySequence.Copy, self, "Copy image to clipboard")
+        self.CtrlC.activated.connect(self.copyImageToClipboard)
+        self.CtrlS = FigDShortcut(QKeySequence.Save, self, "Save image")
+        self.CtrlS.activated.connect(self.saveImage)
         # create layout
         layout = QVBoxLayout()
         # TODO: Check if margin is needed anymore at all.
@@ -1045,16 +1066,46 @@ class ImageViewerWidget(QWidget):
         self._fullscreen = False
 
     def saveImage(self):
-        name = Path(self.path_ptr).name
-        filename, _ = QFileDialog.getSaveFileName(
-			self, "Save image file to ...", 
-			name, "Image Files (*.png)"
-		)
+        if self.save_ptr is None:
+            name = Path(self.path_ptr).name
+            filename, _ = QFileDialog.getSaveFileName(
+			    self, "Save image file to ...", 
+			    name, "Image Files (*.png)"
+		    )
+            self.save_ptr = filename
+        else: filename = self.save_ptr
         print(filename)
         if filename is not None:
+            js_save_code = """
+            var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
+            
+			"""
             # self.page().runJavaScript("")
             pass
 
+    def _copy_image_callback(self, base64_str: str):
+        # self.__copied_image = QImage()
+        base64_str = base64_str.split("data:image/png;base64,")[-1]
+        base64_bytes = base64_str.encode("ascii")
+        img_bytes = base64.b64decode(base64_bytes)
+        # with tempfile.NamedTemporaryFile(mode="wb") as fp:
+        #     fp.write(img_bytes)
+        #     print(fp.name)
+        self.__copied_pixmap = QPixmap()
+        self.__copied_pixmap.loadFromData(img_bytes)
+        QApplication.clipboard().setPixmap(self.__copied_pixmap)
+
+    def copyImageToClipboard(self):
+        """copy displayed image to clipboard"""
+        print("copying image")
+        self.browser.page().runJavaScript(IMAGEVIEWER_IMG_EXTRACT_JS+"""
+        var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
+		var imgFilter = document.getElementById("filterPane").style.backdropFilter;
+		var imgBytes = extractImageBytes(imgElement, imgFilter)
+		imgBytes""", self._copy_image_callback)
+        # if self.path_ptr:
+        #     self.__copied_pixmap = QPixmap(self.path_ptr)
+        #     QApplication.clipboard().setPixmap(self.__copied_pixmap)
     def loadSVGData(self, svg_data: str=""):
         self.svgtree.loadSVGData(svg_data)
 
@@ -1106,6 +1157,7 @@ class ImageViewerWidget(QWidget):
         self.browser.loadDevTools()
         # self.browser.page().runJavaScript("viewer.full();")
     def openUrl(self, path: str):
+        from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
         # populate gallery info if path points to a folder.
@@ -1119,12 +1171,12 @@ class ImageViewerWidget(QWidget):
                 url = QUrl.fromLocalFile(iter_file).toString()
                 gallery_info.append((url, Path(iter_file).stem))
         url = QUrl.fromLocalFile(path).toString()
-        html = self.sources["IMAGE_VIEWER_HTML"].render({
+        html = ImageViewerHTML.render({
             "FILEPATH": path,
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": filename_without_ext,
-            "VIEWER_JS_PLUGIN_JS": self.sources["VIEWER_JS_PLUGIN_JS"],
-            "VIEWER_JS_PLUGIN_CSS": self.sources["VIEWER_JS_PLUGIN_CSS"],
+            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+            "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
             "GALLERY_INFO": gallery_info,
 			"CSS_GRAD": self.css_grad,
@@ -1137,15 +1189,9 @@ class ImageViewerWidget(QWidget):
     def connectMenu(self, menu: ImageViewerMenu):
         self.menu = menu
         self.menu.hide()
-    # def connectTitlebar(self, titlebar: WindowTitleBar):
-    #     self.titlebar = titlebar
-    #     self.titlebar.findBtn.setParent(None)
-    #     self.titlebar.connectWindow(self)
-    #     rcb = self.titlebar.ribbonCollapseBtn
-    #     try: rcb.clicked.connect(self.menu.toggle)
-    #     except AttributeError as e: print(e)
 
     def open(self, path: str):
+        from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         self.svg_data = None
         path = os.path.expanduser(path)
         self.file_watcher.addPath(path)
@@ -1170,12 +1216,12 @@ class ImageViewerWidget(QWidget):
                 url = QUrl.fromLocalFile(iter_file).toString()
                 gallery_info.append((url, Path(iter_file).stem))
         url = QUrl.fromLocalFile(path).toString()
-        html = self.sources["IMAGE_VIEWER_HTML"].render({
+        html = ImageViewerHTML.render({
             "FILEPATH": path,
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": filename_without_ext,
-            "VIEWER_JS_PLUGIN_JS": self.sources["VIEWER_JS_PLUGIN_JS"],
-            "VIEWER_JS_PLUGIN_CSS": self.sources["VIEWER_JS_PLUGIN_CSS"],
+            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+            "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
             "GALLERY_INFO": gallery_info,
 			"CSS_GRAD": self.css_grad,
@@ -1187,12 +1233,6 @@ class ImageViewerWidget(QWidget):
         # self.filetree.setRootPath(path)
         # print(path)
 def launch_imageviewer(app):
-    from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
-    image_viewer_sources = {
-		"IMAGE_VIEWER_HTML": ImageViewerHTML,
-		"VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-		"VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-	}
     # titlebar.setStyleSheet("background: transparent; color: #fff;")
     menu = ImageViewerMenu()
     menu.hide()
@@ -1204,7 +1244,6 @@ def launch_imageviewer(app):
     imageviewer = ImageViewerWidget(
 		css_grad=css_grad, 
 		accent_color=accent_color,
-		sources=image_viewer_sources,
 	)
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
@@ -1226,16 +1265,13 @@ def launch_imageviewer(app):
     except IndexError: 
         openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     imageviewer.open(openpath)
-    CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
+    CtrlB = FigDShortcut(
+		QKeySequence("Ctrl+B"), imageviewer, 
+		"Toggle side pannel visibility"
+	)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
 
 def test_imageviewer():
-    from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
-    image_viewer_sources = {
-		"IMAGE_VIEWER_HTML": ImageViewerHTML,
-		"VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-		"VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-	}
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
     menu = ImageViewerMenu()
@@ -1248,7 +1284,6 @@ def test_imageviewer():
     imageviewer = ImageViewerWidget(
 		css_grad=css_grad,
 		accent_color=accent_color,
-		sources=image_viewer_sources,
 	)
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
@@ -1270,73 +1305,16 @@ def test_imageviewer():
 
     try: openpath = sys.argv[1]
     except IndexError:
-        openpath = "~/Pictures/Elena_Sama.jpg" 
-        # openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+        openpath = FigD.icon("system/imageviewer/lenna.png") # openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     imageviewer.open(openpath)
-    CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
+    CtrlB = FigDShortcut(
+		QKeySequence("Ctrl+B"), imageviewer, 
+		"Toggle side pannel visibility"
+	)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
-
     app.exec()
-# def test_imageviewer():
-#     import sys
-#     from fig_dash.ui.titlebar import TitleBar
 
-#     FigD("/home/atharva/GUI/fig-dash/resources")
-#     app = QApplication(sys.argv)
-#     # set app stylesheet.
-#     app.setStyleSheet("""
-#     QToolTip {
-#         color: #fff;
-#         border: 0px;
-#         padding-top: -1px;
-#         padding-left: 5px;
-#         padding-right: 5px;
-#         padding-bottom: -1px;
-#         font-size:  17px;
-#         background: #000;
-#         font-family: 'Be Vietnam Pro', sans-serif;
-#     }""")
-
-#     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
-#     # titlebar.setStyleSheet("background: transparent; color: #fff;")
-#     menu = ImageViewerMenu()
-#     menu.hide()
-#     imageviewer = ImageViewerWidget(
-#         logo="system/imageviewer/logo.svg",
-#         parentless=True,
-#     )
-#     imageviewer.setAttribute(Qt.WA_TranslucentBackground)
-#     # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
-#     imageviewer.titlebar = titlebar
-#     imageviewer.connectMenu(menu)
-#     imageviewer.connectTitlebar(titlebar)
-#     imageviewer.layout.insertWidget(0, menu)
-#     imageviewer.layout.insertWidget(0, titlebar)
-#     imageviewer.setStyleSheet("background: transparent; border: 0px;")
-#     QFontDatabase.addApplicationFont(
-#         FigD.font("BeVietnamPro-Regular.ttf")
-#     )
-#     try: openpath = sys.argv[1]
-#     except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
-#     imageviewer.open(openpath)
-#     # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
-# 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
-#     # imageviewer.open("~/Pictures/Elena_Posterised.png")
-#     imageviewer.setGeometry(100, 100, 960, 800)
-#     imageviewer.setWindowFlags(
-#         Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-#     # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
-# 	# attach Ctrl+B to sidebar collapse.
-#     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
-#     CtrlB.activated.connect(imageviewer.side_panel.toggle)
-#     FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
-#     FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
-#     # print(FullScreen)
-#     # FullScreen.activated.connect(imageviewer.toggleFullScreen)
-#     titlebar.setWindowIcon(imageviewer.windowIcon())
-#     titlebar.resetSliderPalette()
-#     imageviewer.show()
-#     app.exec()
+# main class
 if __name__ == "__main__":
     test_imageviewer()
 # class ImageViewerWidget(QMainWindow):
@@ -1508,3 +1486,64 @@ if __name__ == "__main__":
 #             self.setWindowTitle(filename_without_ext)
 #         render_url = FigD.createTempUrl(html)
 #         self.browser.load(render_url)
+
+# def test_imageviewer():
+#     import sys
+#     from fig_dash.ui.titlebar import TitleBar
+
+#     FigD("/home/atharva/GUI/fig-dash/resources")
+#     app = QApplication(sys.argv)
+#     # set app stylesheet.
+#     app.setStyleSheet("""
+#     QToolTip {
+#         color: #fff;
+#         border: 0px;
+#         padding-top: -1px;
+#         padding-left: 5px;
+#         padding-right: 5px;
+#         padding-bottom: -1px;
+#         font-size:  17px;
+#         background: #000;
+#         font-family: 'Be Vietnam Pro', sans-serif;
+#     }""")
+
+#     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
+#     # titlebar.setStyleSheet("background: transparent; color: #fff;")
+#     menu = ImageViewerMenu()
+#     menu.hide()
+#     imageviewer = ImageViewerWidget(
+#         logo="system/imageviewer/logo.svg",
+#         parentless=True,
+#     )
+#     imageviewer.setAttribute(Qt.WA_TranslucentBackground)
+#     # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
+#     imageviewer.titlebar = titlebar
+#     imageviewer.connectMenu(menu)
+#     imageviewer.connectTitlebar(titlebar)
+#     imageviewer.layout.insertWidget(0, menu)
+#     imageviewer.layout.insertWidget(0, titlebar)
+#     imageviewer.setStyleSheet("background: transparent; border: 0px;")
+#     QFontDatabase.addApplicationFont(
+#         FigD.font("BeVietnamPro-Regular.ttf")
+#     )
+#     try: openpath = sys.argv[1]
+#     except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+#     imageviewer.open(openpath)
+#     # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
+# 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
+#     # imageviewer.open("~/Pictures/Elena_Posterised.png")
+#     imageviewer.setGeometry(100, 100, 960, 800)
+#     imageviewer.setWindowFlags(
+#         Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+#     # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
+# 	# attach Ctrl+B to sidebar collapse.
+#     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
+#     CtrlB.activated.connect(imageviewer.side_panel.toggle)
+#     FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
+#     FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
+#     # print(FullScreen)
+#     # FullScreen.activated.connect(imageviewer.toggleFullScreen)
+#     titlebar.setWindowIcon(imageviewer.windowIcon())
+#     titlebar.resetSliderPalette()
+#     imageviewer.show()
+#     app.exec()

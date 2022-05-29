@@ -11,6 +11,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow#, extract_colors_from_qt_grad, create_css_grad
 # all system imports.
+from fig_dash.ui.widget.weather import launch_weather
 from fig_dash.ui.system.terminal import launch_terminal
 from fig_dash.ui.system.clipboard import launch_clipboard
 from fig_dash.ui.system.fileviewer import launch_fileviewer
@@ -29,6 +30,7 @@ FigDSystemAppLauncherMap = {
     "videoplayer": blank,
     "codeeditor": launch_codemirror,
     "terminal": launch_terminal,
+    "weather": launch_weather,
 }
 ROW_SIZE = 4
 SYSTEM_APPS_LAUNCHED = []

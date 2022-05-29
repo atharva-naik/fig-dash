@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import datetime
-from operator import ge
 import os
+import sys
 import json
+import time
 import jinja2
+import datetime
 from functools import partial
 from typing import Union, List
+import matplotlib.pyplot as plt
 # Qt5 imports.
-from PyQt5.QtGui import QPixmap, QIcon, QMovie, QColor
+from PyQt5.QtGui import QPixmap, QImage, QIcon, QMovie, QColor
 from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize, QObject, pyqtSlot, pyqtSignal, QThread, QPoint
 from PyQt5.QtWidgets import QLabel, QMenu, QWidget, QMainWindow, QScrollArea, QSplitter, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QToolBar, QSizePolicy, QApplication, QGraphicsDropShadowEffect
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.api.widget.weather import WeatherEngine
+from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 from fig_dash.ui import FigDAppContainer, styleWindowStatusBar, wrapFigDWindow, DashWidgetGroup, DashRibbonMenu, styleContextMenu, DASH_WIDGET_SCROLL_AREA
 
 # icon and flag mappings.
@@ -23,6 +26,7 @@ WEATHER_WIDGET_FLAG_MAP = {
 }
 WEATHER_WIDGET_ICON_MAP = {
     "fog": ("gifs/fog.gif", "gifs/fog.gif"),
+    "haze": ("sun/6.png", "moon/2.2.png"),
     "smoke": ("cloud/35.png", "cloud/35.png"),
     "partly cloudy": ("sun/27.png", "moon/15.png"),
 }
@@ -77,7 +81,7 @@ WEATHER_WIDGET_ICON_MAP = {
 class WeatherAPIFetchWorker(QObject):
     finished = pyqtSignal()
     urlBuilt = pyqtSignal(str)
-    progress = pyqtSignal(str, str)
+    progress = pyqtSignal(str, str, str)
     def __init__(self):
         self.weather_engine = WeatherEngine()
         super(WeatherAPIFetchWorker, self).__init__()
@@ -91,12 +95,14 @@ class WeatherAPIFetchWorker(QObject):
         # launch the query.
         self.weather_engine(**args)
         # get current weather condition.
-        weather = self.weather_engine.get_current_condition()
+        weather_forecast = self.weather_engine.get_weather_forecast() 
+        current_weather = self.weather_engine.get_current_condition()
         area = self.weather_engine.get_nearest_area()
         # print the weather info.
         self.progress.emit(
-            json.dumps(weather), 
-            json.dumps(area)
+            json.dumps(current_weather), 
+            json.dumps(area),
+            json.dumps(weather_forecast),
         )
         self.finished.emit()
 # worker.run(temp='C', precip='mm', pressure='inches', )
@@ -124,7 +130,7 @@ class WeatherWidgetMenu(DashRibbonMenu):
                  parent: Union[None, QWidget]=None):
         super(WeatherWidgetMenu, self).__init__(
             parent=parent, group_names=[
-                "File", "View", "Search", "Filters"
+                "File", "View", "Convert", "Search", "Filters"
             ]
         )
         self.addWidgetGroup("File", [
@@ -232,6 +238,7 @@ class WeatherWidgetMenu(DashRibbonMenu):
 
 # also add moon phase widgets.
 class CurrentWeatherWidget(QWidget):
+    dataReceived = pyqtSignal(str)
     '''weather info, moon phase info and weekly forecast.'''
     def __init__(self, accent_color: str="yellow", 
                  parent: Union[None, QWidget]=None):
@@ -497,8 +504,56 @@ class CurrentWeatherWidget(QWidget):
 
         return area
 
+    def copyCurrentWeatherJSON(self):
+        pass
+
+    def copyCurrentWeatherImage(self):
+        """copy current weather icon"""
+        self.__copied_pixmap = self.tempIcon.pixmap()
+        QApplication.clipboard().setPixmap(self.__copied_pixmap)
+
+    def copyCurrentWeatherString(self):
+        if self.apiData is not None:
+            weather = self.apiData["weather"]
+            desc = weather["desc"]
+            tempCStr = weather["temp"]["C"]+"°C"
+            tempFStr = weather["temp"]["F"]+"°F"
+            feelsLikeC = weather["feels_like"]["C"]+"°C"
+            feelsLikeF = weather["feels_like"]["F"]+"°F"
+            weatherString = f"{desc}\n{tempCStr} ({tempFStr})\nfeels like {feelsLikeC} ({feelsLikeF})"
+            QApplication.clipboard().setText(weatherString)
+
+    def exportCurrentWeatherJSON(self):
+        pass
+
+    def exportForecastCSV(self):
+        pass
+
     def contextMenuEvent(self, event):
         self.contextMenu = QMenu()
+        self.contextMenu.addAction(
+            FigD.Icon("widget/weather/copy.svg"), 
+            "Copy weather string", self.copyCurrentWeatherString
+        )
+        self.contextMenu.addAction(
+            FigD.Icon("widget/weather/copy.svg"), 
+            "Copy weather JSON", self.copyCurrentWeatherJSON
+        )
+        self.contextMenu.addAction(
+            FigD.Icon("widget/weather/copy_image.svg"), 
+            "Copy weather icon", self.copyCurrentWeatherImage
+        )
+        self.contextMenu.addSeparator()
+        self.contextMenu.addAction(
+            FigD.Icon("widget/weather/export_json.svg"), 
+            "Save weather JSON", self.exportCurrentWeatherJSON
+        )
+        # self.contextMenu.addAction(
+        #     FigD.Icon("widget/weather/export_csv.svg"), 
+        #     "Save weekly forecast CSV", self.exportForecastCSV
+        # )
+        self.contextMenu.addSeparator()
+        # build the view side of the things.
         groupNames = [name+"Group" for name in ["wind", "rain", "misc"]]
         groupNames.append("additionalInfo")
         actionNames = [name+" group" for name in ["wind", "rain", "miscellaneous"]]
@@ -532,12 +587,16 @@ class CurrentWeatherWidget(QWidget):
     #     except Exception as e:
     #         print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
 
-    def reportProgress(self, weather: str, area: str):
+    def reportProgress(self, weather: str, area: str, forecast: str):
         # show message for 2 secs.
         self.showMessage(f"    data fetch finished, fetched {len(weather)+len(area)} bytes", msecs=1000) 
         area = json.loads(area)
         weather = json.loads(weather)
-        self.apiData = {"area": area, "weather": weather}
+        self.apiData = {
+            "area": area, "weather": weather, 
+            "forecast": forecast
+        }
+        self.dataReceived.emit(str(forecast))
         # update area related fields.
         self.cityAndRegion.setText(f"{area['area']}, {area['region']}")
         x, y = area["coords"]
@@ -560,16 +619,19 @@ class CurrentWeatherWidget(QWidget):
         print("desc:", desc)
         path_day, path_night = WEATHER_WIDGET_ICON_MAP.get(desc, ("",""))
         hour = int(datetime.datetime.now().strftime("%H"))
+        # print(f"\x1b[34;1mpath_day: {path_day}, path_night: {path_night}\x1b[0m")
         if 6 <= hour <= 12+7:
             # day weather logo.
             self.weatherPixmap = QPixmap(path_day).scaledToHeight(
                 150, mode=Qt.SmoothTransformation
             )
+            # print("\x1b[33;1mday\x1b[0m")
         else:
             # night weather logo.
             self.weatherPixmap = QPixmap(path_night).scaledToHeight(
                 150, mode=Qt.SmoothTransformation
             )
+            # print("\x1b[32;1mnight\x1b[0m")
         self.tempIcon.setPixmap(self.weatherPixmap)
 
         countryName = area["country"]
@@ -608,6 +670,74 @@ class CurrentWeatherWidget(QWidget):
 
         return btn
 
+# forecast widget: splitter: 3 days + hourly forecast plot.
+class ForecastWeatherWidget(QSplitter):
+    def __init__(self, accent_color: str="yellow", 
+                 parent: Union[None, QWidget]=None):
+        super(ForecastWeatherWidget, self).__init__(Qt.Vertical)
+        self.accent_color = accent_color
+        self.forecastData = None
+        # sub-widget forecast tiles.
+        self.forecast_tiles = self.initForecastTiles()
+        # sub-widget hourly plots.
+        self.hourly_plots = self.initHourlyPlots()
+        self.addWidget(self.forecast_tiles)
+        self.addWidget(self.hourly_plots)
+
+    def connectCurrentWeather(self, widget: QWidget):
+        self.current_weather = widget
+        self.current_weather.dataReceived.connect(self.setForecastFromString)
+
+    def setForecastFromString(self, forecastString: dict):
+        """load forecast json from serialized json string"""
+        print("\x1b[31;1mreceived forecast info!\x1b[0m")
+        # print(forecastString)
+        forecastData = json.loads(forecastString)
+        self.setForecastData(forecastData)
+
+    def setForecastData(self, forecastData: dict):
+        """set the forecast data json"""
+        self.forecastData = forecastData
+        for daily_data in forecastData:
+            print(daily_data.keys())
+
+    def initForecastTiles(self):
+        forecast_tiles = QWidget()
+        forecast_tiles.setStyleSheet("""
+        QWidget {
+            border: 0px;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self.forecast_tiles_layout = QHBoxLayout()
+        self.forecast_tiles_layout.setContentsMargins(5, 5, 5, 5)
+        self.forecast_tiles_layout.setSpacing(10)
+        forecast_tiles.setLayout(self.forecast_tiles_layout)
+
+        return forecast_tiles
+
+    def initHourlyPlots(self):
+        plot_widget = QWidget()
+        plot_widget.setStyleSheet("""
+        QWidget {
+            border: 0px;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
+        }""")
+        layout = QHBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(5)
+        # sub widgets.
+        self.plot_canvas = QLabel()
+        # build layout.
+        layout.addWidget(self.plot_canvas)
+        plot_widget.setLayout(layout)
+
+        return plot_widget
+
+    def connectWeatherWidget(self, widget: QWidget):
+        self.weather_widget = widget
+
 # final fig-dash weather widget.
 class WeatherWidget(QMainWindow):
     def __init__(self, accent_color: str="orange", 
@@ -637,11 +767,21 @@ class WeatherWidget(QMainWindow):
         self.__scroll_area.setAttribute(Qt.WA_TranslucentBackground)
         self.__scroll_area.setWidget(self.__splitter)
         # init sub widgets.
+        # current weather
         self.current_weather = CurrentWeatherWidget(
             accent_color=self.accent_color
         )
         self.current_weather.connectWeatherWidget(self)
+        # weather forecast.
+        self.forecast_weather = ForecastWeatherWidget(
+            accent_color=self.accent_color,
+        )
+        self.forecast_weather.connectCurrentWeather(
+            self.current_weather
+        )
+        # self.weather_forecast.connectWeatherWidget(self) 
         self.__splitter.addWidget(self.current_weather)
+        self.__splitter.addWidget(self.forecast_weather)
 
         self.menu = WeatherWidgetMenu(accent_color=self.accent_color)
         self.menu.setFixedHeight(120)
@@ -664,8 +804,8 @@ def test_weather_widget():
     s = time.time()
     # args.
     where = "front"
-    icon = "widget/weather/logo.png"
-    accent_color = "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e95900, stop : 0.091 #ed6600, stop : 0.182 #f17300, stop : 0.273 #f58000, stop : 0.364 #f88c00, stop : 0.455 #fa9900, stop : 0.545 #fca500, stop : 0.636 #feb100, stop : 0.727 #febe00, stop : 0.818 #ffca00, stop : 0.909 #ffd600, stop : 1.0 #fee200)"
+    icon = FigDSystemAppIconMap["weather"]
+    accent_color = FigDAccentColorMap["weather"]
     # main widget.
     weather = WeatherWidget(accent_color=accent_color)
     window = wrapFigDWindow(
@@ -687,6 +827,34 @@ def test_weather_widget():
     # report time needed.
     print(time.time()-s)
     app.exec()
+
+def launch_weather():
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    # args.
+    where = "front"
+    icon = FigDSystemAppIconMap["weather"]
+    accent_color = FigDAccentColorMap["weather"]
+    # accent_color = "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e95900, stop : 0.091 #ed6600, stop : 0.182 #f17300, stop : 0.273 #f58000, stop : 0.364 #f88c00, stop : 0.455 #fa9900, stop : 0.545 #fca500, stop : 0.636 #feb100, stop : 0.727 #febe00, stop : 0.818 #ffca00, stop : 0.909 #ffd600, stop : 1.0 #fee200)"
+    # main widget.
+    weather = WeatherWidget(accent_color=accent_color)
+    window = wrapFigDWindow(
+        weather, title="Weather", icon=icon,
+        accent_color=accent_color, width=650,
+        height=500, where=where,
+    )
+    window = styleWindowStatusBar(window, font_color="#eb5f34")
+    # needed just for this widget.
+    try: weather.statusbar = window.statusbar
+    except AttributeError as e: print(e)
+    # show the window.
+    window.show()
+    try:
+        weather.update(region=sys.argv[1])
+    except IndexError as e:
+        print(e)
+        weather.update()
+
+    return window
 
 
 if __name__ == '__main__':

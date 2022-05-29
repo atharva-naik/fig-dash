@@ -555,23 +555,23 @@ class FigDAppContainer(QApplication):
         # actions for tray icon context menu.
         self.showAction = QAction("Open")
         self.quitAction = QAction("Quit")
-        self.logsAction = QAction("Get logs")
-        self.supportAction = QAction("Collect support files")
+        # self.logsAction = QAction("Get logs")
+        # self.supportAction = QAction("Collect support files")
         self.settingsAction = QAction("Settings")
         # add icons.
         self.showAction.setIcon(FigD.Icon("tray/open.svg"))
         self.quitAction.setIcon(FigD.Icon("tray/close.svg"))
-        self.logsAction.setIcon(FigD.Icon("tray/logs.svg"))
-        self.supportAction.setIcon(FigD.Icon("tray/logs.svg"))
+        # self.logsAction.setIcon(FigD.Icon("tray/logs.svg"))
+        # self.supportAction.setIcon(FigD.Icon("tray/logs.svg"))
         self.settingsAction.setIcon(FigD.Icon("tray/settings.svg"))
         # connect functions to actions.
         self.showAction.triggered.connect(self.showActiveWindow)
         self.quitAction.triggered.connect(self.quit)
         # tray icon menu.
         trayMenu = QMenu()
-        trayMenu.addAction(self.logsAction)
-        trayMenu.addAction(self.supportAction)
-        trayMenu.addSeparator()
+        # trayMenu.addAction(self.logsAction)
+        # trayMenu.addAction(self.supportAction)
+        # trayMenu.addSeparator()
         trayMenu.addAction(self.settingsAction)
         trayMenu.addSeparator()
         trayMenu.addAction(self.showAction)
@@ -772,22 +772,28 @@ class FigDWindow(QMainWindow):
         background: transparent;""")
         vboxlayout = QVBoxLayout()
         shortcuts_list.setLayout(vboxlayout)
-        for action in self.findChildren(QAction):
-            shortcuts = [shortcut.toString() for shortcut in action.shortcuts()]
-            if len(shortcuts) == 0: continue
-            for shortcut in shortcuts:
-                vboxlayout.addWidget(
-                    self.createShortcutLine(
-                        shortcut,
-                        action.text(),
-                    )
-                )
+        # account for QShortcuts.
+        covered_keys = {}
         for shortcut in self.findChildren(QShortcut):
             if isinstance(shortcut, FigDShortcut):
                 vboxlayout.addWidget(
                     self.createShortcutLine(
                         shortcut.key().toString(),
                         shortcut.description,
+                    )
+                )
+                covered_keys[shortcut.key().toString()] = ""
+        # account for action related shortcuts not covered by QShortucts. 
+        # This is populated only after QContextMenu is invoked once.
+        for action in self.findChildren(QAction):
+            shortcuts = [shortcut.toString() for shortcut in action.shortcuts()]
+            if len(shortcuts) == 0: continue
+            for shortcut in shortcuts:
+                if shortcut in covered_keys: continue
+                vboxlayout.addWidget(
+                    self.createShortcutLine(
+                        shortcut,
+                        action.text(),
                     )
                 )
         shortcuts_widget.setWidget(shortcuts_list)
@@ -958,6 +964,14 @@ def wrapFigDWindow(widget: QWidget, **args):
     window = FigDWindow(widget=centralWidget, **args)
     window.appName = name
     window.connectTitleBar(titlebar)
+    # menu many not exist.
+    try:
+        window.CtrlShiftM = FigDShortcut(
+            QKeySequence("Ctrl+Shift+M"), window,
+            "Toggle ribbon menu"
+        )
+        window.CtrlShiftM.activated.connect(widget.menu.toggle)
+    except Exception as e: print(e)
     # connect full screen action.
     try:
         # full screen action.
