@@ -104,6 +104,16 @@ class AssetManager:
         
         return QUrl.fromLocalFile(tempPath)
 
+    def createTempPath(self, content: str) -> str:
+        tempPath = os.path.join(
+            self.static_dir,
+            "temp_file_123456789.html"
+        )
+        with open(tempPath, "w") as f:
+            f.write(content)
+        
+        return tempPath
+
     def __del__(self):
         '''delete temporary file.'''
         tempPath = os.path.join(

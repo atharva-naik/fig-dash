@@ -3,6 +3,7 @@
 print("fig_dash::ui::system::imageviewer")
 import os
 import re
+from warnings import filters
 import bs4
 import sys
 import time
@@ -15,7 +16,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 # from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
@@ -152,21 +153,34 @@ class ImageViewerViewGroup(DashWidgetGroup):
 		self.addWidget(toggleWidget)
 		# self.layout.addWidget()
 
-class ImageViewerMenu(QWidget):
-	def __init__(self, parent: Union[None, QWidget]=None):
-		super(ImageViewerMenu, self).__init__(parent)
-		# create layout.
-		self.layout = QHBoxLayout()
-		self.layout.setSpacing(0)
-		self.setFixedHeight(120)
-		self.layout.setContentsMargins(0, 0, 0, 0)
-		# create widget groups.
-		self.viewgroup = ImageViewerViewGroup()
-		# build layout.
-		self.layout.addWidget(self.viewgroup)
-		self.layout.addStretch()
-		# set layout.
-		self.setLayout(self.layout)
+class ImageViewerMenu(DashRibbonMenu):
+	def __init__(self, accent_color: str="green", 
+				 parent: Union[None, QWidget]=None):
+		super(ImageViewerMenu, self).__init__(
+			parent=parent, group_names=[
+				"File", "Edit", "View"
+			]
+		)
+		self.addWidgetGroup("File", [
+			([
+                {
+                    "icon": "widget/weather/save.svg",
+                    "text": "Save As",
+                    "tip": "Save image to a given path",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (30,30),
+                },
+                {
+                    "text": "Save",
+                    "tip": "Save changes to image",
+                    "background": accent_color,
+                }
+			], {
+               "alignment_flag": Qt.AlignCenter, 
+               "orient": "vertical",
+			}),
+		])
 
 	def toggle(self):
 		"""toggle the visibility of the ribbon menu."""
@@ -603,11 +617,16 @@ class ImageViewerLayers(QWidget):
 class ImageViewerFilterSlider(QWidget):
 	def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25),
 				 minm: int=0, maxm: int=50, value: int=100, accent_color: str="yellow",
-				 parent: Union[QWidget, None]=None, webview: Union[DebugWebView, None]=None,
-				 role: str="blur"):
-# js_callback_code: Union[str, None]=None):
+				 parent: Union[QWidget, None]=None, imageviewer=None, role: str="blur"):
 		super(ImageViewerFilterSlider, self).__init__(parent)
-		self.webview = webview
+		# connect to imageviewer and assume it has the browser or webview attribute pointing to the webview.
+		self.imageviewer = imageviewer
+		try: 
+			self.webview = imageviewer.browser
+		except AttributeError as e: 
+			self.webview = imageviewer.webview
+			print(e)
+		self.apply_effect = True
 		self.role = role
 		# main layout.
 		self.vboxlayout = QVBoxLayout()
@@ -691,7 +710,7 @@ class ImageViewerFilterSlider(QWidget):
 
 	def _js_effect_applicator(self, backdropFilter: str):
 		"""apply backdrop-filter effect using js."""
-		if self.webview is None: return
+		if self.imageviewer is None: return
 		regex = IMAGEVIEWER_BACKDROP_REGEX_MAP[self.role]
 		if self.role == "blur":
 			newValue = f"blur({self.slider.value()}px)"
@@ -702,11 +721,19 @@ class ImageViewerFilterSlider(QWidget):
 		backdropFilter = re.sub(regex, newValue, backdropFilter)
 		jscode = f'filterPane.style.backdropFilter = "{backdropFilter}";'
 		self.webview.page().runJavaScript(jscode)
-# 			currentStyle = currentStyle.replace("blur(0px)", f"blur({self.slider.value()}px)")
-# 		jscode = f"""var styleString = "{currentStyle.strip()}"
-# document.getElementById("filterPane").setAttribute("style", styleString);"""
-# 		print(jscode)
-# 		self.webview.page().runJavaScript(jscode)
+
+	def setFilterEffect(self, value: float):
+		if isinstance(value, (int, float)):
+			self.apply_effect = True
+			self.updateEffect(value)
+
+	def setFilterValue(self, value: float):
+		if isinstance(value, (int, float)):
+			self.apply_effect = False
+			self.readout.setText(str(value))
+			self.slider.setValue(value)
+			self.apply_effect = True
+
 	def setEffect(self):
 		try: 
 			value = float(self.readout.text())
@@ -718,116 +745,131 @@ class ImageViewerFilterSlider(QWidget):
 	def updateEffect(self, value):
 		global FILTER_OPERATION_DETECTED
 		self.readout.setText(str(value))
+		if not self.apply_effect: 
+			self.apply_effect = True
+			return
+
 		if not FILTER_OPERATION_DETECTED:
 			FILTER_OPERATION_DETECTED = True
 			if self.webview is None: return
 			self.webview.page().runJavaScript(filterPaneJS)
+		
 		if self.webview is not None:
 			self.webview.page().runJavaScript(
 				'filterPane.style.backdropFilter', 
 				self._js_effect_applicator
 			)
+		# if auto save is on then save image after filter is applied.
+		if self.imageviewer.autoSave():
+			print("saving changes")
+			self.imageviewer.saveImage()
 
-
+# image viewer panel containing filters.
 class ImageViewerFiltersPanel(QWidget):
 	def __init__(self, parent: Union[QWidget, None]=None,
-				 webview: Union[None, DebugWebView]=None,
-				 accent_color: str="yellow"):
+				 imageviewer=None, accent_color: str="yellow"):
 		super(ImageViewerFiltersPanel, self).__init__(parent)
+		self.imageviewer = imageviewer
 		self.vboxlayout = QVBoxLayout()
 		self.vboxlayout.setContentsMargins(10, 10, 10, 10)
 		self.vboxlayout.setSpacing(5)
 		self.blurSlider = ImageViewerFilterSlider(
 			"blur (in px)", icon="system/fileviewer/blur.svg",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="blur"
 		)
 		self.brightnessSlider = ImageViewerFilterSlider(
 			"brightness (in %)", icon="system/fileviewer/brightness.svg",
 			minm=0, maxm=150, value=100, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="brightness"
 		)
 		self.contrastSlider = ImageViewerFilterSlider(
 			"contrast (in %)", icon="system/fileviewer/contrast.svg",
 			minm=0, maxm=150, value=100, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="contrast"
 		)
 		self.grayScaleSlider = ImageViewerFilterSlider(
 			"gray scale (in %)", icon="system/fileviewer/grayscale.png",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="grayscale"
 		)
 		self.invertSlider = ImageViewerFilterSlider(
 			"invert (in %)", icon="system/fileviewer/invert.svg",
 			minm=0, maxm=150, value=0, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="invert"
 		)
 		self.opacitySlider = ImageViewerFilterSlider(
 			"opacity (in %)", icon="system/fileviewer/opacity.svg",
 			minm=0, maxm=100, value=100, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="opacity"
 		)
 		self.saturationSlider = ImageViewerFilterSlider(
 			"saturation (in %)", icon="system/fileviewer/saturation.png",
 			minm=0, maxm=100, value=100, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="saturate"
 		)
 		self.sepiaSlider = ImageViewerFilterSlider(
 			"sepia (in %)", icon="system/fileviewer/sepia.png",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="sepia"
 		)
 		self.hueRotateSlider = ImageViewerFilterSlider(
 			"hue rotation (in ° )", icon="system/fileviewer/hue.png",
 			minm=0, maxm=180, value=0, icon_size=(20,20),
-			accent_color=accent_color, webview=webview,
+			accent_color=accent_color, imageviewer=imageviewer,
 			role="hue-rotate"
 		)
+		self.resetBtn = QToolButton()
+		self.resetBtn.setText("Reset Filters")
+		self.resetBtn.setStyleSheet("""
+		QToolButton {
+			padding: 5px;
+			font-size: 17px;
+			margin-top: 20px;
+			border-radius: 5px;
+			background: #484848;
+			border: 1px solid gray;
+		}
+		QToolButton:hover {
+			color: #292929;
+			background: """+accent_color+""";
+		}""")
+		self.filterNames = [
+			"brightness", "contrast", "grayscale", 
+			"invert", "opacity", "saturate", 
+			"sepia", "hue-rotate", "blur",
+		]
+		self.sliderNames = {
+			"blur": "blurSlider",
+			"sepia": "sepiaSlider",
+			"invert": "invertSlider",
+			"opacity": "opacitySlider",
+			"contrast": "contrastSlider",
+			"saturate": "saturationSlider",
+			"grayscale": "grayScaleSlider",
+			"hue-rotate": "hueRotateSlider",
+			"brightness": "brightnessSlider",
+		}
+		self.resetBtn.clicked.connect(self.reset)
 		# self.dropShadowPicker = ImageViewerDropShadowPicker()
-		self.vboxlayout.addWidget(
-			self.blurSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.brightnessSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.contrastSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.grayScaleSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.invertSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.opacitySlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.saturationSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.sepiaSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
-		self.vboxlayout.addWidget(
-			self.hueRotateSlider, 0, 
-			Qt.AlignCenter | Qt.AlignTop
-		)
+		self.vboxlayout.addWidget(self.blurSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.brightnessSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.contrastSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.grayScaleSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.invertSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.opacitySlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.saturationSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.sepiaSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.hueRotateSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.resetBtn, 0, Qt.AlignCenter | Qt.AlignTop)
 		# self.vboxlayout.addWidget(
 		# 	self.dropShadowPicker, 0, 
 		# 	Qt.AlignCenter | Qt.AlignTop
@@ -835,15 +877,50 @@ class ImageViewerFiltersPanel(QWidget):
 		self.vboxlayout.addStretch(1)
 		self.setLayout(self.vboxlayout)
 
-		# self.vboxlayout.addWidget(self.)
+	def setFilterValues(self, **values):
+		if self.imageviewer is None: return
+		currentState = {}
+		for filterName in self.filterNames:
+			sliderName = self.sliderNames[filterName]
+			currentState[filterName] = values.get(filterName, getattr(self, sliderName).slider.value())
+		# create the css backdropFilter string.
+		backdropFilter: str = "" 
+		for filterName, value in currentState.items():
+			sliderName = self.sliderNames[filterName]
+			filterSlider = getattr(self, sliderName)
+			filterSlider.setFilterValue(value)
+			if filterName == "blur":
+				backdropFilter += f"blur({value}px)"
+			elif filterName == "hue-rotate":
+				backdropFilter += f" hue-rotate({value}deg)"
+			elif filterName in ["opacity","brightness","contrast","grayscale","invert","saturate","sepia"]:
+				backdropFilter += f" {filterName}({value}%)"
+		print(backdropFilter)
+		self._js_set_filter_values(backdropFilter=backdropFilter)
+
+	def _js_set_filter_values(self, backdropFilter: str):
+		"""apply backdrop-filter effect using js."""
+		if self.imageviewer is None: return
+		jscode = f'filterPane.style.backdropFilter = "{backdropFilter}";'
+		print(backdropFilter)
+		self.imageviewer.browser.page().runJavaScript(jscode)
+
+	def reset(self):
+		filterState = {
+			"blur": 0, "brightness": 100, "contrast": 100,
+			"saturation": 100, "sepia": 0, "hue-rotate": 0,
+			"grayscale": 0, "invert": 0, "opacity": 100,
+		}
+		self.setFilterValues(**filterState)
+
+# image viewer side panel with various tabs containing: 
 class ImageViewerSidePanel(QTabWidget):
 	def __init__(self, parent: Union[None, QWidget]=None,
-				 webview: Union[None, DebugWebView]=None,
-				 accent_color: str="yellow"):
-		super(ImageViewerSidePanel, self).__init__()
+				 imageviewer=None, accent_color: str="yellow"):
+		super(ImageViewerSidePanel, self).__init__(parent=parent)
 		self.filters_panel = ImageViewerFiltersPanel(
 			accent_color=accent_color, 
-			webview=webview,
+			imageviewer=imageviewer,
 		)
 		self.effects_panel = ImageViewerEffectsPanel()
 		self.filetree = ImageViewerFileTree()
@@ -1014,6 +1091,7 @@ class ImageViewerWidget(QWidget):
         super(ImageViewerWidget, self).__init__()
         self.path_ptr = None
         self.save_ptr = None
+        self.__auto_save = False
 		# arguments.
         print(args.keys())
         self.svg_data = None
@@ -1039,7 +1117,7 @@ class ImageViewerWidget(QWidget):
         self.file_watcher.fileChanged.connect(self.browser.reload)
         self.side_panel = ImageViewerSidePanel(
 			accent_color=accent_color,
-			webview=self.browser,
+			imageviewer=self,
 		)
         self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
@@ -1058,8 +1136,8 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
-    def _save_image_callback(self, base64_str: str):
-        if self.save_ptr:
+    def _save_image_callback(self, base64_str: Union[str, None]):
+        if base64_str and self.save_ptr:
             base64_str = base64_str.split("data:image/png;base64,")[-1]
             base64_bytes = base64_str.encode("ascii")
             img_bytes = base64.b64decode(base64_bytes)
@@ -1186,6 +1264,21 @@ class ImageViewerWidget(QWidget):
         render_url = FigD.createTempUrl(html)
         self.browser.load(render_url)
 
+    def toggleAutoSave(self, state: int):
+        """toggle auto save state of the image viewer"""
+        if state == 2: 
+            print("ImageViewerWidget.setAutoSave(True)")
+            self.setAutoSave(True)
+        elif state == 0: 
+            print("ImageViewerWidget.setAutoSave(False)")
+            self.setAutoSave(False)
+
+    def setAutoSave(self, autoSave: bool):
+        self.__auto_save = autoSave
+
+    def autoSave(self):
+        return self.__auto_save
+
     def connectMenu(self, menu: ImageViewerMenu):
         self.menu = menu
         self.menu.hide()
@@ -1233,13 +1326,14 @@ class ImageViewerWidget(QWidget):
         # self.filetree.setRootPath(path)
         # print(path)
 def launch_imageviewer(app):
-    # titlebar.setStyleSheet("background: transparent; color: #fff;")
-    menu = ImageViewerMenu()
-    menu.hide()
     # accent color and css grad color.
     accent_color = FigDAccentColorMap["imageviewer"]
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
+	# create ribbon menu for imageviewer.
+    menu = ImageViewerMenu(accent_color=accent_color)
+    menu.setFixedHeight(110)
+    menu.hide()
     # create imageviewer widget.
     imageviewer = ImageViewerWidget(
 		css_grad=css_grad, 
@@ -1248,16 +1342,14 @@ def launch_imageviewer(app):
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
     imageviewer.layout.insertWidget(0, menu)
-    # imageviewer.layout.insertWidget(0, titlebar)
-    # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
-    # FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
+	# FigD window.
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", 
 		icon="system/imageviewer/logo.svg",
 		accent_color=accent_color,
 		titlebar_callbacks={
+			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
-            # "ribbonCollapseBtn": menu.toggle,
 		}
 	)
     window.show()
@@ -1276,16 +1368,18 @@ def test_imageviewer():
     s = time.time()
     app = FigDAppContainer(sys.argv)
     print(f"app created in: {time.time()-s}")
-    s = time.time()
-    menu = ImageViewerMenu()
-    print(f"menu created in: {time.time()-s}")
-    # menu.hide()
     # accent color and css grad color.
     s = time.time()
     accent_color = FigDAccentColorMap["imageviewer"]
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
     print(f"grads & accents in: {time.time()-s}")
+    # create ribbon menu for imageviewer.
+    s = time.time()
+    menu = ImageViewerMenu(accent_color=accent_color)
+    menu.setFixedHeight(110)
+    menu.hide()
+    print(f"menu created in: {time.time()-s}")
     # create imageviewer widget.
     s = time.time()
     imageviewer = ImageViewerWidget(
@@ -1298,15 +1392,14 @@ def test_imageviewer():
     imageviewer.connectMenu(menu)
     imageviewer.layout.insertWidget(0, menu)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
-    # FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
-    # FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
+
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", 
 		icon="system/imageviewer/logo.svg",
 		accent_color=accent_color, name="imageviewer",
 		titlebar_callbacks={
+			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
-            # "ribbonCollapseBtn": menu.toggle,
 		}
 	)
     window.show()

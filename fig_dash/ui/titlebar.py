@@ -7,8 +7,9 @@ import jinja2
 from typing import *
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette
+from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette, QPainter
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel
 from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea
 # title_bar_style = '''
@@ -123,6 +124,21 @@ QToolBar {
     border-top-right-radius: 20px;
 }
 ''')
+def extractSliderColor(bg, where="back"):
+    if ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="back"):
+        sliderColor = bg.split(":")[-1].strip()
+        sliderColor = sliderColor.split()[-1]
+        sliderColor = sliderColor.split(")")[0]
+        sliderColor = sliderColor.strip()
+    elif ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="front"):
+        sliderColor = bg.split("stop")[1]
+        sliderColor = sliderColor.split("#")[-1]
+        sliderColor = sliderColor.split(",")[0]
+        sliderColor = "#"+sliderColor.strip()
+    else: 
+        sliderColor = "white" 
+
+    return sliderColor
 
 def styleContextMenu(menu, accent_color: str="yellow"):
     menu.setAttribute(Qt.WA_TranslucentBackground)
@@ -135,7 +151,8 @@ def styleContextMenu(menu, accent_color: str="yellow"):
     	border-radius: 15px;
     }
     QMenu#FigDMenu::item:selected {
-    	color: #fff; 
+    	color: #292929; 
+        border-radius: 5px;
     	background-color: {{ ACCENT_COLOR }}; 
     }
     QMenu#FigDMenu:separator {
@@ -674,6 +691,8 @@ class WindowTitleBar(QToolBar):
         ))
         print(f"\x1b[33;1mwhere:\x1b[0m {where}")
         self.background = background
+        self.callbacks = callbacks
+        # set icon size and movability.
         self.setIconSize(QSize(20,20))
         self.setMovable(False)
         # close window
@@ -739,16 +758,13 @@ class WindowTitleBar(QToolBar):
             callback=callbacks.get("ribbonCollapseBtn"),
             accent_color=background,
         )
-        gray = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #3f3f3f, stop : 0.091 #494949, stop : 0.182 #545454, stop : 0.273 #5f5f5f, stop : 0.364 #6a6a6a, stop : 0.455 #757575, stop : 0.545 #808080, stop : 0.636 #8c8c8c, stop : 0.727 #989898, stop : 0.818 #a4a4a4, stop : 0.909 #b0b0b0, stop : 1.0 #bcbcbc)"""
         self.accentColorBtn = self.initTitleBtn(
             "titlebar/accent_color.png",
             tip="pick a new accent color",
-            # background=gray, style="l"
         )
         self.settingsBtn = self.initTitleBtn(
             "titlebar/settings.svg",
             tip="open window settings",
-            # background=gray, style="r"
         )
         self.shortcutsBtn = TitleBarShortcutsBtn(titlebar=self)
         # zoom slider
@@ -782,39 +798,46 @@ class WindowTitleBar(QToolBar):
             background: {{ BACKGROUND }};
             /* #34b4eb; #39a4e7; */
         }""").render(BACKGROUND=background))
-        def extractSliderColor(bg, where="back"):
-            if ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="back"):
-                sliderColor = bg.split(":")[-1].strip()
-                sliderColor = sliderColor.split()[-1]
-                sliderColor = sliderColor.split(")")[0]
-                sliderColor = sliderColor.strip()
-            elif ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="front"):
-                sliderColor = bg.split("stop")[1]
-                sliderColor = sliderColor.split("#")[-1]
-                sliderColor = sliderColor.split(",")[0]
-                sliderColor = "#"+sliderColor.strip()
-            else: 
-                sliderColor = "white" 
-
-            return sliderColor
-    
         sliderHandleColor = extractSliderColor(self.background, where=where)
         self.zoomSlider.connectLabel(self.zoomLabel)
         palette = QPalette()
-        palette.setColor(QPalette.Window, QColor(0,0,0,0))
+        palette.setColor(QPalette.Window, QColor(0, 0, 0, 0))
         palette.setColor(QPalette.Button, QColor(sliderHandleColor))
-        palette.setColor(QPalette.Highlight, QColor(255,255,255))
+        palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
         self.zoomSlider.setPalette(palette)
         # self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
-
-        # # window title
-        # self.title = QLabel()
-        # # self.title.setText("fig-dash: a dashboard for Python developers")
-        # self.title.setStyleSheet("font-family: 'Be Vietnam Pro', sans-serif; font-weight: bold; color: #fff; font-size: 16px;")
-        # # self.title.setAlignment(Qt.AlignCenter)
-        # self.title.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-
+        # auto save toggle button.
+        self.sliderHandleColor = sliderHandleColor
+        self.autoSaveToggle = AnimatedToggle(
+            checked_color=sliderHandleColor,
+            pulse_checked_color=sliderHandleColor,
+        )
+        self.autoSaveToggle.setFixedWidth(50)
+        self.autoSaveToggle.setFixedHeight(32)
+        self.autoSaveToggle.setContentsMargins(0, 0, 12, 0)
+        # auto save toggle blank.
+        self.autoSaveBlank = self.initBlank(10)
+        # auto save toggle icon.
+        self.autoSaveIcon = QToolButton()
+        self.autoSaveIcon.setText(" Autosave")
+        self.autoSaveIcon.setToolTip("Auto save changes to currently opened file")
+        self.autoSaveIcon.setStatusTip("Auto save changes to currently opened file")
+        self.autoSaveIcon.setIcon(FigD.Icon("widget/weather/save.svg"))
+        self.autoSaveIcon.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.autoSaveIcon.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 15px;
+            font-family: "Be Vietnam Pro";
+            background: transparent;
+        }""")
+        if "autoSave" not in callbacks:
+            self.autoSaveIcon.hide()
+            self.autoSaveToggle.hide()
+        else:
+            self.autoSaveToggle.stateChanged.connect(self.toggleAutoSaveIcon)
         # to display window icon.
         self.windowIcon = QLabel()
         self.title_widget = title_widget
@@ -834,7 +857,9 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.minimizeBtn)
         self.addWidget(self.initBlank(3))
         self.addWidget(self.maximizeBtn)
-        self.addWidget(self.initBlank(10))
+        self.addWidget(self.autoSaveBlank)
+        self.addWidget(self.autoSaveIcon)
+        self.addWidget(self.autoSaveToggle)
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.devToolsBtn)
@@ -845,7 +870,6 @@ class WindowTitleBar(QToolBar):
         self.addWidget(zoomSliderWrapper)
         self.addWidget(self.zoomInBtn)
         self.addWidget(self.initBlank(10))
-        # self.addWidget(self.title)
         self.addWidget(self.accentColorBtn)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.shortcutsBtn)
@@ -860,25 +884,34 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.windowIcon)
         self.addWidget(self.initBlank(10))
         self.setMaximumHeight(30)
-    # def define(self, btn: str, callback) -> bool:
-    #     """connect `callback` to a `button` (string name) attribute.
 
-    #     Args:
-    #         btn (str): the button whose slot/connection/callback is to be defined.
-    #         callback (function): callback function.
+    def toggleAutoSaveIcon(self, state: int):
+        """toggle the auto save icon color disabled: white, enabled: accent_color"""
+        if state == 2:
+            # print("self.autoSaveIcon", self.background)
+            iconTemplate = jinja2.Template(r"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" class="svg_3aeb045a" focusable="false"><path d="M1792 128q27 0 50 10t40 27 28 41 10 50v1664H357l-229-230V256q0-27 10-50t27-40 41-28 50-10h1536zM512 896h1024V256H512v640zm768 512H640v384h128v-256h128v256h384v-384zm512-1152h-128v768H384V256H256v1381l154 155h102v-512h896v512h384V256z" fill="{{ BACKGROUND_COLOR }}"></path></svg>""") 
+            iconPath = FigD.createTempPath(iconTemplate.render(BACKGROUND_COLOR=self.sliderHandleColor))
+            self.autoSaveIcon.setIcon(QIcon(iconPath))
+            self.autoSaveIcon.setStyleSheet("""
+            QToolButton {
+                color: """+self.sliderHandleColor+""";
+                border: 0px;
+                font-size: 15px;
+                font-family: "Be Vietnam Pro";
+                background: transparent;
+            }""")
+        elif state == 0:
+            self.autoSaveIcon.setIcon(FigD.Icon("widget/weather/save.svg"))
+            self.autoSaveIcon.setStyleSheet("""
+            QToolButton {
+                color: #fff;
+                border: 0px;
+                font-size: 15px;
+                font-family: "Be Vietnam Pro";
+                background: transparent;
+            }""")
+        self.callbacks["autoSave"]
 
-    #     Returns:
-    #         bool: returns True if callback is successfully connected, otherwise it prints the exception and returns a False message.
-    #     """
-    #     try:
-    #         btn = eval(f"self.{btn}")
-    #         print(btn)
-    #         btn.show()
-    #         btn.clicked.connect(callback)
-    #         return True
-    #     except Exception as e:
-    #         print(e)
-    #         return False
     def setAnimatedTitle(self, title: str, timing: int=100):
         if self.title_widget is None:
             self.title.setAnimatedText(title, timing=timing)
@@ -886,20 +919,7 @@ class WindowTitleBar(QToolBar):
     def setTitle(self, title: str):
         if self.title_widget is None:
             self.title.setText(title)
-    # def resetSliderPalette(self):
-    #     if "qlineargradient" in self.background:
-    #         sliderHandleColor = self.background.split(":")[-1].strip()
-    #         sliderHandleColor = sliderHandleColor.split()[-1].split(")")[0]
-    #         sliderHandleColor = sliderHandleColor.strip()
-    #     else: 
-    #         sliderHandleColor = self.background
-    #     self.zoomSlider.connectLabel(self.zoomLabel)
-    #     palette = QPalette()
-    #     palette.setColor(QPalette.Window, QColor(0,0,0,0))
-    #     palette.setColor(QPalette.Button, QColor(sliderHandleColor))
-    #     palette.setColor(QPalette.Highlight, QColor(255,255,255))
-    #     print("\x1b[34;1mresetSliderPalette:\x1b[0m", palette)
-    #     self.zoomSlider.setPalette(palette)
+
     def setWindowIcon(self, winIcon: QIcon, 
                       size: Tuple[int,int]=(30,30)):
         self.windowIcon.setPixmap(
@@ -1227,16 +1247,6 @@ class TitleBar(QToolBar):
         self.infoLayout.addWidget(self.battery.pluggedIcon, 0, Qt.AlignCenter | Qt.AlignVCenter)
         self.infoLayout.addWidget(self.battery)
         self.addWidget(self.infoDisplay)
-        # self.addWidget(self.wifi)
-        # self.addWidget(self.wifi.netName)
-        # self.addWidget(self.volume)
-        # self.addWidget(self.langBtn)
-        # self.addWidget(self.bluetoothBtn)
-        # self.addWidget(self.battery.pluggedIcon)
-        # self.addWidget(self.battery)
-        # self.addWidget(self.onScreenKeyboard)
-        # self.addWidget(self.transBtn)
-        # self.addWidget(self.ttsBtn)
         self.addWidget(self.tab_searchbar)
         self.addWidget(self.initBlank2(5))
         self.addWidget(self.accountBtn)
@@ -1389,3 +1399,23 @@ def titlebar_test():
 
 if __name__ == '__main__':
     titlebar_test()
+    # def define(self, btn: str, callback) -> bool:
+    #     """connect `callback` to a `button` (string name) attribute.
+
+    #     Args:
+    #         btn (str): the button whose slot/connection/callback is to be defined.
+    #         callback (function): callback function.
+
+    #     Returns:
+    #         bool: returns True if callback is successfully connected, otherwise it prints the exception and returns a False message.
+    #     """
+    #     try:
+    #         btn = eval(f"self.{btn}")
+    #         print(btn)
+    #         btn.show()
+    #         btn.clicked.connect(callback)
+    #         return True
+    #     except Exception as e:
+    #         print(e)
+    #         return False
+    # gray = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #3f3f3f, stop : 0.091 #494949, stop : 0.182 #545454, stop : 0.273 #5f5f5f, stop : 0.364 #6a6a6a, stop : 0.455 #757575, stop : 0.545 #808080, stop : 0.636 #8c8c8c, stop : 0.727 #989898, stop : 0.818 #a4a4a4, stop : 0.909 #b0b0b0, stop : 1.0 #bcbcbc)"""
