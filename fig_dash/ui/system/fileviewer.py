@@ -16,14 +16,14 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-from fig_dash.ui import wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut
+from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEnginePage
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QPalette
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QThread, QFileSystemWatcher
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
+from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QLayout, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
 # filweviewer widget.
 
 # IMPORTANT: URL to share page on 
@@ -33,6 +33,8 @@ from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, Q
 # https://www.facebook.com/sharer/sharer.php?u={enc_url}
 # linkedin
 # https://www.linkedin.com/sharing/share-offsite/?url={enc_url}
+def blank(*args, **kwargs):
+    print(args, kwargs)
 FILE_VIEWER_CACHE_PATH = os.path.expanduser("~/.cache/fig_dash/fileviewer/thumbnails")
 class EventHandler(QObject):
     def __init__(self, fileviewer):
@@ -131,7 +133,6 @@ class FileViewerFolderSearchBar(QLineEdit):
 
     def search(self):
         pass
-        # print("searched")
 
 # Thumbnailer for files,
 class PyMuPdfThumbnailer:
@@ -361,27 +362,27 @@ class FileViewerWebView(DebugWebView):
 
     def initItemMenu(self, mimetype="folder"):
         self.itemMenu = QMenu()
-        self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "Open With default")
+        self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "&Open With default", blank, QKeySequence.Open)
         self.itemMenu.addSeparator()
         self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "Open With")
         self.itemMenu.addSeparator()
-        self.itemMenu.addAction("Cut")
-        self.itemMenu.addAction(FigD.Icon("browser/copy.svg"), "Copy")
+        self.itemMenu.addAction(FigD.Icon("textedit/cut.svg"), "Cu&t", blank, QKeySequence.Cut)
+        self.itemMenu.addAction(FigD.Icon("textedit/copy.svg"), "&Copy", blank, QKeySequence.Copy)
         self.itemMenu.addSeparator()
-        self.itemMenu.addAction("Move To...")
-        self.itemMenu.addAction("Copy To...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/move.svg"), "Move To...")
+        self.itemMenu.addAction(FigD.Icon("textedit/copy.svg"), "Copy To...")
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/link.svg"), "Make Link")
-        self.itemMenu.addAction("Rename...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/rename.svg"), "Rename...", blank, QKeySequence("Ctrl+Shift+R"))
         # if mimetype == ""
             # self.itemMenu.addAction("Set as Wallpaper")
         self.itemMenu.addSeparator()
-        self.itemMenu.addAction(FigD.Icon("tabbar/trash.svg"), "Move to Trash")
+        self.itemMenu.addAction(FigD.Icon("textedit/delete.svg"), "Move to Trash", blank, QKeySequence.Delete)
         self.itemMenu.addSeparator()
         self.itemMenu.addAction("Revert to Previous Version...")
-        self.itemMenu.addAction("Compress...")
-        self.itemMenu.addAction("Email...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/compress.svg"), "Compress...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/email.svg"), "Email...")
         self.itemMenu.addSeparator()
-        self.itemMenu.addAction("Properties") 
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties") 
         self.itemMenu = styleContextMenu(
             self.itemMenu, 
             accent_color=self.accent_color
@@ -2108,11 +2109,7 @@ class FileViewerWidget(QMainWindow):
         self.overviewArea
         # searchbar.
         self.foldersearchbar = FileViewerFolderSearchBar()
-        self.foldersearchbar.hide()
-        # self.searchbar.setParent(self.webview)
-        self.foldersearchbar.setMinimumWidth(800)
-        self.foldersearchbar.setFixedHeight(34)
-        self.foldersearchbar.move(0,0)
+        self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # statusbar.
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
@@ -2140,7 +2137,6 @@ class FileViewerWidget(QMainWindow):
             QKeySequence("Ctrl+Shift+F"), self,
             "Open file explorer search bar"
         )
-        self.CtrlShiftF.activated.connect(self.foldersearchbar.show)
         # self.SelectAll.setEnabled(False)
     
         # add the dev tools button to the view group.
@@ -2151,8 +2147,24 @@ class FileViewerWidget(QMainWindow):
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
+        fsbar_wrapper = QWidget()
+        fsbar_close_btn = QToolButton()
+        fsbar_close_btn.setIcon(FigD.Icon("system/fileviewer/close.svg"))
+        fsbar_close_btn.clicked.connect(fsbar_wrapper.hide)
+        fsbar_wrapper.setStyleSheet("background: red;")
+        fsbar_wrapper.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        fsbar_layout = QHBoxLayout()
+        fsbar_layout.setContentsMargins(0, 0, 0, 0)
+        fsbar_layout.setSpacing(0)
+        fsbar_layout.addWidget(fsbar_close_btn)
+        fsbar_layout.addWidget(self.foldersearchbar)
+        fsbar_wrapper.setLayout(fsbar_layout)
+        fsbar_wrapper.hide()
+        fsbar_wrapper.setFixedHeight(34)
+        self.CtrlShiftF.activated.connect(fsbar_wrapper.show)
+
         self.layout.insertWidget(0, self.webview.splitter, 0)
-        self.layout.insertWidget(0, self.foldersearchbar, 0, Qt.AlignCenter)
+        self.layout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
         if not dangle_folderbar:
             self.layout.insertWidget(0, self.folderbar, 0)
         # if args.get("parentless", False):
@@ -2802,22 +2814,23 @@ def test_fileviewer():
                                 "viewSourceBtn": fileviewer.viewSource,
                             }, title_widget=fileviewer.folderbar)
                             #, title=f"fileviewer: {path}")
-    spacer1 = QWidget()
-    spacer1.setStyleSheet("background: transparent")
-    spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    spacer2 = QWidget()
-    spacer2.setStyleSheet("background: transparent")
-    spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-    window.statusBar().addWidget(spacer1)
-    window.statusBar().addWidget(fileviewer.statusbar)
-    window.statusBar().addWidget(spacer2)
-    window.statusBar().setStyleSheet("""
-    QStatusBar {
-        color: #4293d5;
-        border-radius: 20px;
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-    }""")
+    # spacer1 = QWidget()
+    # spacer1.setStyleSheet("background: transparent")
+    # spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    # spacer2 = QWidget()
+    # spacer2.setStyleSheet("background: transparent")
+    # spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    # window.statusBar().addWidget(spacer1)
+    # window.statusBar().addWidget(fileviewer.statusbar)
+    # window.statusBar().addWidget(spacer2)
+    # window.statusBar().setStyleSheet("""
+    # QStatusBar {
+    #     color: #4293d5;
+    #     border-radius: 20px;
+    #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+    # }""")
+    window = styleWindowStatusBar(window, widget=fileviewer, 
+                                  accent_color=accent_color)
     window.show()
     app.exec()
     # fileviewer.saveScreenshot("fileviewer.html")

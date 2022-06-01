@@ -19,8 +19,8 @@ from fig_dash.theme import FigDAccentColorMap
 from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal
-from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
+from PyQt5.QtWidgets import QAction, QWidget, QCompleter, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
 filterPaneJS = r"""
@@ -162,7 +162,6 @@ class ImageViewerViewGroup(DashWidgetGroup):
 		toggleWidget.setLayout(toggleLayout)
 		# add widgets to widget group.
 		self.addWidget(toggleWidget)
-		# self.layout.addWidget()
 
 class ImageViewerMenu(DashRibbonMenu):
 	def __init__(self, accent_color: str="green", 
@@ -205,9 +204,8 @@ class ImageViewerFileTree(QWidget):
         super(ImageViewerFileTree, self).__init__(parent)
         # veritcal layout.
         self.root = root  # root path.
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        # self.layout.addWidget(QLabel(root))
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
         # file system model.
         self.fileModel = QFileSystemModel()
         self.fileModel.setRootPath(os.path.expanduser("~/Pictures"))
@@ -234,9 +232,9 @@ class ImageViewerFileTree(QWidget):
         self.fileTree.setColumnWidth(0, 300)
         # self.fileTree.setMinimumHeight(400)
         # add file tree to layout.
-        self.layout.addWidget(self.fileTree)
+        self.vboxlayout.addWidget(self.fileTree)
 
-        self.setLayout(self.layout)
+        self.setLayout(self.vboxlayout)
         self.setStyleSheet(file_tree_style)
         # self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Expanding)
     # def setRootPath(self, path: str):
@@ -395,8 +393,8 @@ class SVGTreeNode:
 class ImageViewerSVGTree(QWidget):
 	def __init__(self, parent: Union[None, QWidget]=None):
 		super(ImageViewerSVGTree, self).__init__(parent)
-		self.layout = QVBoxLayout()
-		self.layout.setContentsMargins(5, 5, 5, 5)
+		self.vboxlayout = QVBoxLayout()
+		self.vboxlayout.setContentsMargins(5, 5, 5, 5)
 		# tree widget & details pane.
 		self.tree = QTreeWidget()
 		self.tree.setAnimated(True)
@@ -428,9 +426,8 @@ class ImageViewerSVGTree(QWidget):
 		self.splitter.addWidget(self.tree)
 		self.splitter.addWidget(self.details_pane)
 
-		self.layout.addWidget(self.splitter)
-		# self.layout.addStretch(1)
-		self.setLayout(self.layout)
+		self.vboxlayout.addWidget(self.splitter)
+		self.setLayout(self.vboxlayout)
 
 	def updateDetailsPane(self, item):
 		record = item._record_ptr
@@ -934,6 +931,37 @@ class ImageViewerFiltersPanel(QWidget):
 		}
 		self.setFilterValues(**filterState)
 
+# search bar to search google/enter URLs.
+class ImageViewerURLSearchBar(QLineEdit):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(ImageViewerURLSearchBar, self).__init__(parent)
+        # create actions.
+        caseAction = self.addAction(
+            FigD.Icon("browser/case.svg"), 
+            QLineEdit.TrailingPosition
+        )
+        searchAction = self.addAction(
+            FigD.Icon("browser/search.svg"), 
+            QLineEdit.LeadingPosition
+        )
+        self.setStyleSheet("""
+        QLineEdit {
+            color: #fff;
+            padding: 5px;
+            background: #292929;
+            border-radius: 5px;
+        }""")
+        self.setPlaceholderText("Search system apps")
+        completer = QCompleter()
+        stringModel = QStringListModel()
+        stringModel.setStringList(list(
+            FigDSystemAppLauncherMap.keys()
+        ))
+        completer.setModel(stringModel)
+        self.setCompleter(completer)
+        self.setMinimumWidth(600)
+        self.setClearButtonEnabled(True)
+
 # image viewer plain text edit.
 class ImageViewerPlainTextEdit(QPlainTextEdit):
 	def __init__(self, *args, accent_color: str="green", **kwargs):
@@ -1322,7 +1350,7 @@ class ImageViewerWidget(QWidget):
         margin = 10
         layout.setContentsMargins(margin, 0, margin, margin)
         layout.setSpacing(0)
-        self.layout = layout
+        self.centralLayout = layout
         # build layout.
         self.browser = ImageViewerWebView(imageviewer=self)
         self.browser.CtrlC = FigDShortcut(QKeySequence.Copy, self.browser, "Copy image to clipboard")
@@ -1424,7 +1452,7 @@ class ImageViewerWidget(QWidget):
         margin = 10
         layout.setContentsMargins(margin, 0, margin, margin)
         layout.setSpacing(0)
-        self.layout = layout
+        self.centralLayout = layout
         # build layout.
         self.browser = ImageViewerWebView()
         self.browser.imageviewer = self
@@ -1561,7 +1589,7 @@ def launch_imageviewer(app):
 	)
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
-    imageviewer.layout.insertWidget(0, menu)
+    imageviewer.centralLayout.insertWidget(0, menu)
 	# FigD window.
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", 
@@ -1610,7 +1638,7 @@ def test_imageviewer():
     s = time.time()
     imageviewer.browser.setAccentColor(accent_color)
     imageviewer.connectMenu(menu)
-    imageviewer.layout.insertWidget(0, menu)
+    imageviewer.centralLayout.insertWidget(0, menu)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
 
     window = wrapFigDWindow(
@@ -1701,7 +1729,6 @@ if __name__ == "__main__":
 #         margin = 10
 #         layout.setContentsMargins(margin, 0, margin, margin)
 #         layout.setSpacing(0)
-#         self.layout = layout
 #         # build layout.
 #         self.browser = ImageViewerWebView()
 #         # self.statusbar = self.statusBar()
@@ -1843,8 +1870,6 @@ if __name__ == "__main__":
 #     imageviewer.titlebar = titlebar
 #     imageviewer.connectMenu(menu)
 #     imageviewer.connectTitlebar(titlebar)
-#     imageviewer.layout.insertWidget(0, menu)
-#     imageviewer.layout.insertWidget(0, titlebar)
 #     imageviewer.setStyleSheet("background: transparent; border: 0px;")
 #     QFontDatabase.addApplicationFont(
 #         FigD.font("BeVietnamPro-Regular.ttf")

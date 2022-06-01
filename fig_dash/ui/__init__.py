@@ -1078,15 +1078,17 @@ def wrapFigDWindow(widget: QWidget, **args):
 
     return window
 
-def styleWindowStatusBar(window: QMainWindow, accent_color: Union[str, None]=None, 
-                         apply_style_sheet: bool=True, where: str="back", 
-                         font_color: str="#fff") -> QMainWindow:
+def styleWindowStatusBar(window: QMainWindow, widget: Union[QWidget, None]=None, 
+                         accent_color: Union[str, None]=None, where: str="back",
+                         apply_style_sheet: bool=True, font_color: str="#fff") -> QMainWindow:
     """Shifts a windows statusbar from the transparent QMainWindow to the window object.
     Args:
         window (QMainWindow): A QMainWindow or FigDWindow object.
+        windget (QWidget, optional): The widget wrapped around in the FigDWindow. Defaults to None.
         accent_color (str, optional): Accent color of the window.
         apply_style_sheet (bool, optional): Whether statusBar style sheet should be updated. Defaults to True.
-
+        widget
+        font_color (str, optional): Color of the statusbar font. Defaults to "#fff".
     Returns:
         QMainWindow: returns rearranged FigDWindow/QMainWindow object.
     """
@@ -1094,7 +1096,9 @@ def styleWindowStatusBar(window: QMainWindow, accent_color: Union[str, None]=Non
     statusBar = window.statusBar()
     window.statusbar = statusBar
     window.centralWidget().layout().addWidget(window.statusbar)
-
+    # if the wrapped widget has a "statusbar" attribute then add it to statusbar.
+    if widget is not None and hasattr(widget, "statusbar"):
+        window.statusbar.addWidget(widget.statusbar)
     if apply_style_sheet:
         if accent_color:
             fontColor = extractFromAccentColor(accent_color, where=where)

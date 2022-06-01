@@ -323,6 +323,7 @@ def test_clipboard():
                             height=400, accent_color=accent_color,
                             add_tabs=False)
     # show the app window.
+    window.show()
     # run the application!
     app.exec()
 
