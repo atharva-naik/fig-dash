@@ -1,25 +1,25 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 print("fig_dash::ui::system::imageviewer")
-import os
-import re
-from warnings import filters
+import PIL
 import bs4
-import sys
 import time
 import base64
+import platform
 import svgpathtools
 from typing import *
+import os, io, re, sys
 from pathlib import Path
+from PIL import Image, ImageCms
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 # from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileSystemWatcher, QSortFilterProxyModel
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
@@ -55,8 +55,19 @@ function extractImageBytes(img, filter) {
 	var base64String = canvas.toDataURL();
 	
 	return base64String;
+}"""
+IMAGEVIEWER_BYTES_EXTRACT_JS = IMAGEVIEWER_IMG_EXTRACT_JS+r"""
+var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
+try {
+	var imgFilter = document.getElementById("filterPane").style.backdropFilter;
 }
-"""
+catch(err) {
+	console.log(err);
+	var imgFilter = undefined;
+}
+var imgBytes = extractImageBytes(imgElement, imgFilter);
+console.log(imgBytes);
+imgBytes"""
 # hue-rotate, drop-shadow.
 # IMAGEVIEWER_BLUR_FILTER_JS = r""""""
 # IMAGEVIEWER_BRIGHTNESS_FILTER_JS = r""""""
@@ -159,7 +170,7 @@ class ImageViewerMenu(DashRibbonMenu):
 		super(ImageViewerMenu, self).__init__(
 			parent=parent, group_names=[
 				"File", "Edit", "View"
-			]
+			], accent_color=accent_color,
 		)
 		self.addWidgetGroup("File", [
 			([
@@ -395,9 +406,7 @@ class ImageViewerSVGTree(QWidget):
 
 		self.tree.setColumnCount(1)
 		self.tree.setHeaderLabels(["element"])
-		print(self.tree.verticalScrollBar().setStyleSheet(
-			scrollbar_style
-		))
+		print(self.tree.verticalScrollBar().setStyleSheet(scrollbar_style))
 		self._tree_records = {}
 		# self.tree.setHeaderLabels(["name", "id", "text", "fill", "width", "height", "opacity", "start", "end", "radius", "rotation", "large arc", "sweep"])
 		# self.tree.header().resizeSection(0, 100) # name
@@ -615,6 +624,7 @@ class ImageViewerLayers(QWidget):
 
 
 class ImageViewerFilterSlider(QWidget):
+	imageChanged = pyqtSignal() 
 	def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25),
 				 minm: int=0, maxm: int=50, value: int=100, accent_color: str="yellow",
 				 parent: Union[QWidget, None]=None, imageviewer=None, role: str="blur"):
@@ -745,6 +755,7 @@ class ImageViewerFilterSlider(QWidget):
 	def updateEffect(self, value):
 		global FILTER_OPERATION_DETECTED
 		self.readout.setText(str(value))
+		# print(self.apply_effect)
 		if not self.apply_effect: 
 			self.apply_effect = True
 			return
@@ -759,13 +770,14 @@ class ImageViewerFilterSlider(QWidget):
 				'filterPane.style.backdropFilter', 
 				self._js_effect_applicator
 			)
+		else:
+			print("couldn't save because webview was none")
 		# if auto save is on then save image after filter is applied.
-		if self.imageviewer.autoSave():
-			print("saving changes")
-			self.imageviewer.saveImage()
+		self.imageChanged.emit()
 
 # image viewer panel containing filters.
 class ImageViewerFiltersPanel(QWidget):
+	imageChanged = pyqtSignal()
 	def __init__(self, parent: Union[QWidget, None]=None,
 				 imageviewer=None, accent_color: str="yellow"):
 		super(ImageViewerFiltersPanel, self).__init__(parent)
@@ -779,54 +791,63 @@ class ImageViewerFiltersPanel(QWidget):
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="blur"
 		)
+		self.blurSlider.imageChanged.connect(self.imageChanged.emit)
 		self.brightnessSlider = ImageViewerFilterSlider(
 			"brightness (in %)", icon="system/fileviewer/brightness.svg",
 			minm=0, maxm=150, value=100, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="brightness"
 		)
+		self.brightnessSlider.imageChanged.connect(self.imageChanged.emit)
 		self.contrastSlider = ImageViewerFilterSlider(
 			"contrast (in %)", icon="system/fileviewer/contrast.svg",
 			minm=0, maxm=150, value=100, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="contrast"
 		)
+		self.contrastSlider.imageChanged.connect(self.imageChanged.emit)
 		self.grayScaleSlider = ImageViewerFilterSlider(
 			"gray scale (in %)", icon="system/fileviewer/grayscale.png",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="grayscale"
 		)
+		self.grayScaleSlider.imageChanged.connect(self.imageChanged.emit)
 		self.invertSlider = ImageViewerFilterSlider(
 			"invert (in %)", icon="system/fileviewer/invert.svg",
 			minm=0, maxm=150, value=0, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="invert"
 		)
+		self.invertSlider.imageChanged.connect(self.imageChanged.emit)
 		self.opacitySlider = ImageViewerFilterSlider(
 			"opacity (in %)", icon="system/fileviewer/opacity.svg",
 			minm=0, maxm=100, value=100, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="opacity"
 		)
+		self.opacitySlider.imageChanged.connect(self.imageChanged.emit)
 		self.saturationSlider = ImageViewerFilterSlider(
 			"saturation (in %)", icon="system/fileviewer/saturation.png",
 			minm=0, maxm=100, value=100, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="saturate"
 		)
+		self.saturationSlider.imageChanged.connect(self.imageChanged.emit)
 		self.sepiaSlider = ImageViewerFilterSlider(
 			"sepia (in %)", icon="system/fileviewer/sepia.png",
 			minm=0, maxm=100, value=0, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="sepia"
 		)
+		self.sepiaSlider.imageChanged.connect(self.imageChanged.emit)
 		self.hueRotateSlider = ImageViewerFilterSlider(
 			"hue rotation (in ° )", icon="system/fileviewer/hue.png",
 			minm=0, maxm=180, value=0, icon_size=(20,20),
 			accent_color=accent_color, imageviewer=imageviewer,
 			role="hue-rotate"
 		)
+		self.hueRotateSlider.imageChanged.connect(self.imageChanged.emit)
 		self.resetBtn = QToolButton()
 		self.resetBtn.setText("Reset Filters")
 		self.resetBtn.setStyleSheet("""
@@ -907,11 +928,201 @@ class ImageViewerFiltersPanel(QWidget):
 
 	def reset(self):
 		filterState = {
+			"grayscale": 0, "invert": 0, "opacity": 100,
 			"blur": 0, "brightness": 100, "contrast": 100,
 			"saturation": 100, "sepia": 0, "hue-rotate": 0,
-			"grayscale": 0, "invert": 0, "opacity": 100,
 		}
 		self.setFilterValues(**filterState)
+
+# image viewer plain text edit.
+class ImageViewerPlainTextEdit(QPlainTextEdit):
+	def __init__(self, *args, accent_color: str="green", **kwargs):
+		super(ImageViewerPlainTextEdit, self).__init__(*args, **kwargs)
+		self.accent_color = accent_color
+		self.setReadOnly(True)
+		self.CtrlC = QShortcut(QKeySequence.Copy, self)
+
+	def contextMenuEvent(self, event):
+		self.contextMenu = self.createStandardContextMenu()
+		for action in self.contextMenu.actions():
+			if action.text().strip() == "&Copy":
+				self.CtrlC.activated.connect(action.trigger)
+				action.setShortcut("Ctrl+C")
+		self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+		self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+		self.contextMenu.popup(event.globalPos())
+# image viewer metadata panel.
+class ImageViewerMetaDataPanel(QWidget):
+	def __init__(self, accent_color: str="gray", 
+				 parent: Union[None, QWidget]=None):
+		super(ImageViewerMetaDataPanel, self).__init__(parent)
+		self.accent_color = accent_color
+		self.mimedb = QMimeDatabase()
+		# panel layout.
+		self.vboxlayout = QVBoxLayout()
+		self.setLayout(self.vboxlayout)
+		# init sub widgets.
+		self.panel = self.initPanel()
+		# build layout.
+		self.vboxlayout.addWidget(self.panel)
+
+	def toggle(self):
+		if self.isVisible():
+			self.hide()
+		else: self.show()
+
+	def update(self, path: str):
+		from fig_dash.utils import h_format_mem, extractSliderColor, exif_color_space, has_transparency
+
+		self.path = path
+		fontColor = extractSliderColor(self.accent_color)
+		self.info = QFileInfo(path)
+		mimetype = self.mimedb.mimeTypeForFile(self.path).name()
+		# # stat info.
+		# statInfo = os.stat(path)
+		try:
+			birthTime = self.info.birthTime().toPyDateTime()
+			birthTime = birthTime.strftime("%b %d, %Y %H:%M %p")
+		except ValueError as e: 
+			print(e)
+			birthTime = f"Creation time not available for {platform.system()}"
+		lastRead = self.info.lastRead().toPyDateTime().strftime("%b %d, %Y %H:%M %p")
+		lastModified = self.info.lastModified().toPyDateTime().strftime("%b %d, %Y %H:%M %p")
+		metadataChangeTime = self.info.metadataChangeTime().toPyDateTime().strftime("%b %d, %Y %H:%M %p")
+		# create PIL object to get image specific metadata.
+		colorspace = ""
+		colorprofile = ""
+		ICC_INFO = ""
+		MISC_INFO = ""
+		MEDIA_INFO = ""
+		COLOR_SPACE = ""
+		HEADER_INFO = ""
+		INTENT_INFO = ""
+		PROFILE_INFO = ""
+		try:
+			PILObj = Image.open(path)
+			width = PILObj.size[0]
+			height = PILObj.size[1]
+			# icc
+			icc = PILObj.info.get("icc_profile", "")
+			if icc != "":
+				prf = ImageCms.ImageCmsProfile(io.BytesIO(icc))
+				print("Product Name:", prf.product_name)
+				print("Product Info:", prf.product_info)
+				print("Profile Attributes:", prf.profile.attributes)
+				
+				p = prf.profile
+				colorspace = f"{p.xcolor_space}"
+				colorprofile = p.profile_description
+				measurement_condition = "<br>"+"<br>".join([f"{k}: {v}" for k,v in p.icc_measurement_condition.items()])
+				clut = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.clut.items()])
+
+				MISC_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Miscellaneous</span>
+				<div style="color: #fff;">
+					<b>Clut:</b> {clut} <br>
+					<b>Model:</b> {p.model} <br>
+					<b>Target:</b> {p.target} <br>
+					<b>Device Class:</b> {p.device_class} <br>
+					<b>Connection Space:</b> {p.connection_space} <br>
+					<b>Is Matrix Shaper?:</b> {p.is_matrix_shaper} <br>
+					<b>Viewing Condition:</b> {p.viewing_condition} <br>
+					<b>Screening Description:</b> {p.screening_description} <br>
+				</div><br>"""
+				ICC_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">ICC</span>
+				<div style="color: #fff;">
+					<b>Version:</b> {p.icc_version} <br>
+					<b>Measurement Condition:</b> {measurement_condition} <br>
+					<b>Viewing Condition:</b> {p.icc_viewing_condition} <br>
+				</div><br>"""
+				PROFILE_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Profile</span>
+				<div style="color: #fff;">
+					<!-- <b>Id:</b> {p.profile_id} <br> -->
+					<b>Description:</b> {p.profile_description} <br>
+					<b>Version:</b> {p.version} <br>
+					<b>Creation Date:</b> {p.creation_date} <br>
+					<b>Copyright:</b> {p.copyright} <br>
+					<b>Manufacturer:</b> {p.manufacturer} <br>
+					<b>Technology:</b> {p.technology} <br>
+				</div><br>"""
+				COLOR_SPACE = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Color Space</span>
+				<div style="color: #fff;">
+					<b>Red Primary:</b> ({", ".join([f"{c:.2f}" for c in p.red_primary[0]])}) ({", ".join([f"{c:.2f}" for c in p.red_primary[1]])}) <br>
+					<b>Blue Primary:</b> ({", ".join([f"{c:.2f}" for c in p.blue_primary[0]])}) ({", ".join([f"{c:.2f}" for c in p.blue_primary[1]])}) <br>
+					<b>Green Primary:</b> ({", ".join([f"{c:.2f}" for c in p.green_primary[0]])}) ({", ".join([f"{c:.2f}" for c in p.green_primary[1]])}) <br>
+					<b>Red Colorant:</b> ({", ".join([f"{c:.2f}" for c in p.red_colorant[0]])}) ({", ".join([f"{c:.2f}" for c in p.red_colorant[1]])}) <br>
+					<b>Blue Colorant:</b> ({", ".join([f"{c:.2f}" for c in p.blue_colorant[0]])}) ({", ".join([f"{c:.2f}" for c in p.blue_colorant[1]])}) <br>
+					<b>Green Colorant:</b> ({", ".join([f"{c:.2f}" for c in p.green_colorant[0]])}) ({", ".join([f"{c:.2f}" for c in p.green_colorant[1]])}) <br>
+				</div><br>"""
+				supported = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.intent_supported.items()])
+				INTENT_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Intent Information</span>
+				<div style="color: #fff;">
+					<b>Rendering:</b> {p.rendering_intent} <br>
+					<b>Is supported?:</b> {p.colorimetric_intent} <br>
+					<b>Supported:</b> {supported} <br>
+					<b>Perceptual Rendering Gamut:</b> {p.perceptual_rendering_intent_gamut} <br>
+					<b>Saturation Rendering Gamut:</b> {p.saturation_rendering_intent_gamut} <br>
+				</div><br>"""
+				MEDIA_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Media Information</span>
+				<div style="color: #fff;">
+					<b>Black Point:</b> ({", ".join([f"{c:.2f}" for c in p.media_black_point[0]])}) ({", ".join([f"{c:.2f}" for c in p.media_black_point[1]])}) <br>
+					<b>White Point:</b> ({", ".join([f"{c:.2f}" for c in p.media_white_point[0]])}) ({", ".join([f"{c:.2f}" for c in p.media_white_point[1]])}) <br>
+					<b>White Point Temperature:</b> {p.media_white_point_temperature:.2f} <br>
+				</div><br>"""
+				HEADER_INFO = f"""
+				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Header Information</span>
+				<div style="color: #fff;">
+					<b>Manufacturer:</b> {p.header_manufacturer} <br>
+					<b>Model:</b> {p.header_model} <br>
+					<b>Flags:</b> {p.header_flags} <br>
+				</div><br>"""
+				# print(dir(prf.profile))
+			# colorspace = exif_color_space(PILObj)
+			hasAlpha = "Yes" if has_transparency(PILObj) else "No"
+
+		except PIL.UnidentifiedImageError as e:
+			width = "scalable"
+			height = "scalable"
+			hasAlpha = "Not meaningful for svg"
+			print(e)
+		fileSize = self.info.size()
+		self.panel.setPlainText("")
+		# update file information.
+		self.panel.appendHtml(f"""
+		<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">File Information</span>
+		<div style="color: #fff;">
+			<b>Kind:</b> {mimetype} <br>
+			<b>Size:</b> {h_format_mem(fileSize)} ({fileSize:,} bytes) <br>
+			<b>Disk:</b> {h_format_mem(fileSize)} on disk <br>
+			<b>Where:</b> {self.path} <br>
+			<b>Created:</b> {birthTime} <br>
+			<b>Modified:</b> {lastModified} <br>
+			<b>Last opened:</b> {lastRead} <br>
+			<b>Metadata changed:</b> {metadataChangeTime} <br>
+		</div>
+		<br>
+		<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Image Information</span>
+		<div style="color: #fff;">
+			<b>Dimensions:</b> {width} x {height} <br>
+			<b>Color space:</b> {colorspace} <br>
+			<b>Color profile:</b> {colorprofile} <br>
+			<b>Alpha channel:</b> {hasAlpha} <br>
+		</div> <br>
+		{PROFILE_INFO}
+		{COLOR_SPACE}
+		{MEDIA_INFO}
+		{INTENT_INFO}
+		{HEADER_INFO}
+		{ICC_INFO}
+		{MISC_INFO}""")
+
+	def initPanel(self) -> QWidget:
+		return ImageViewerPlainTextEdit(accent_color=self.accent_color)
 
 # image viewer side panel with various tabs containing: 
 class ImageViewerSidePanel(QTabWidget):
@@ -1013,6 +1224,7 @@ class ImageViewerWebView(DebugWebView):
             elif action.text() == "Copy image":
                 action.setShortcut(QKeySequence.Copy)
                 action.setIcon(FigD.Icon("browser/copy.svg"))
+                # action.triggered.connect(self.imageviewer.copyImageToClipboard)
             elif action.text() == "Copy image address":
                 action.setShortcut(QKeySequence("Ctrl+Shift+C"))
                 action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
@@ -1101,10 +1313,9 @@ class ImageViewerWidget(QWidget):
         self.mime_database = QMimeDatabase()
         self.file_watcher = QFileSystemWatcher()
 		# shortcuts.
-        self.CtrlC = FigDShortcut(QKeySequence.Copy, self, "Copy image to clipboard")
-        self.CtrlC.activated.connect(self.copyImageToClipboard)
         self.CtrlS = FigDShortcut(QKeySequence.Save, self, "Save image")
         self.CtrlS.activated.connect(self.saveImage)
+        self.CtrlShiftK = FigDShortcut(QKeySequence("Ctrl+Shift+K"), self, "Toggle metadata panel visibility.")
         # create layout
         layout = QVBoxLayout()
         # TODO: Check if margin is needed anymore at all.
@@ -1114,17 +1325,25 @@ class ImageViewerWidget(QWidget):
         self.layout = layout
         # build layout.
         self.browser = ImageViewerWebView(imageviewer=self)
+        self.browser.CtrlC = FigDShortcut(QKeySequence.Copy, self.browser, "Copy image to clipboard")
+        self.browser.CtrlC.activated.connect(self.copyImageToClipboard)
         self.file_watcher.fileChanged.connect(self.browser.reload)
         self.side_panel = ImageViewerSidePanel(
 			accent_color=accent_color,
 			imageviewer=self,
 		)
+        self.side_panel.filters_panel.imageChanged.connect(self._decide_on_save)
+		
+        self.metadata_panel = ImageViewerMetaDataPanel(accent_color=accent_color)
+        self.metadata_panel.hide()
+        self.CtrlShiftK.activated.connect(self.metadata_panel.toggle)
         self.svgtree = self.side_panel.svgtree
         self.filetree = self.side_panel.filetree
         self.filetree.connectImageViewer(self)
         self.side_panel.hide()
         # self.filetree.hide()
         self.browser.splitter.insertWidget(0, self.side_panel)
+        self.browser.splitter.addWidget(self.metadata_panel)
         layout.addWidget(self.browser.splitter)
         # set layout.
         self.setLayout(layout)
@@ -1136,13 +1355,21 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
+    def _decide_on_save(self):
+        print(f"triggered auto save: {self.autoSave()}")
+        if self.autoSave():
+            print("saving changes")
+            self.saveImage() 
+
     def _save_image_callback(self, base64_str: Union[str, None]):
-        if base64_str and self.save_ptr:
+        if base64_str is not None and self.save_ptr:
             base64_str = base64_str.split("data:image/png;base64,")[-1]
             base64_bytes = base64_str.encode("ascii")
             img_bytes = base64.b64decode(base64_bytes)
             with open(self.save_ptr, "wb") as fp:
                 fp.write(img_bytes)
+        elif base64_str is None:
+            print("\x1b[34;1mCouldn't save image: base64_str=None\x1b[0m")
 
     def saveImage(self):
         if self.save_ptr is None:
@@ -1155,20 +1382,15 @@ class ImageViewerWidget(QWidget):
         else: filename = self.save_ptr
         print(filename)
         if filename is not None:
-            self.browser.page().runJavaScript(IMAGEVIEWER_IMG_EXTRACT_JS+"""
-            var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
-		    var imgFilter = document.getElementById("filterPane").style.backdropFilter;
-		    var imgBytes = extractImageBytes(imgElement, imgFilter)
-		    imgBytes""", self._save_image_callback)
+            self.browser.page().runJavaScript(IMAGEVIEWER_BYTES_EXTRACT_JS, self._save_image_callback)
 
     def _copy_image_callback(self, base64_str: str):
-        # self.__copied_image = QImage()
+        if base64_str is None: 
+            print("base64_str:", base64_str)
+            return
         base64_str = base64_str.split("data:image/png;base64,")[-1]
         base64_bytes = base64_str.encode("ascii")
         img_bytes = base64.b64decode(base64_bytes)
-        # with tempfile.NamedTemporaryFile(mode="wb") as fp:
-        #     fp.write(img_bytes)
-        #     print(fp.name)
         self.__copied_pixmap = QPixmap()
         self.__copied_pixmap.loadFromData(img_bytes)
         QApplication.clipboard().setPixmap(self.__copied_pixmap)
@@ -1176,11 +1398,7 @@ class ImageViewerWidget(QWidget):
     def copyImageToClipboard(self):
         """copy displayed image to clipboard"""
         print("copying image")
-        self.browser.page().runJavaScript(IMAGEVIEWER_IMG_EXTRACT_JS+"""
-        var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
-		var imgFilter = document.getElementById("filterPane").style.backdropFilter;
-		var imgBytes = extractImageBytes(imgElement, imgFilter)
-		imgBytes""", self._copy_image_callback)
+        self.browser.page().runJavaScript(IMAGEVIEWER_BYTES_EXTRACT_JS, self._copy_image_callback)
         # if self.path_ptr:
         #     self.__copied_pixmap = QPixmap(self.path_ptr)
         #     QApplication.clipboard().setPixmap(self.__copied_pixmap)
@@ -1266,6 +1484,7 @@ class ImageViewerWidget(QWidget):
 
     def toggleAutoSave(self, state: int):
         """toggle auto save state of the image viewer"""
+        print(state)
         if state == 2: 
             print("ImageViewerWidget.setAutoSave(True)")
             self.setAutoSave(True)
@@ -1288,6 +1507,7 @@ class ImageViewerWidget(QWidget):
         self.svg_data = None
         path = os.path.expanduser(path)
         self.file_watcher.addPath(path)
+        self.metadata_panel.update(path)
         self.path_ptr = path
         filename_without_ext = str(Path(path).stem)
         isdir = os.path.isdir(path)
@@ -1406,7 +1626,9 @@ def test_imageviewer():
 
     try: openpath = sys.argv[1]
     except IndexError:
-        openpath = FigD.icon("system/imageviewer/lenna.png") # openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+        # openpath = "~/Pictures/atharva.jpg"
+        openpath = FigD.icon("system/imageviewer/lenna.png") 
+		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     imageviewer.open(openpath)
     CtrlB = FigDShortcut(
 		QKeySequence("Ctrl+B"), imageviewer, 

@@ -138,7 +138,7 @@ class AnimatedToggle(Toggle):
 
         self._pulse_unchecked_animation = QBrush(QColor(pulse_unchecked_color))
         pulse_checked_color = QColor(pulse_checked_color).lighter()
-        pulse_checked_color.setAlphaF(0.7)
+        pulse_checked_color.setAlphaF(0.6)
         print(f"pulse checked color: {pulse_checked_color.name()}")
         self._pulse_checked_animation = QBrush(pulse_checked_color)
 

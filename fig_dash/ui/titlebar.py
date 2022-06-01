@@ -690,11 +690,11 @@ class WindowTitleBar(QToolBar):
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
         print(f"\x1b[33;1mwhere:\x1b[0m {where}")
-        self.background = background
         self.callbacks = callbacks
+        self.background = background
         # set icon size and movability.
-        self.setIconSize(QSize(20,20))
         self.setMovable(False)
+        self.setIconSize(QSize(20,20))
         # close window
         self.closeBtn = TitleBarCloseBtn(
             callback=self.callback if parent is None else parent.hide
@@ -706,9 +706,8 @@ class WindowTitleBar(QToolBar):
         # maximize button
         self.maximizeBtn = TitleBarMaximizeBtn(callback=self.maximize)
         self.printBtn = self.initTitleBtn(
-            "titlebar/print.svg", 
+            "titlebar/print.svg", style="c",
             tip="print the webpage (as PDF).",
-            style="c",
             # callback=self.callback if parent is None else parent.tabs.printPage
         ) 
         if "printBtn" not in callbacks:
@@ -727,14 +726,8 @@ class WindowTitleBar(QToolBar):
         )
         if "saveSourceBtn" not in callbacks:
             self.saveSourceBtn.hide()
-        self.zoomInBtn = self.initTitleBtn(
-            "titlebar/zoom_in.svg", 
-            tip="zoom in", style="r",
-        )
-        self.findBtn = self.initTitleBtn(
-            "titlebar/find_in_page.svg", 
-            tip="find in page", style="c",
-        )
+        self.zoomInBtn = self.initTitleBtn("titlebar/zoom_in.svg", tip="zoom in", style="r")
+        self.findBtn = self.initTitleBtn("titlebar/find_in_page.svg", tip="find in page", style="c")
         if "findBtn" not in callbacks: 
             self.findBtn.hide()
         self.devToolsBtn = self.initTitleBtn(
@@ -745,9 +738,8 @@ class WindowTitleBar(QToolBar):
         if "devToolsBtn" not in callbacks: 
             self.devToolsBtn.hide()
         self.zoomOutBtn = self.initTitleBtn(
-            "titlebar/zoom_out.svg", 
-            tip="zoom out", 
-            style="l" if callbacks=={} else "c",
+            "titlebar/zoom_out.svg", tip="zoom out", 
+            style="l" if "viewSourceBtn" not in callbacks else "c"
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -799,16 +791,18 @@ class WindowTitleBar(QToolBar):
             /* #34b4eb; #39a4e7; */
         }""").render(BACKGROUND=background))
         sliderHandleColor = extractSliderColor(self.background, where=where)
+        self.sliderHandleColor = sliderHandleColor
         self.zoomSlider.connectLabel(self.zoomLabel)
+
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(0, 0, 0, 0))
         palette.setColor(QPalette.Button, QColor(sliderHandleColor))
         palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
+        
         self.zoomSlider.setPalette(palette)
         # self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
         # auto save toggle button.
-        self.sliderHandleColor = sliderHandleColor
         self.autoSaveToggle = AnimatedToggle(
             checked_color=sliderHandleColor,
             pulse_checked_color=sliderHandleColor,
@@ -900,6 +894,7 @@ class WindowTitleBar(QToolBar):
                 font-family: "Be Vietnam Pro";
                 background: transparent;
             }""")
+            self.callbacks["autoSave"](state)
         elif state == 0:
             self.autoSaveIcon.setIcon(FigD.Icon("widget/weather/save.svg"))
             self.autoSaveIcon.setStyleSheet("""
@@ -910,7 +905,7 @@ class WindowTitleBar(QToolBar):
                 font-family: "Be Vietnam Pro";
                 background: transparent;
             }""")
-        self.callbacks["autoSave"]
+            self.callbacks["autoSave"](state)
 
     def setAnimatedTitle(self, title: str, timing: int=100):
         if self.title_widget is None:

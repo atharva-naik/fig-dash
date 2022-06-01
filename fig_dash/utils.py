@@ -1,5 +1,6 @@
 print("fig_dash::utils")
 import os
+from PIL import Image
 from PyQt5.Qt import PYQT_VERSION_STR
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import Qt, QEventLoop, QTimer, QT_VERSION_STR
@@ -124,3 +125,57 @@ def brightenRGB(rgb: Tuple[int,int,int], ratio: float) -> Tuple[int,int,int]:
     b = rgb[2]
 
     return rgb 
+
+def extractSliderColor(gradient: str, where="back") -> str:
+    """Extract the first or last color from a qgradient stylesheet string.
+
+    Args:
+        gradient (str): qgradient stylesheet string.
+        where (str, optional): Whether the first stop or last stop has to be extacted. 
+        Defaults to "back".
+
+    Returns:
+        str: extracted color as hex string.
+    """
+    if ("qlineargradient" in gradient or "qconicalgradient" in gradient) and (where=="back"):
+        sliderColor = gradient.split(":")[-1].strip()
+        sliderColor = sliderColor.split()[-1]
+        sliderColor = sliderColor.split(")")[0]
+        sliderColor = sliderColor.strip()
+    elif ("qlineargradient" in gradient or "qconicalgradient" in gradient) and (where=="front"):
+        sliderColor = gradient.split("stop")[1]
+        sliderColor = sliderColor.split("#")[-1]
+        sliderColor = sliderColor.split(",")[0]
+        sliderColor = "#"+sliderColor.strip()
+    else: 
+        sliderColor = "white" 
+
+    return sliderColor
+
+def exif_color_space(img: Image):
+    exif = img._getexif() or {}
+    a = exif.get(0xA001)
+    b = exif.get(0x0001)
+    if a == 1 or b == 'R98':
+        return 'sRGB'
+    elif a == 2 or b == 'R03':
+        return 'Adobe RGB'
+    elif a is None and b is None:
+        return 'Empty EXIF tags ColorSpace and InteropIndex'
+    else:
+        return f'UNKNOWN color space ({a}, {b})'
+
+def has_transparency(img):
+    if img.info.get("transparency", None) is not None:
+        return True
+    if img.mode == "P":
+        transparent = img.info.get("transparency", -1)
+        for _, index in img.getcolors():
+            if index == transparent:
+                return True
+    elif img.mode == "RGBA":
+        extrema = img.getextrema()
+        if extrema[3][0] < 255:
+            return True
+
+    return False

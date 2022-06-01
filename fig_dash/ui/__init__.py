@@ -106,6 +106,14 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/cut.svg"),
         FigD.icon("textedit/cut_disabled.svg")
     ),
+    "Copy": (
+        FigD.icon("textedit/copy.svg"),
+        FigD.icon("textedit/copy_disabled.svg")
+    ),
+    "&Copy": (
+        FigD.icon("textedit/copy.svg"),
+        FigD.icon("textedit/copy_disabled.svg")
+    ),
     "&Copy	Ctrl+C": (
         FigD.icon("textedit/copy.svg"),
         FigD.icon("textedit/copy_disabled.svg")
@@ -353,8 +361,10 @@ class DashWidgetGroupBtn(QToolButton):
 
 class DashWidgetGroup(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None,
-                 name: str="Widget Group"):
+                 name: str="Widget Group", 
+                 accent_color: str="gray"):
         super(DashWidgetGroup, self).__init__(parent)
+        self.accent_color = accent_color
         layout = QVBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -402,6 +412,8 @@ class DashWidgetGroup(QWidget):
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
         }''')
+        self.groupLabelName = name
+
         return name
 
     def initBtnGroup(self, btn_args, orient="horizontal", 
@@ -438,14 +450,60 @@ class DashWidgetGroup(QWidget):
 
         return btnGroup
 
+    def setBackgroundColor(self, color):
+        palette = self.palette()
+        if isinstance(color, str): 
+            color = QColor(color)
+        elif isinstance(color, tuple): 
+            color = QColor(*color)
+        palette.setColor(QPalette.Window, color)
+        self.setAutoFillBackground(True)
+        self.setPalette(palette)
+
+    def enterEvent(self, event):
+        """on entering highlight the group's background and it's name"""
+        # print("\x1b[34;1menterEvent\x1b[0m")
+        self.setBackgroundColor((255,255,255,50))
+        self.groupLabelName.setStyleSheet("""
+        QLabel {
+            border: 0px;
+            border-right: 1px;
+            padding: 6px;
+            color: """+self.accent_color+""";
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: transparent;
+            padding-bottom: 0px;
+        }""")
+        super(DashWidgetGroup, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        """on exiting restore the group's default styling"""
+        # print("\x1b[34;1mleaveEvent\x1b[0m")
+        self.setBackgroundColor((255,255,255,0))
+        self.groupLabelName.setStyleSheet("""
+        QLabel {
+            border: 0px;
+            border-right: 1px;
+            padding: 6px;
+            color: #6e6e6e;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: transparent;
+            padding-bottom: 0px;
+        }""")
+        super(DashWidgetGroup, self).leaveEvent(event)
+
     def initBtn(self, **args):
         return DashWidgetGroupBtn(self, **args)
 
 # dash widget ribbon menu.
 class DashRibbonMenu(QWidget):
     def __init__(self, group_names: List[str]=[], 
-                 parent: Union[None, QWidget]=None):
+                 parent: Union[None, QWidget]=None,
+                 accent_color: str="gray"):
         super(DashRibbonMenu, self).__init__(parent)
+        self.accent_color = accent_color
         self.separators = []
         # create the scoll area.
         self.__scroll_area = QScrollArea()
@@ -462,11 +520,17 @@ class DashRibbonMenu(QWidget):
         self.__group_names = group_names
         self.__group_widget_map = {}
         for name in self.__group_names[:-1]:
-            self.__group_widget_map[name] = DashWidgetGroup(parent=parent, name=name)
+            self.__group_widget_map[name] = DashWidgetGroup(
+                parent=parent, name=name, 
+                accent_color=accent_color
+            )
             self.hboxlayout.addWidget(self.__group_widget_map[name])
             self.hboxlayout.addWidget(self.addSeparator())
         name = self.__group_names[-1]
-        self.__group_widget_map[name] = DashWidgetGroup(parent=parent, name=name)
+        self.__group_widget_map[name] = DashWidgetGroup(
+            parent=parent, name=name,
+            accent_color=accent_color,
+        )
         self.hboxlayout.addWidget(self.__group_widget_map[name])
         self.hboxlayout.addStretch(1)
         # create main widget and set it's layout.

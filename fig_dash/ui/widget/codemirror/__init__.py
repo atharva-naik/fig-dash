@@ -17,7 +17,9 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.ui import FigDAppContainer, wrapFigDWindow, styleContextMenu, DashWidgetGroup
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap, FigDSystemAppIconMap
 
-
+def blank(*args, **kwargs):
+    print("args:", args)
+    print("kwargs:", kwargs)
 class CodeMirrorBtn(QToolButton): 
     def __init__(self, parent: Union[None, QWidget]=None, **kwargs):
         super(CodeMirrorBtn, self).__init__(parent)
@@ -520,8 +522,10 @@ def test_codemirror():
     accent_color = FigDAccentColorMap["codeeditor"]
     cm = CodeMirrorEditor(accent_color=accent_color)
     # cm.show()
-    window = wrapFigDWindow(cm, title="Code Editor", 
-                            icon=icon, accent_color=accent_color)
+    window = wrapFigDWindow(cm, title="Code Editor", icon=icon, where="back",
+                            accent_color=accent_color, titlebar_callbacks={
+                                "autoSave": blank(),
+                            })
     window.show()
     s = time.time()
     cm.buildEditor(merge_mode=False)
@@ -535,8 +539,10 @@ def launch_codemirror(app):
     accent_color = FigDAccentColorMap["codeeditor"]
     cm = CodeMirrorEditor(accent_color=accent_color)
     cm.buildEditor(merge_mode=False)
-    window = wrapFigDWindow(cm, title="Code Editor", 
-                            icon=icon, accent_color=accent_color)
+    window = wrapFigDWindow(cm, title="Code Editor", icon=icon, where="back",
+                            accent_color=accent_color, titlebar_callbacks={
+                                "autoSave": blank(),
+                            })
     window.show()
 
 
