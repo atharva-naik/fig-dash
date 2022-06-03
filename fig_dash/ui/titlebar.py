@@ -10,7 +10,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette, QPainter
-from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel
+from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel, pyqtSignal
 from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea
 # title_bar_style = '''
 # QToolBar {
@@ -383,9 +383,21 @@ class TitleBarShortcutsBtn(QToolButton):
         self.titlebar = titlebar
         self.setIconSize(QSize(*size))
         self.setStyleSheet(window_title_btn_style)
+        self.clicked.connect(self.clickedEvent)
+
+    def clickedEvent(self):
+        p = QPoint(self.x(), self.y())
+        window =  self.titlebar.window
+        pos = self.mapToGlobal(p)
+        # create window shortcuts page.
+        window.shortcuts_pane = window.createShortcutsPane()
+        print(pos.x()-352, pos.y()+6)
+        window.shortcuts_pane.move(pos.x()-352, pos.y()+6)
+        window.shortcuts_pane.show()
 
     def contextMenuEvent(self, event):
         pos = event.globalPos()
+        print(pos)
         x, y = pos.x(), pos.y()
         window =  self.titlebar.window
         window.shortcuts_pane = window.createShortcutsPane()
@@ -393,7 +405,6 @@ class TitleBarShortcutsBtn(QToolButton):
         window.shortcuts_pane.show()
         # print(window.printShortcuts())
         # self.menu.popup(event.globalPos())
-
 class TitleBarMinimizeBtn(QToolButton):
     def __init__(self, callback=None, 
                  size: Tuple[int,int]=(22,22)):
@@ -641,6 +652,7 @@ class VolumeLabel(QWidget):
         self.label.setText(str(int(value)))
 
 class ZoomSlider(QSlider):
+    zoomChanged = pyqtSignal(float)
     def __init__(self):
         super(ZoomSlider, self).__init__(Qt.Horizontal)
         self.setFixedWidth(100)
@@ -657,12 +669,16 @@ class ZoomSlider(QSlider):
         self.label = label
         self.label.returnPressed.connect(self.setTabZoomFromLabel)
 
+    def setZoomValue(self, zoomValue: float):
+        self.label.setText(f"{zoomValue:.0f}")
+
     def setTabZoom(self):
         zoom = self.value()
         self.label.setText(f"{zoom}")
-        try: self.tabWidget.setTabZoom(zoom)
-        except: print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoom:\x1b[0m 'not connected to tabWidget'")
-
+        self.zoomChanged.emit(float(zoom))
+        if hasattr(self, "tabWidget") and hasattr(self.tabWidget, "setTabZoom"):
+            self.tabWidget.setTabZoom(zoom)
+        # print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoom:\x1b[0m 'not connected to tabWidget'")
     def setTabZoomFromLabel(self):
         zoom = self.label.text()
         try:
@@ -677,10 +693,11 @@ class ZoomSlider(QSlider):
         elif zoom > 500:
             zoom = 500
             self.label.setText("500")
-        try: self.tabWidget.setTabZoom(zoom)
-        except: print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoomFromLabel:\x1b[0m 'not connected to tabWidget'")
-
-
+        self.zoomChanged.emit(float(zoom))
+        if hasattr(self, "tabWidget") and hasattr(self.tabWidget, "setTabZoom"):
+            self.tabWidget.setTabZoom(zoom)
+        # print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoomFromLabel:\x1b[0m 'not connected to tabWidget'")
+# Titlebar for FigDWindow
 class WindowTitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None, 
                  background: str="#292929", title_widget=None, 
@@ -762,37 +779,18 @@ class WindowTitleBar(QToolBar):
         # zoom slider
         self.zoomSlider = ZoomSlider()
         # wrapper for maintaining background color.
-        zoomSliderWrapper = QWidget()
-        # zoomSliderWrapper.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        zoomSliderWrapper.setFixedHeight(27)
-        zoomSliderWrapper.setFixedWidth(100)
-        zoomSliderWrapper.setObjectName("ZoomSliderWrapper")
-        zoomSliderLayout = QVBoxLayout()
-        zoomSliderLayout.setSpacing(0)
-        zoomSliderLayout.setContentsMargins(0, 0, 0, 0)
-        zoomSliderWrapper.setStyleSheet(jinja2.Template("""
-        QWidget#ZoomSliderWrapper {
-            background: {{ BACKGROUND }};
-        }""").render(BACKGROUND=background))
-        zoomSliderLayout.addWidget(self.zoomSlider)
-        zoomSliderWrapper.setLayout(zoomSliderLayout)
-
-        self.zoomLabel = QLineEdit()
-        self.zoomLabel.setText("125")
-        self.zoomLabel.setFixedHeight(27)
-        self.zoomLabel.setStyleSheet(jinja2.Template("""
-        QLineEdit {
-            color: #fff; 
-            border: 0px;
-            padding: 1px;
-            font-size: 16px;
-            font-weight: bold;
-            background: {{ BACKGROUND }};
-            /* #34b4eb; #39a4e7; */
-        }""").render(BACKGROUND=background))
+        zoomSliderWrapper = self.initZoomSliderWrapper(
+            self.zoomSlider, background=background
+        )
+        # create zoom label.
+        self.zoomLabel = self.initZoomLabel(
+            background=background, where=where
+        )
+        # connect zoom slider and readout.
+        self.zoomSlider.connectLabel(self.zoomLabel)
+        # exctract slider handle color.
         sliderHandleColor = extractSliderColor(self.background, where=where)
         self.sliderHandleColor = sliderHandleColor
-        self.zoomSlider.connectLabel(self.zoomLabel)
 
         palette = QPalette()
         palette.setColor(QPalette.Window, QColor(0, 0, 0, 0))
@@ -878,6 +876,42 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.windowIcon)
         self.addWidget(self.initBlank(10))
         self.setMaximumHeight(30)
+
+    def initZoomLabel(self, background: str, where: str):
+        zoomLabel = QLineEdit()
+        zoomLabel.setText("125")
+        zoomLabel.setFixedHeight(27)
+        zoomLabel.setStyleSheet(jinja2.Template("""
+        QLineEdit {
+            color: #fff; 
+            border: 0px;
+            padding: 1px;
+            font-size: 16px;
+            font-weight: bold;
+            background: {{ BACKGROUND }};
+            /* #34b4eb; #39a4e7; */
+        }""").render(BACKGROUND=background))
+
+        return zoomLabel
+
+    def initZoomSliderWrapper(self, zoomSlider, background: str):
+        """create a wrapper around the zoomSlider"""
+        zoomSliderWrapper = QWidget()
+        # zoomSliderWrapper.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        zoomSliderWrapper.setFixedHeight(27)
+        zoomSliderWrapper.setFixedWidth(100)
+        zoomSliderWrapper.setObjectName("ZoomSliderWrapper")
+        zoomSliderLayout = QVBoxLayout()
+        zoomSliderLayout.setSpacing(0)
+        zoomSliderLayout.setContentsMargins(0, 0, 0, 0)
+        zoomSliderWrapper.setStyleSheet(jinja2.Template("""
+        QWidget#ZoomSliderWrapper {
+            background: {{ BACKGROUND }};
+        }""").render(BACKGROUND=background))
+        zoomSliderLayout.addWidget(zoomSlider)
+        zoomSliderWrapper.setLayout(zoomSliderLayout)
+
+        return zoomSliderWrapper
 
     def toggleAutoSaveIcon(self, state: int):
         """toggle the auto save icon color disabled: white, enabled: accent_color"""

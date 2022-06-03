@@ -7,7 +7,7 @@ from typing import *
 from pathlib import Path
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.titlebar import TitleBar, WindowTitleBar
+from fig_dash.ui.titlebar import TitleBar, WindowTitleBar, ZoomSlider
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
@@ -289,6 +289,7 @@ class DashWidgetGroupBtn(QToolButton):
         icon = args.get("icon")
         text = args.get("text")
         style = args.get("style")
+        stylesheet = args.get("stylesheet")
         self.is_text_button = True
         self.hover_response = "background"
         if icon:
@@ -309,7 +310,9 @@ class DashWidgetGroupBtn(QToolButton):
         # stylesheet attributes.
         background = args.get("background", "transparent")
         # print(font_size)
-        if self.hover_response == "background":
+        if stylesheet:
+            self.setStyleSheet(stylesheet)
+        elif self.hover_response == "background":
             self.setStyleSheet(jinja2.Template('''
             QToolButton {
                 color: #fff;
@@ -387,6 +390,11 @@ class DashWidgetGroup(QWidget):
         layout.addWidget(self.group)
         layout.addWidget(self.Label(name))
         self.setLayout(layout)
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
 
     def addWidget(self, *args, **kwargs):
         self.layout.addWidget(*args, **kwargs)
@@ -473,7 +481,6 @@ class DashWidgetGroup(QWidget):
             font-size: 16px;
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
-            padding-bottom: 0px;
         }""")
         super(DashWidgetGroup, self).enterEvent(event)
 
@@ -490,7 +497,6 @@ class DashWidgetGroup(QWidget):
             font-size: 16px;
             font-family: 'Be Vietnam Pro', sans-serif;
             background: transparent;
-            padding-bottom: 0px;
         }""")
         super(DashWidgetGroup, self).leaveEvent(event)
 
@@ -555,6 +561,42 @@ class DashRibbonMenu(QWidget):
         self.separators.append(sep)
 
         return sep
+
+    def contextMenuEvent(self, event):
+        self.contextMenu = QMenu()
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+        for group_name, widget_group in self.__group_widget_map.items():
+            if widget_group.isVisible():
+                self.contextMenu.addAction(
+                    FigD.Icon("widget/hide_group.svg"), 
+                    f"Hide {group_name.lower()} group",
+                    widget_group.hide,
+                )
+            else:
+                self.contextMenu.addAction(
+                    FigD.Icon("widget/show_group.svg"), 
+                    f"Show {group_name.lower()} group",
+                    widget_group.show,
+                )
+        self.contextMenu.addAction(
+            FigD.Icon("widget/show_group.svg"), 
+            f"Show all groups",
+            self.showAllGroups,
+        )
+        self.contextMenu.addAction(
+            FigD.Icon("widget/hide_group.svg"), 
+            "Hide all groups",
+            self.hideAllGroups,
+        )
+        self.contextMenu.popup(event.globalPos())
+
+    def hideAllGroups(self):
+        for widget_group in self.__group_widget_map.values():
+            widget_group.hide()
+
+    def showAllGroups(self):
+        for widget_group in self.__group_widget_map.values():
+            widget_group.show()
 
     def setFixedHeight(self, height: int):
         for sep in self.separators:
@@ -661,8 +703,14 @@ class FigDAppContainer(QApplication):
 
 
 class FigDTabWidget(QTabWidget):
-    def __init__(self):
-        super(FigDTabWidget, self).__init__()
+    def __init__(self, widget_factory=None, window_factory=None, 
+                parent: Union[None, QWidget]=None, 
+                widget_args={}, window_args={}):
+        super(FigDTabWidget, self).__init__(parent)
+        self.window_factory = window_factory
+        self.widget_factory = widget_factory
+        self.window_args = window_args
+        self.widget_args = widget_args 
         self.setStyleSheet("""
         QTabWidget {
             color: #fff;
@@ -730,10 +778,79 @@ class FigDTabWidget(QTabWidget):
             font-size: 17px;
             font-weight: bold;
         }""")
+        # set stuff.
+        self.setMovable(True)
+        self.setTabsClosable(True)
+        self.setDocumentMode(False)
         self.setTabBarAutoHide(True)
+        self.setElideMode(Qt.ElideRight)
+        self.setObjectName("FigDTabWidget")
+        # connect slots to signals.
+        self.currentChanged.connect(self.onTabChange)
+        self.tabCloseRequested.connect(self.removeTab)
+        # shortcuts
+        self.AddTab = FigDShortcut(QKeySequence.AddTab, self, "Open new tab")
+        self.AddTab.activated.connect(self.openTab)
+        self.NewWindow = FigDShortcut(QKeySequence.New, self, "Open new window")
+        self.NewWindow.activated.connect(self.openWindow)
+        self.CloseTab = FigDShortcut(QKeySequence.Close, self, "Close tab/window")
+        self.CloseTab.activated.connect(self.closeCurrentTab)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
+    def onTabChange(self):
+        widget = self.currentWidget()
+        # if hasattr(widget, "signalZoom"):
+        #     widget.signalZoom()
+        pass
 
+    def connectTitleBar(self, titlebar):
+        self.titlebar = titlebar
+
+    def closeCurrentTab(self):
+        i = self.currentIndex()
+        if i == 0: 
+            QApplication.activeWindow().close()
+        else: self.removeTab(i)
+
+    def changeCurrentTabTitle(self, title: str):
+        i = self.currentIndex()
+        print(title)
+        self.setTabText(i, title)
+
+    def changeCurrentTabIcon(self, icon: str):
+        i = self.currentIndex()
+        self.setTabIcon(i, QIcon(icon))
+
+    def openTab(self):
+        # print(f"self.widget_factory: {self.widget_factory}")
+        if self.widget_factory is None: return
+        widget = self.widget_factory(**self.widget_args)
+        if hasattr(widget, "changeTabTitle"):
+            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
+        if hasattr(widget, "changeTabIcon"):
+            widget.changeTabTitle.connect(self.changeCurrentTabIcon)
+        if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
+            widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
+        # print(widget)
+        self.addTab(widget, FigD.Icon("system/fileviewer/new_tab_icon.svg"), "Home")
+
+    def openWindow(self):
+        if self.window_factory is None: return
+        window = self.window_factory(**self.window_args)
+        window.show()
+
+        return window
+
+    def changeZoom(self, zoomValue: float):
+        """React to change in zoom value of the zoom slider.
+        Args:
+            zoomValue (float): the zoom value
+        """
+        if hasattr(self.currentWidget(), "changeZoom"):
+            # print(f"{self.currentWidget()}.changeZoom({zoomValue})")
+            self.currentWidget().changeZoom(zoomValue)
+
+# FigD window object.
 class FigDWindow(QMainWindow):
     def __init__(self, widget, **args):
         # self.layout.insertWidget(0, titlebar)
@@ -912,7 +1029,6 @@ def wrapFigDWindow(widget: QWidget, **args):
     )
     # arguments.
     icon = args.get("icon")
-    name = args.get("name", "-")
     title = args.get("title", "")
     width = args.get("width", 960)
     height = args.get("height", 800)
@@ -929,6 +1045,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         title_widget=args.get("title_widget"),
         where=_where,
     )
+    tab_icon = args.get("tab_icon", "icon.svg")
+    tab_title = args.get("tab_title", "New tab")
     if animated: titlebar.setAnimatedTitle(title)
     else: titlebar.setTitle(title)
     # menu many not exist.
@@ -1016,8 +1134,21 @@ def wrapFigDWindow(widget: QWidget, **args):
     # build layout.
     layout.addWidget(titlebar)
     if add_tabs:
-        tabwidget = FigDTabWidget()
-        tabwidget.addTab(widget, name)
+        tabwidget = FigDTabWidget(
+            widget_args=args.get("widget_args", {}),
+            window_args=args.get("window_args", {}),
+            widget_factory=args.get("widget_factory"),
+            window_factory=args.get("window_factory"),
+        )
+        tabwidget.connectTitleBar(titlebar)
+        # print(f"tab_icon: {tab_icon}")
+        if hasattr(widget, "changeTabTitle"):
+            widget.changeTabTitle.connect(tabwidget.changeCurrentTabTitle)
+        if hasattr(widget, "changeTabIcon"):
+            widget.changeTabTitle.connect(tabwidget.changeCurrentTabIcon)
+        if hasattr(widget, "zoomChanged") and hasattr(tabwidget, "titlebar"):
+            widget.zoomChanged.connect(titlebar.zoomSlider.setZoomValue)
+        tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
         layout.addWidget(tabwidget)
     else:
         layout.addWidget(widget)
@@ -1027,8 +1158,17 @@ def wrapFigDWindow(widget: QWidget, **args):
     centralWidget.setLayout(layout)
 
     window = FigDWindow(widget=centralWidget, **args)
-    window.appName = name
+    window.appName = title
     window.connectTitleBar(titlebar)
+    # changeZoom function may not exist.
+    try:
+        zoomSlider = titlebar.zoomSlider
+        # react to change in zoom acc. to the slider/label.
+        if add_tabs:
+            zoomSlider.zoomChanged.connect(tabwidget.changeZoom)
+        else:
+            zoomSlider.zoomChanged.connect(widget.changeZoom)
+    except Exception as e: print(e)
     # menu many not exist.
     try:
         window.CtrlShiftM = FigDShortcut(

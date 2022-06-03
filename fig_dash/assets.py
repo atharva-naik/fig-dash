@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+'''Asset management for FigD'''
 print("fig_dash::ui::assets")
-'''Asset management for ScriptO'''
 import os
 import jinja2
+import logging
+import coloredlogs
 from pathlib import Path
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QIcon, QFont
@@ -18,6 +20,18 @@ class AssetManager:
         self.ResourceUrl = QUrl.fromLocalFile(self.ResourcePath)
         self.dir = resource_dir
         self.reset(resource_dir)
+        # initialize logger and allow coloredlogs.
+        self.logger = logging.getLogger(__name__)
+        coloredlogs.install(level="debug", logger=self.logger)
+
+    def info(self, *args, **kwargs):
+        self.logger.info(*args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        self.logger.debug(*args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self.logger.error(*args, **kwargs)
 
     def reset(self, resource_dir: str):
         self.icon_dir = os.path.join(resource_dir, "icons")
@@ -123,7 +137,7 @@ class AssetManager:
         try: os.remove(tempPath)
         except FileNotFoundError:
             pass
-            # print(f"FileNotFoundError: {tempPath}")
+
     def Icon(self, name:str) -> QIcon :
         '''return QIcon'''
         icon_path = self.icon(name)

@@ -9,5 +9,5 @@ requests
 pyautogui
 PyQtChart
 qtwidgets
-BlurWindow
+coloredlogs
 PyQtWebEngine

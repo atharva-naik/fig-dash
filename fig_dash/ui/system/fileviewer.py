@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::system::fileviewer")
 # the fig-dash fileviewer is known as the "orchard".
+print("fig_dash::ui::system::fileviewer")
 import os
 import time
 import jinja2
@@ -16,7 +16,7 @@ from fig_dash.ui.browser import DebugWebView
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut
+from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut, DashRibbonMenu
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
@@ -34,7 +34,7 @@ from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, Q
 # linkedin
 # https://www.linkedin.com/sharing/share-offsite/?url={enc_url}
 def blank(*args, **kwargs):
-    print(args, kwargs)
+    FigD.debug(args, kwargs)
 FILE_VIEWER_CACHE_PATH = os.path.expanduser("~/.cache/fig_dash/fileviewer/thumbnails")
 class EventHandler(QObject):
     def __init__(self, fileviewer):
@@ -43,18 +43,15 @@ class EventHandler(QObject):
 
     @pyqtSlot(str)
     def sendClickedItem(self, path: str):
-        # print(f"selected path {path}")
         self.fileviewer.updateSelection(path)
 
     @pyqtSlot(str)
     def sendOpenRequest(self, path: str):
-        # print(f"opened path {path}")
         self.fileviewer.open(path)
 
     @pyqtSlot(str)
     def triggerContextMenu(self, path: str):
-        # self.fileviewer.webview.menu = self.fileviewer.webview.itemMenu
-        print(f"context menu triggered for {path}")
+        FigD.debug(f"context menu triggered for {path}")
 
     @pyqtSlot(str, str)
     def triggerRename(self, id: str, new_name: str):
@@ -151,9 +148,9 @@ class PyMuPdfThumbnailer:
             pixmap = thumbnail_page.get_pixmap()
             pixmap.save(save_path)
         except fitz.fitz.EmptyFileError as e:
-            print(f"\x1b[31;1mui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.EmptyFileError\x1b[0m", e)
+            FigD.error(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.EmptyFileError", e)
         except fitz.fitz.FileNotFoundError as e:
-            print(f"\x1b[31;1mui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.FileNotFoundError\x1b[0m", e)
+            FigD.error(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.FileNotFoundError", e)
 
 # File viewer thumbnailing backend worker.
 class FileViewerThumbnailer(QObject):
@@ -186,7 +183,7 @@ class FileViewerThumbnailer(QObject):
         import fitz
         import fitz.fitz
         if self.__file_path is None:
-            print("file path not set")
+            FigD.debug("file path not set")
             return
         path = self.__file_path
         path = os.path.expanduser(path)
@@ -252,9 +249,9 @@ class FileViewerStatus(QWidget):
         self.layout.addWidget(self.shortcut)
         # set layout and style
         self.setLayout(self.layout)
-        self.setObjectName("CodeMirrorStatus")
+        self.setObjectName("FileViewerStatus")
         self.setStyleSheet('''
-        QWidget#CodeMirrorStatus {
+        QWidget#FileViewerStatus {
             color: #fff;
             border: 0px;
             font-family: 'Be Vietnam Pro', sans-serif;
@@ -262,7 +259,7 @@ class FileViewerStatus(QWidget):
             background: transparent;
         }
         QLabel {
-            color: #6e6e6e;
+            color: #69bfee;
             border: 0px;
             font-family: 'Be Vietnam Pro', sans-serif;
             font-size: 16px;
@@ -286,10 +283,10 @@ class FileViewerStatus(QWidget):
         shortcut = data.get("shortcut", False)
         symbolic = data.get("symbolic", False)
         if symbolic:
-            print("is a symlink")
+            FigD.debug("is a symlink")
             self.symlink.setIcon(FigD.Icon("system/fileviewer/symlink.svg"))
         if shortcut:
-            print("is a shortcut")
+            FigD.debug("is a shortcut")
             self.shortcut.setIcon(FigD.Icon("system/fileviewer/shortcut.png"))
 
         self.selected.setText(f" selected: {name}")
@@ -325,7 +322,8 @@ class FileViewerStatus(QWidget):
         btn.setStyleSheet("background: #292929; color: #fff;")
         btn.setStyleSheet('''
         QToolButton {
-            color: #6e6e6e;
+            color: #69bfee;
+            /* color: #6e6e6e; */
             border: 0px;
             font-family: 'Be Vietnam Pro', sans-serif;
             font-size: 16px;
@@ -380,7 +378,7 @@ class FileViewerWebView(DebugWebView):
         self.itemMenu.addSeparator()
         self.itemMenu.addAction("Revert to Previous Version...")
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/compress.svg"), "Compress...")
-        self.itemMenu.addAction(FigD.Icon("system/fileviewer/email.svg"), "Email...")
+        self.itemMenu.addAction(FigD.Icon("system/fileviewer/email_menu.svg"), "Email...")
         self.itemMenu.addSeparator()
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties") 
         self.itemMenu = styleContextMenu(
@@ -398,12 +396,10 @@ class FileViewerWebView(DebugWebView):
     def contextMenuEvent(self, event):
         '''show the orchared context menu (not specific to a selected item)'''
         data = self.page().contextMenuData()
-        print(data)
-        # print(dir(event))
+        FigD.debug(data)
         if data.mediaType() == 0:
             self.orchardMenu.popup(event.globalPos())
         elif data.mediaType() == 1:
-            # print(self.widget.selected_item)
             self.itemMenu = self.initItemMenu()
             self.itemMenu.popup(event.globalPos())
 
@@ -431,7 +427,6 @@ document.execCommand('selectAll', false, null);
 document.getSelection().collapseToEnd();
 selectedItemSpan.addEventListener('keypress', handleItemRename);
 '''        
-        # print(code)
         self.page().runJavaScript(code)
 
     def createItem(self, path: str, name: str, 
@@ -511,7 +506,6 @@ class FileViewerBtn(QToolButton):
         self.setStatusTip(tip)
         # stylesheet attributes.
         background = args.get("background", "transparent")
-        # print(font_size)
         if self.hover_response == "background":
             self.setStyleSheet(
                 file_viewer_btn_style.render(
@@ -666,7 +660,6 @@ class FileViewerGroup(QWidget):
         elif orient == "vertical":
             layout = QVBoxLayout()
         if spacing is not None:
-            # print("setting spacing")
             layout.setSpacing(spacing)
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
@@ -719,7 +712,6 @@ class FileViewerGroup(QWidget):
 
     def enterEvent(self, event):
         """on entering highlight the group's background and it's name"""
-        # print("\x1b[34;1menterEvent\x1b[0m")
         self.setBackgroundColor((255,255,255,50))
         self.groupNameLabel.setStyleSheet("""
         QLabel {
@@ -736,7 +728,6 @@ class FileViewerGroup(QWidget):
 
     def leaveEvent(self, event):
         """on exiting restore the group's default styling"""
-        # print("\x1b[34;1mleaveEvent\x1b[0m")
         self.setBackgroundColor((255,255,255,0))
         self.groupNameLabel.setStyleSheet("""
         QLabel {
@@ -1156,14 +1147,14 @@ class XdgOpenDropdown(QComboBox):
     def getAppsList(self, mimetype: str):
         '''get list of apps available for a given mimetype.'''
         apps = self.mime_to_apps(mimetype)
-        # print(mimetype)
+        FigD.debug(mimetype)
         self.desktop_files = []
         app_names = []
         for app in apps:
             desktop_file = DesktopFile(app)
             # desktop_file.read()
             self.desktop_files.append(desktop_file)
-            # print(desktop_file)
+            FigD.debug(desktop_file)
             app_names.append(desktop_file.app_name)
 
         return app_names
@@ -1190,9 +1181,7 @@ class XdgOpenDropdown(QComboBox):
 
     def selChanged(self, index: int):
         '''selected application (for xdg-open) is changed.'''
-        # print(index, self.apps)
         appSelected = self.apps[index]
-        # print(appSelected)
 
 class FileViewerOpenGroup(FileViewerGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
@@ -1640,16 +1629,7 @@ class FileViewerMenu(QWidget):
         self.layout.addStretch(1)
         self.setLayout(self.layout)
         self.setAttribute(Qt.WA_TranslucentBackground)
-    # def addSeparator(self, width: Union[None, int]=None):
-    #     sep = QFrame()
-    #     sep.setFrameShape(QFrame.VLine)
-    #     sep.setFrameShadow(QFrame.Sunken)
-    #     sep.setStyleSheet('''background: #292929;''')
-    #     sep.setLineWidth(1)
-    #     # sep.setMaximumHeight(90)
-    #     if width: 
-    #         sep.setFixedWidth(width)
-    #     return sep
+
     def addSeparator(self):
         sep = QFrame()
         sep.setFrameShape(QFrame.VLine)
@@ -1661,7 +1641,7 @@ class FileViewerMenu(QWidget):
         return sep
 
     def toggle(self):
-        print("\x1b[34;1mtoggling menu\x1b[0m")
+        FigD.debug("\x1b[34;1mtoggling menu\x1b[0m")
         if self.scroll_area_ptr:
             self.scroll_area_ptr.toggle()
 
@@ -1690,6 +1670,100 @@ def wrapInScrollArea(widget):
 
     return scrollArea
 
+# fileviewer's ribbon menu.
+# FILEVIEWER_BTN_STYLESHEET = """
+# QToolButton {
+#     color: #fff;
+#     border: 0px;
+#     font-size: 12px;
+#     text-align: center;
+#     background: transparent;
+# }
+# QToolButton:hover {
+#     border: 1px solid #bf3636;
+#     background: #a11f53aa;
+#     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+# }"""
+class FileViewerMenuNew(DashRibbonMenu):
+    def __init__(self, accent_color: str="blue", 
+                 parent: Union[None, QWidget]=None):
+        super(FileViewerMenuNew, self).__init__(
+            parent=parent, group_names=[
+                "File", "Edit", "View", 
+                "Open", "Share", "Misc"
+            ], accent_color=accent_color,
+        )
+        # self.addWidgetGroup("File", [
+        #     ()
+        # ])
+        self.xdgOpenWidget = self.initXdgOpenWidget()
+        self.addWidgetGroup("Open", [
+            (self.xdgOpenWidget, {}),
+            ([
+                {
+                    "icon": "system/fileviewer/browser.svg",
+                    "text": "Open with\nterminal",
+                    "tip": "Open selected item in terminal",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                },
+                {
+                    "icon": "system/fileviewer/terminal.svg",
+                    "text": "Open in\nbrowser",
+                    "tip": "Open selected item in webview",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                }
+            ], {
+               "alignment_flag": Qt.AlignCenter, 
+               "orient": "horizontal",
+            })
+        ])
+        self.browserBtn = self.widgetGroupAt("Open").memberAt(1).btns[0]
+        self.terminalBtn = self.widgetGroupAt("Open").memberAt(1).btns[1]
+
+    def updateMimeBtn(self, mimetype: str, 
+                      icon: QIcon, path: str):
+        self.mimeBtn.setText(mimetype)
+        self.mimeBtn.setIcon(QIcon(icon))
+        self.mimeBtn.setIconSize(QSize(35,35))
+        self.appDropdown.populate(mimetype)
+        self.mimeBtn.clicked.connect(lambda: self.appDropdown.open(path))
+
+    def initXdgOpenWidget(self):
+        '''change xdg-open settings.'''
+        xdgOpenWidget = QWidget() 
+        xdgOpenLayout = QVBoxLayout()
+        xdgOpenLayout.setContentsMargins(0, 0, 0, 0)
+        xdgOpenLayout.setSpacing(0)
+        tip = "open selected file with selected app"
+        icon = os.path.join(
+            "system/fileviewer", 
+            "file.svg"
+        )
+        self.mimeBtn = QToolButton()
+        self.mimeBtn.setToolTip(tip)
+        self.mimeBtn.setStatusTip(tip)
+        self.mimeBtn.setText("text/plain")
+        self.mimeBtn.setIcon(FigD.Icon(icon))
+        self.mimeBtn.setIconSize(QSize(35,35))
+        self.mimeBtn.setStyleSheet(file_viewer_btn_style.render(
+            background="transparent"
+        ))
+        self.mimeBtn.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        # app selection dropdown.
+        self.appDropdown = XdgOpenDropdown("text/plain")
+        self.appDropdown.setFixedWidth(130)
+        self.appDropdown.setFixedHeight(24)
+        xdgOpenLayout.addWidget(self.mimeBtn, 0, Qt.AlignCenter)
+        xdgOpenLayout.addWidget(self.appDropdown)
+        xdgOpenWidget.setLayout(xdgOpenLayout)
+
+        return xdgOpenWidget
+
+# folder bar buttons.
 class FileViewerFolderBar(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FileViewerFolderBar, self).__init__(parent)
@@ -1759,7 +1833,7 @@ class FileViewerFolderBar(QWidget):
         self.forwardBtn.setFixedHeight(24)
 
     def toggle(self):
-        print("toggling folderbar visibility")
+        FigD.debug("toggling folderbar visibility")
         if self.isVisible():
             self.hide()
         else: self.show()
@@ -1778,10 +1852,11 @@ class FileViewerFolderBar(QWidget):
     def clear(self):
         '''clear all the folder buttons on the folder bar.'''
         for i in reversed(range(len(self))): # print(i)
-            try: self.layout.itemAt(i).widget().setParent(None)
-            except AttributeError as e: 
-                print(f"fileviewer.FileViewerFolderBar.clear({i}):", e)
-
+            item = self.layout.itemAt(i)
+            if item is not None:
+                item.widget().setParent(None)
+            else: pass
+    # FigD.debug(f"fileviewer.FileViewerFolderBar.clear({i}):", e)
     def getSubPaths(self, path):
         sub_paths = []
         path = Path(path)
@@ -1985,7 +2060,7 @@ class FileViewerSideBar(QWidget):
         self.setLayout(self.layout)
 
     def toggle(self):
-        print("toggling folderbar visibility")
+        FigD.debug("toggling folderbar visibility")
         if self.isVisible():
             self.hide()
         else: self.show()
@@ -2053,6 +2128,9 @@ class FileViewerKeyPressSearch(QLineEdit):
 
 
 class FileViewerWidget(QMainWindow):
+    # changeTabIcon = pyqtSignal(str)
+    zoomChanged = pyqtSignal(float)
+    changeTabTitle = pyqtSignal(str)
     def __init__(self, parent: Union[None, QWidget]=None, 
                  logo: Union[None, str, QIcon]=None, 
                  dangle_folderbar: bool=False,
@@ -2066,15 +2144,18 @@ class FileViewerWidget(QMainWindow):
         self.layout.setSpacing(0)
         self.webview = FileViewerWebView(accent_color=accent_color)
         self.browser = self.webview
+        self.browser.zoomChanged.connect(self.signalZoom)
         self.zoom_factor = zoom_factor
         self.menu = FileViewerMenu()
+        self.menu1 = FileViewerMenuNew(accent_color=accent_color)
+        self.menu1.setFixedHeight(120)
         self.font_color = args.get("font_color", '#fff')
         # data
         # set logo.
         if isinstance(logo, QIcon):
             self.setWindowIcon(logo)
         elif isinstance(logo, str):
-            print("FileViewerWidget logo:", logo)
+            FigD.debug("FileViewerWidget logo:", logo)
             self.setWindowIcon(
                 FigD.Icon("system/fileviewer/logo.svg")
             )
@@ -2113,7 +2194,7 @@ class FileViewerWidget(QMainWindow):
         # statusbar.
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
-        self.clipboard = args.get("clipboard")
+        self.clipboard = QApplication.clipboard()
         # connect to browser buttom.
         browserBtn = self.menu.opengroup.browserBtn
         browserBtn.clicked.connect(self.openFileInWebView)
@@ -2151,7 +2232,7 @@ class FileViewerWidget(QMainWindow):
         fsbar_close_btn = QToolButton()
         fsbar_close_btn.setIcon(FigD.Icon("system/fileviewer/close.svg"))
         fsbar_close_btn.clicked.connect(fsbar_wrapper.hide)
-        fsbar_wrapper.setStyleSheet("background: red;")
+        fsbar_wrapper.setStyleSheet("background: transparent;")
         fsbar_wrapper.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         fsbar_layout = QHBoxLayout()
         fsbar_layout.setContentsMargins(0, 0, 0, 0)
@@ -2177,6 +2258,7 @@ class FileViewerWidget(QMainWindow):
         self.menuArea.setFixedHeight(130)
         self.menuArea.hide()
         self.layout.insertWidget(0, self.menuArea)
+        self.layout.insertWidget(0, self.menu1)
         # self.layout.addStretch(1)
 
         self.webview.splitter.insertWidget(0, self.sideArea)
@@ -2190,9 +2272,7 @@ class FileViewerWidget(QMainWindow):
         self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
         self.central_widget.setLayout(self.layout)
         self.setCentralWidget(self.central_widget)
-
         self.webview.urlChanged.connect(self.onUrlChange)
-        
         self.menu.connectWidget(self)
         self.folderbar.connectWidget(self)
         self.webview.connectWidget(self)
@@ -2214,6 +2294,13 @@ class FileViewerWidget(QMainWindow):
         else: 
             self.selected_item = None
             self.clearSelection()
+
+    def signalZoom(self, zoomValue: Union[float, None]=None):
+        if zoomValue is None:
+            zoomValue = self.browser.zoomFactor()
+        zoomValue = 100*zoomValue
+        self.zoomChanged.emit(zoomValue)
+        print(f"zoomChanged.emit({zoomValue})")
 
     def toggleHiddenFiles(self):
         if self.hidden_visible:
@@ -2265,7 +2352,7 @@ class FileViewerWidget(QMainWindow):
     def callXdgOpen(self, path: str):
         '''call xdg-open for the appropriate mimetype.'''
         mimetype = self.mime_database.mimeTypeForFile(path).name()
-        print(f"{path}: calling xdg-open for {mimetype} files")
+        FigD.debug(f"{path}: calling xdg-open for {mimetype} files")
         url = QUrl.fromLocalFile(path).toString()
         os.system(f'xdg-open "{url}"')
 
@@ -2308,7 +2395,6 @@ class FileViewerWidget(QMainWindow):
 
     def getIcon(self, path):
         name = self.icon_provider.icon(QFileInfo(path)).name()
-        # print(name)
         # paths where mimetype icons may be found.
         icon_theme_devices_path = "/usr/share/icons/breeze/devices/48"
         icon_theme_places_path = "/usr/share/icons/breeze/places/64"
@@ -2322,11 +2408,15 @@ class FileViewerWidget(QMainWindow):
 
         return path
 
+    def changeZoom(self, zoomValue: float):
+        print(f"changeZoom({zoomValue})")
+        self.browser.setZoomFactor(zoomValue/100)
+
     def errorDialog(self, msg):
         self.error_dialog = QErrorMessage()
         self.error_dialog.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.error_dialog.showMessage(msg)
-        # print(msg)
+        
     def createDialogue(self, item_type="file"):
         if item_type == "folder": 
             path = self.createFolder()
@@ -2348,7 +2438,7 @@ class FileViewerWidget(QMainWindow):
     def renameItem(self, id: str, new_name: str):
         parent = Path(id).parent
         new_name = os.path.join(parent, new_name)
-        print(f"renaming {id} to {new_name}")
+        FigD.debug(f"renaming {id} to {new_name}")
         os.rename(id, new_name)
 
     def createFile(self):
@@ -2358,7 +2448,7 @@ class FileViewerWidget(QMainWindow):
             path = os.path.join(self.folder, f"Untitled File {i}")
             if not os.path.exists(path): break
             else: i += 1
-        print(f"\x1b[32;1mcreated new file: {path}\x1b[0m")
+        FigD.debug(f"created new file: {path}")
         open(path, "w")
 
         return path
@@ -2376,7 +2466,7 @@ class FileViewerWidget(QMainWindow):
                 break
             except FileExistsError:
                 i += 1
-        print(f"\x1b[32;1mcreated new folder: {path}\x1b[0m")
+        FigD.debug(f"created new folder: {path}")
 
         return path
 
@@ -2387,7 +2477,7 @@ class FileViewerWidget(QMainWindow):
                 QWebEnginePage.ViewSource
             )
         except Exception as e: 
-            print("\x1b[33;1mui::system::fileviewer::FileViewerWidget.viewSource\x1b[0m", e)
+            FigD.error("ui::system::fileviewer::FileViewerWidget.viewSource", e)
 
     def createThumbnailWorker(self, path: str, thumb_size: int) -> QThread:
         s = time.time()
@@ -2421,16 +2511,19 @@ class FileViewerWidget(QMainWindow):
     #     """)
     #     # print(f"thumbnail for {path} @ {thumb_path}")
     def open(self, folder: str="~"):
+        from fig_dash.utils import collapseuser
         from fig_dash.ui.js.fileviewer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
         '''open a file/folder location.'''
         try:
-            print(self.dash_window)
+            FigD.debug(self.dash_window)
             i = self.dash_window.tabs.currentIndex()
             self.dash_window.tabs.setTabText(i, folder)
         except AttributeError:
-            print("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
+            FigD.error("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
         # expand user.
         folder = os.path.expanduser(folder) 
+        self.changeTabTitle.emit(Path(folder).name)
+        # self.changeTabIcon.emit(FigD.icon("system/fileviewer/new_tab_icon.svg"))
         self.file_watcher.addPath(folder)
         # call xdg-open if a file is clicked instead of a folder.
         if os.path.isfile(folder): 
@@ -2442,7 +2535,7 @@ class FileViewerWidget(QMainWindow):
         try:
             os.scandir(folder)
         except PermissionError as e:
-            print("\x1b[31;1mfileviewer.open\x1b[0m", e)
+            FigD.error("fileviewer.open", e)
             self.errorDialog(str(e))
             return
         self.folder = Path(folder)
@@ -2519,7 +2612,6 @@ class FileViewerWidget(QMainWindow):
                     FILE_VIEWER_CACHE_PATH, 
                     filename + ".png",
                 )
-                # print(cached_file_path)
                 if os.path.exists(cached_file_path):
                     icon_paths.append(QUrl.fromLocalFile(cached_file_path).toString())
                 else: 
@@ -2570,7 +2662,7 @@ class FileViewerWidget(QMainWindow):
                     continue
                 path = "/usr/share/icons/breeze/mimetypes/32/text-plain.svg"
                 icon_paths.append(QUrl.fromLocalFile(path).toString())    
-        print(self.webview.url()) 
+        FigD.debug("url: "+self.webview.url().toString()) 
         # def chunk_string(string, k=12):
         #     result = []
         #     for i in range(0, len(string), k):
@@ -2585,7 +2677,7 @@ class FileViewerWidget(QMainWindow):
                 listed.append(rec)
 
             return listed         
-        # print(icons)
+
         self.params = {
             "FOLDER": self.folder.name,
             "FONT_COLOR": self.font_color,
@@ -2611,20 +2703,22 @@ class FileViewerWidget(QMainWindow):
         s = time.time()
         for path in full_paths: 
             self.createThumbnailWorker(path=path, thumb_size=240)
-        print(f"\x1b[33;1m**created thumbnail workers in {time.time()-s}s**\x1b[0m")
+        FigD.debug(f"**created thumbnail workers in {time.time()-s}s**")
 
     def updateSelection(self, item):
         '''update widget state when currently selected item is changed'''
         self.selected_item = item
-        # print(os.path.splitext(item))
         _, file_ext = os.path.splitext(item)
         if file_ext == "":
             file_ext = ".ext"
-        # print(file_ext)
         icon = self.getIcon(item)
         mimetype = self.mime_database.mimeTypeForFile(item).name()
         self.menu.filegroup.updateExt(file_ext)
         self.menu.opengroup.updateMimeBtn(
+            mimetype=mimetype, 
+            icon=icon, path=item
+        )
+        self.menu1.updateMimeBtn(
             mimetype=mimetype, 
             icon=icon, path=item
         )
@@ -2667,7 +2761,6 @@ class FileViewerWidget(QMainWindow):
         )
 
     def keyPressEvent(self, event):
-        # print(event.key()) # print("opened keypress search")
         try:
             letter = chr(event.key())
             self.keypress_search.showPanel(
@@ -2676,9 +2769,8 @@ class FileViewerWidget(QMainWindow):
                 h=self.height(),
             )
             self.keypress_search.setText(letter.lower())
-            # print("changed focus")
         except (TypeError, ValueError) as e:
-            print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
+            FigD.error("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
             # fail silently.
         super(FileViewerWidget, self).keyPressEvent(event)
 
@@ -2691,29 +2783,28 @@ class FileViewerWidget(QMainWindow):
         if self.clipboard and self.selected_item:
             url = QUrl.fromLocalFile(self.selected_item).toString()
             self.clipboard.setText(url)
-            print(f"copied {url} to clipboard")  
+            FigD.debug(f"copied {url} to clipboard")  
 
     def copyStemToClipboard(self):
         if self.clipboard and self.selected_item:
             stem = Path(self.selected_item).stem
             self.clipboard.setText(stem)
-            print(f"copied {stem} to clipboard")    
+            FigD.debug(f"copied {stem} to clipboard")    
 
     def copyPathToClipboard(self):
         if self.clipboard and self.selected_item:
             self.clipboard.setText(self.selected_item)
-            print(f"copied {self.selected_item} to clipboard")
+            FigD.debug(f"copied {self.selected_item} to clipboard")
 
     def copyNameToClipboard(self):
         if self.clipboard and self.selected_item:
             name = Path(self.selected_item).name
             self.clipboard.setText(name)
-            print(f"copied {name} to clipboard")            
+            FigD.debug(f"copied {name} to clipboard")            
 
     @pyqtSlot()
     def selectAll(self):
         '''select all items.'''
-        # print("selected all items")
         self.webview.page().runJavaScript('selectAllItems();')
 
     def reload(self):
@@ -2741,14 +2832,14 @@ class FileViewerWidget(QMainWindow):
     def copyToClipboard(self, text):
         if self.clipboard:
             self.clipboard.setText(text)
-            print(f"copied {text} to clipboard")
+            FigD.debug(f"copied {text} to clipboard")
 
     def saveScreenshot(self, path):
         with open(path, "w") as f:
             f.write(self.viewer_html)
 
     def connectWindow(self, window):
-        print("FileViewerWidget: \x1b[32;1mconnected to DashWindow\x1b[0m")
+        FigD.debug("FileViewerWidget: connected to DashWindow")
         self.dash_window = window
 
     def wrapInScrollArea(self, widget):
@@ -2765,17 +2856,17 @@ class FileViewerWidget(QMainWindow):
 
         return scrollArea
 
+def fileviewer_factory(**args):
+    path = os.path.expanduser(args.get("path", "~"))
+    fileviewer = FileViewerWidget(**args)
+    fileviewer.open(path)
+
+    return fileviewer
 
 def test_fileviewer():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
-    # fileviewer = FileViewerWidget(
-    #     clipboard=app.clipboard(),
-    #     background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-    #     logo="system/fileviewer/logo.svg",
-    #     font_color="#fff", parentless=True,
-    # )
     # fileviewer.setStyleSheet("background: tranparent; border: 0px;")
     # QFontDatabase.addApplicationFont(
     #     FigD.font("BeVietnamPro-Regular.ttf")
@@ -2796,41 +2887,27 @@ def test_fileviewer():
     # get accent color & icon.
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
-    fileviewer = FileViewerWidget(
-        clipboard=QApplication.instance().clipboard(),
-        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True, dangle_folderbar=True,
-        accent_color=accent_color,
-    )
+    widget_args = {
+        "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
+        "font_color": "#fff", "parentless": True, "dangle_folderbar": True,
+        "accent_color": accent_color,
+    }
     # open path.
     try: 
         path = os.path.expanduser(sys.argv[1])
     except IndexError: 
         path = os.path.expanduser("~")
-    fileviewer.open(path)
-    window = wrapFigDWindow(fileviewer, icon=icon, width=800,
-                            height=600, accent_color=accent_color,
-                            name="fileviewer", titlebar_callbacks={
+    fileviewer = fileviewer_factory(path=path, **widget_args)
+    window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=600,
+                            accent_color=accent_color, tab_title="Home", 
+                            tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
+                            titlebar_callbacks={
                                 "viewSourceBtn": fileviewer.viewSource,
-                            }, title_widget=fileviewer.folderbar)
-                            #, title=f"fileviewer: {path}")
-    # spacer1 = QWidget()
-    # spacer1.setStyleSheet("background: transparent")
-    # spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    # spacer2 = QWidget()
-    # spacer2.setStyleSheet("background: transparent")
-    # spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    # window.statusBar().addWidget(spacer1)
-    # window.statusBar().addWidget(fileviewer.statusbar)
-    # window.statusBar().addWidget(spacer2)
-    # window.statusBar().setStyleSheet("""
-    # QStatusBar {
-    #     color: #4293d5;
-    #     border-radius: 20px;
-    #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-    # }""")
-    window = styleWindowStatusBar(window, widget=fileviewer, 
-                                  accent_color=accent_color)
+                            }, title_widget=fileviewer.folderbar, 
+                            widget_factory=fileviewer_factory, 
+                            widget_args=widget_args)
+
+    window = styleWindowStatusBar(window, widget=fileviewer)
     window.show()
     app.exec()
     # fileviewer.saveScreenshot("fileviewer.html")
@@ -2839,7 +2916,6 @@ def launch_fileviewer(app, path: Union[str, None]=None):
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
     fileviewer = FileViewerWidget(
-        clipboard=QApplication.instance().clipboard(),
         background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
         font_color="#fff", parentless=True, accent_color=accent_color
     )

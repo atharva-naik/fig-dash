@@ -781,8 +781,53 @@ class DevToolbarBtn(QToolButton):
         self.setIcon(self.inactive_icon)
         super(DevToolbarBtn, self).leaveEvent(event)
 
+# zoom factor object.
+class ZoomFactor:
+    '''browser zoom factor'''
+    def __init__(self, zoom_factor):
+        if zoom_factor > 5:
+            zoom_factor /= 100
+        zoom_factor = max(min(zoom_factor, 5), 0.25)
+        self.value = zoom_factor
 
+    def __str__(self):
+        return f"zoom: {self.value}"
+
+    def __repr__(self):
+        return f"zoom: {self.value}"
+
+    def __eq__(self, other):
+        return self.value == other.value 
+
+    def __lt__(self, other):
+        return self.value < other.value 
+
+    def __gt__(self, other):
+        return self.value > other.value 
+
+    def gt(self, zoom_factors):
+        for value in zoom_factors:
+            # print(f"{value.value} > {self.value}: {value > self}")
+            if value > self: 
+                return value
+        return value
+
+    def lt(self, zoom_factors):
+        for value in zoom_factors:
+            if value.value < self.value: 
+                return value
+        return value
+
+    def set(self, value):
+        self.value = value
+
+    def __call__(self):
+        return self.value
+
+# web view class with dev tools.
 class DebugWebView(QWebEngineView):
+    zoomChanged = pyqtSignal(float)
+    backgroundChanged = pyqtSignal(int, int, int)
     def __init__(self, parent=None,
                  zoomFactor=1.25, 
                  dev_tools_zoom=1.35):
@@ -796,6 +841,8 @@ class DebugWebView(QWebEngineView):
         self.devToolsBtn.clicked.connect(self.toggleDevTools)
         # current zoom factor of the main web view.
         self.currentZoomFactor = zoomFactor
+        zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+        self.zoomFactors = [ZoomFactor(zf) for zf in zoomFactors]
 
         self.splitter = QSplitter(Qt.Horizontal)
         self.splitter.addWidget(self)
@@ -818,25 +865,50 @@ class DebugWebView(QWebEngineView):
         # shortcuts.
         self.Esc = QShortcut(QKeySequence("Esc"), self)
         self.Esc.activated.connect(self.searchPanel.closePanel)
+
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
         self.CtrlF.activated.connect(self.reactToCtrlF)
+        
         self.RefreshShortcut = QShortcut(QKeySequence.Refresh, self)
         self.RefreshShortcut.activated.connect(self.reload)
+        
         self.ForwardShortcut = QShortcut(QKeySequence.Forward, self)
         self.ForwardShortcut.activated.connect(self.forward)
+        
         self.BackShortcut = QShortcut(QKeySequence.Back, self)
         self.BackShortcut.activated.connect(self.back)
+        
         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
         self.CtrlShiftI.activated.connect(self.toggleDevTools)
+        
+        self.CtrlPlus = QShortcut(QKeySequence.ZoomIn, self)
+        self.CtrlPlus.activated.connect(self.__zoomIn)
+        
+        self.CtrlMinus = QShortcut(QKeySequence.ZoomOut, self)
+        self.CtrlMinus.activated.connect(self.__zoomOut)
 
         self.devTools.hide()
         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
         self.titlebar = None
 
+    def __zoomIn(self):
+        """zoom into browser."""
+        currentZoom = self.currentZoomFactor
+        zoomFactor = ZoomFactor(currentZoom).gt(self.zoomFactors).value
+        self.setZoomFactor(zoomFactor)
+        self.currentZoomFactor = zoomFactor
+        self.zoomChanged.emit(self.currentZoomFactor)
+
+    def __zoomOut(self):
+        """zoom out of browser."""
+        currentZoom = self.currentZoomFactor
+        zoomFactor = ZoomFactor(currentZoom).lt(self.zoomFactors[::-1]).value
+        self.setZoomFactor(zoomFactor)
+        self.currentZoomFactor = zoomFactor
+        self.zoomChanged.emit(self.currentZoomFactor)
+
     def getPageBackground(self):
-        """
-        get page background colors from computed css style.
-        """
+        """get page background colors from computed css style."""
         self.page().runJavaScript(
             "window.getComputedStyle(document.body).backgroundColor", 
             self._set_background_color,
@@ -863,6 +935,7 @@ class DebugWebView(QWebEngineView):
                 print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
                 # the default color.
                 bgColor = [89,89,89]
+        self.backgroundChanged.emit(bgColor[0], bgColor[1], bgColor[2])
         # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
         self._page_background_color = bgColor
         # print("\x1b[31;1mself.titlebar =\x1b[0m", self.titlebar)
