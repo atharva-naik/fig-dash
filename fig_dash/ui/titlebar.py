@@ -655,7 +655,6 @@ class ZoomSlider(QSlider):
     zoomChanged = pyqtSignal(float)
     def __init__(self):
         super(ZoomSlider, self).__init__(Qt.Horizontal)
-        self.setFixedWidth(100)
         self.setMaximum(250)
         self.setMinimum(25)
         self.setValue(125)
@@ -899,7 +898,7 @@ class WindowTitleBar(QToolBar):
         zoomSliderWrapper = QWidget()
         # zoomSliderWrapper.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         zoomSliderWrapper.setFixedHeight(27)
-        zoomSliderWrapper.setFixedWidth(100)
+        zoomSliderWrapper.setFixedWidth(80)
         zoomSliderWrapper.setObjectName("ZoomSliderWrapper")
         zoomSliderLayout = QVBoxLayout()
         zoomSliderLayout.setSpacing(0)

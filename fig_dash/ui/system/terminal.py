@@ -126,9 +126,8 @@ class TerminalCommandInput(QLineEdit):
         self.setCompleter(self.qcompleter)
 
     def keyPressEvent(self, event):
-        # print(event.key())
         if event.key() == Qt.Key_Tab:
-            print("tab pressed", self.text())
+            # print("tab pressed", self.text())
             return
         elif event.key() in [Qt.Key_Up, Qt.Key_Down]:
             if self.curr_idx == len(self.cmd_history):
@@ -206,7 +205,7 @@ class TerminalCommandOutput(QPlainTextEdit):
 
 class RedirectShellContainer(QWidget):
     def __init__(self, path: str="~", accent_color: str="gray", 
-                parent: Union[None, QWidget]=None):
+                 parent: Union[None, QWidget]=None):
         super(RedirectShellContainer, self).__init__(parent)
         path = os.path.expanduser(path)
         self.path = path
@@ -229,11 +228,19 @@ class RedirectShellContainer(QWidget):
         self.output_formatter = Ansi2HTMLConverter()
         self.setLayout(self.vboxlayout)
 
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
     def expandPaths(self):
         cmd = self.input.text().strip()
-        if cmd.split()[0].strip() == "cd":
-            path = " ".join(cmd.split()[1:]).strip()
-            print(os.path.exists(path))
+        try:
+            if cmd.split()[0].strip() == "cd":
+                path = " ".join(cmd.split()[1:]).strip()
+                # print(os.path.exists(path))
+        except IndexError as e:
+            print(e)
 
     def runCommand(self):
         cmd = self.input.text().strip()
@@ -315,9 +322,9 @@ class GnomeShellContainer(QWidget):
             if cmd is not None: 
                 "executes the command in `cmd` at startup."
                 flags += ["-e", f'"{cmd}"']
-            print(cmd)
+            # print(cmd)
             self.process.start(term, flags)
-            print(winId)
+            # print(winId)
         # blankWindow = QTextEdit()
         # blankWindow.setReadOnly(True)
         # blankWindow.setsetFixedWidth(800)

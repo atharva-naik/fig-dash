@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # the fig-dash fileviewer is known as the "orchard".
 print("fig_dash::ui::system::fileviewer")
+
 import os
 import time
 import jinja2
@@ -9,10 +10,12 @@ import socket
 import getpass
 from typing import *
 from pathlib import Path
+from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
+from fig_dash.config import PDFJS_VIEWER_PATH
 from fig_dash.api.js.system import SystemHandler
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
@@ -23,7 +26,7 @@ from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEnginePage
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QPalette
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QThread, QFileSystemWatcher
-from PyQt5.QtWidgets import QWidget, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QLayout, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
+from PyQt5.QtWidgets import QWidget, QSplitter, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QLayout, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
 # filweviewer widget.
 
 # IMPORTANT: URL to share page on 
@@ -148,9 +151,9 @@ class PyMuPdfThumbnailer:
             pixmap = thumbnail_page.get_pixmap()
             pixmap.save(save_path)
         except fitz.fitz.EmptyFileError as e:
-            FigD.error(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.EmptyFileError", e)
+            print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.EmptyFileError", e)
         except fitz.fitz.FileNotFoundError as e:
-            FigD.error(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.FileNotFoundError", e)
+            print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.FileNotFoundError", e)
 
 # File viewer thumbnailing backend worker.
 class FileViewerThumbnailer(QObject):
@@ -342,15 +345,16 @@ class FileViewerWebView(DebugWebView):
     def __init__(self, accent_color="yellow"):
         super(FileViewerWebView, self).__init__()
         self.orchardMenu = QMenu()
-        self.orchardMenu.addAction("New Folder")
-        self.orchardMenu.addAction("New File")
+        self.orchardMenu.addAction(FigD.Icon("system/fileviewer/file.svg"), "New Folder")
+        self.orchardMenu.addAction(FigD.Icon("system/fileviewer/new_tab_icon.svg"), "New File")
         self.orchardMenu.addSeparator()
         self.orchardMenu.addAction("Restore Missing Files...")
-        self.orchardMenu.addAction("Open in Terminal")
+        self.orchardMenu.addAction(FigD.Icon("system/fileviewer/terminal.svg"), "Open in Terminal")
         self.orchardMenu.addSeparator()
-        self.orchardMenu.addAction("Paste")
+        self.orchardMenu.addAction(FigD.Icon("textedit/paste.svg"), "Paste")
+        self.orchardMenu.addAction("Paste shortcut")
         self.orchardMenu.addSeparator()
-        self.orchardMenu.addAction("Properties")
+        self.orchardMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties")
 
         self.accent_color = accent_color
         self.orchardMenu = styleContextMenu(
@@ -362,13 +366,14 @@ class FileViewerWebView(DebugWebView):
         self.itemMenu = QMenu()
         self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "&Open With default", blank, QKeySequence.Open)
         self.itemMenu.addSeparator()
-        self.itemMenu.addAction(FigD.Icon("tray/open.svg"), "Open With")
+        self.itemMenu.addAction("Open With")
         self.itemMenu.addSeparator()
         self.itemMenu.addAction(FigD.Icon("textedit/cut.svg"), "Cu&t", blank, QKeySequence.Cut)
         self.itemMenu.addAction(FigD.Icon("textedit/copy.svg"), "&Copy", blank, QKeySequence.Copy)
+        self.itemMenu.addAction(FigD.Icon("textedit/duplicate.svg"), "Duplicate", blank)
         self.itemMenu.addSeparator()
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/move.svg"), "Move To...")
-        self.itemMenu.addAction(FigD.Icon("textedit/copy.svg"), "Copy To...")
+        self.itemMenu.addAction("Copy To...")
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/link.svg"), "Make Link")
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/rename.svg"), "Rename...", blank, QKeySequence("Ctrl+Shift+R"))
         # if mimetype == ""
@@ -377,7 +382,7 @@ class FileViewerWebView(DebugWebView):
         self.itemMenu.addAction(FigD.Icon("textedit/delete.svg"), "Move to Trash", blank, QKeySequence.Delete)
         self.itemMenu.addSeparator()
         self.itemMenu.addAction("Revert to Previous Version...")
-        self.itemMenu.addAction(FigD.Icon("system/fileviewer/compress.svg"), "Compress...")
+        self.itemMenu.addAction("Compress...")
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/email_menu.svg"), "Email...")
         self.itemMenu.addSeparator()
         self.itemMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties") 
@@ -1065,7 +1070,7 @@ class FileViewerViewGroup(FileViewerGroup):
         self.hiddenFilesBtn = self.layoutGroup.btns[-1]
         self.folderbarBtn = self.visibilityGroup.btns[0]
         self.searchbarBtn = self.visibilityGroup.btns[1]
-        self.sidebarBtn = self.visibilityGroup.btns[2]
+        self.navpaneBtn = self.visibilityGroup.btns[2]
         self.arrangeGroup = self.initBtnGroup([
             {"icon": "sidebar_left.ico", "size": (25,25), "tip": "sidebar to the left", "text": " left", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
             {"icon": "sidebar_right.png", "size": (25,25), "tip": "sidebar to the right", "text": " right", "style": Qt.ToolButtonTextBesideIcon, "font_size": 10},
@@ -1086,8 +1091,8 @@ class FileViewerViewGroup(FileViewerGroup):
         self.folderbarBtn.clicked.connect(
             widget.folderbar.toggle
         )
-        self.sidebarBtn.clicked.connect(
-            widget.sideArea.toggle
+        self.navpaneBtn.clicked.connect(
+            widget.navpane.toggle
         )
 
         self.hiddenFilesBtn.clicked.connect(
@@ -1590,9 +1595,9 @@ class FileViewerAppearanceGroup(FileViewerGroup):
         self.widget = widget
 
 # don't need class FileViewerMoveGroup(QWidget):
-class FileViewerMenu(QWidget):
+class FileViewerMenuOld(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(FileViewerMenu, self).__init__(parent)
+        super(FileViewerMenuOld, self).__init__(parent)
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
@@ -1684,25 +1689,269 @@ def wrapInScrollArea(widget):
 #     background: #a11f53aa;
 #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
 # }"""
-class FileViewerMenuNew(DashRibbonMenu):
+class FileViewerMenu(DashRibbonMenu):
     def __init__(self, accent_color: str="blue", 
                  parent: Union[None, QWidget]=None):
-        super(FileViewerMenuNew, self).__init__(
+        # "View" layout maps to current view
+        super(FileViewerMenu, self).__init__(
             parent=parent, group_names=[
-                "File", "Edit", "View", 
-                "Open", "Share", "Misc"
-            ], accent_color=accent_color,
+                "Clipboard", "Organize", "New", "Open", "Select", "Panes", "Layout", "View", "Show/hide", 
+                "Share", "Notes", "Tags", "Bookmarks", "Shortcut Tools", "Compressed Folder Tools",
+                "Picture Tools", "Music Tools", "Video Tools", "Drive Tools",
+            ], accent_color=accent_color, contents_margins=(10, 0, 10, 0),
         )
-        # self.addWidgetGroup("File", [
-        #     ()
-        # ])
+        # tags -> tags, color
+        # notes -> notes, rating
+        # bookmarks -> bookmarks, quick access
+        self.addWidgetGroup("New", [
+            ({
+                "icon": "system/fileviewer/folder.ico",
+                "text": "New\nfolder",
+                "tip": "Create new folder",
+                "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                "style": Qt.ToolButtonTextUnderIcon,
+                "size": (40,40),                
+            },{}),
+            ([
+                {
+                    "icon": "system/fileviewer/new_item.ico",
+                    "text": "New item ▾",
+                    "tip": "Create new item",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/link.svg",
+                    "text": "New link ▾",
+                    "tip": "Create new link",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/easy_access.ico",
+                    "text": "Easy access ▾",
+                    "tip": "Add file to easy access",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+            ], {
+                "orient": "vertical",
+                "alignment_flag": Qt.AlignLeft,
+            }),
+        ])
+        self.addWidgetGroup("Panes", [
+            ([
+                {
+                    "icon": "system/fileviewer/navigation_pane.ico",
+                    "text": "Navigation\npane ▾",
+                    "tip": "Toggle navigation pane visibility",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                }
+            ], {})
+        ])
+        self.addWidgetGroup("Organize", [
+            ([
+                {
+                    "icon": "system/fileviewer/move_to.ico",
+                    "text": "Move\nto ▾",
+                    "tip": "Move selected item(s) to ...",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (40,40),
+                },
+                {
+                    "icon": "system/fileviewer/copy_to.ico",
+                    "text": "Copy\nto ▾",
+                    "tip": "Copy selected item(s) to...",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (40,40),
+                },
+                {
+                    "icon": "system/fileviewer/delete.ico",
+                    "text": "Delete\n▾",
+                    "tip": "Delete selected item(s)",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (40,40),
+                },{
+                    "icon": "system/fileviewer/rename.ico",
+                    "text": "Rename",
+                    "tip": "Copy selected item(s) to...",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (40,40),
+                }
+            ], {
+                "orient": "horizontal",
+                "spacing": 0,
+            })
+        ])
+        self.addWidgetGroup("Clipboard", [
+            ([
+                {
+                    "icon": "system/fileviewer/copy.ico",
+                    "text": "Copy",
+                    "tip": "Copy item to clipboard",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                },
+                {
+                    "icon": "system/fileviewer/paste.ico",
+                    "text": "Paste",
+                    "tip": "Paste copied item",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                },
+                {
+                    "icon": "system/fileviewer/copy_as_url.png",
+                    "text": "Copy url",
+                    "tip": "Paste copied item", # "fg_color": "#69bfee",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (50,50),
+                }
+            ], {
+                "orient": "horizontal",
+                "spacing": 0,
+            }),
+            # ([
+            #     {
+            #         "icon": "system/fileviewer/copy.ico",
+            #         "text": "Copy",
+            #         "tip": "Copy item to clipboard",
+            #         "stylesheet": file_viewer_btn_style.render(background="transparent"),
+            #         "style": Qt.ToolButtonTextUnderIcon,
+            #         "size": (50,50),
+            #     },{
+            #         "icon": "system/fileviewer/paste.ico",
+            #         "text": "Paste",
+            #         "tip": "Paste copied item",
+            #         "stylesheet": file_viewer_btn_style.render(background="transparent"),
+            #         "style": Qt.ToolButtonTextUnderIcon,
+            #         "size": (50,50),
+            #     }
+            # ], {
+            #     "orient": "horizontal",
+            #     "spacing": 0,
+            # }),
+            ([
+                {
+                    "icon": "system/fileviewer/cut.ico",
+                    "text": "Cut",
+                    "tip": "Cut selected item",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/copy_filepath.png",
+                    "text": "Copy path",
+                    "tip": "Copy path of selected item to clipboard",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/paste_shortcut.ico",
+                    "text": "Paste shortcut",
+                    "tip": "Cut selected item",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+            ], {
+                "orient": "vertical",
+                "alignment_flag": Qt.AlignLeft,
+            })
+        ])
+        self.addWidgetGroup("Select", [
+            ([
+                {
+                    "icon": "system/fileviewer/select_all.ico",
+                    "text": "Select all",
+                    "tip": "Select all visible items",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/clear_selection.ico",
+                    "text": "Select none",
+                    "tip": "Clear selected items",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+                {
+                    "icon": "system/fileviewer/invert_selection.ico",
+                    "text": "Invert selection",
+                    "tip": "Invert item selection",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (20,20),
+                },
+            ], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+            }),
+        ])
+        self.addWidgetGroup("Layout", [
+            ([
+                [
+                    {"icon": "system/fileviewer/extra_large.ico", "text": "Extra large icons",  
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), "size":(20,20),
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show extra large icons"},   
+                    {"icon": "system/fileviewer/large.ico", "text": "Large icons", "size":(20,20), 
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show extra large icons"},          
+                    {"icon": "system/fileviewer/medium.ico", "text": "Medium icons",  
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), "size":(20,20),
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show medium icons"},  
+                ],
+                [
+                    {"icon": "system/fileviewer/small.ico", "text": "Small icons", "size":(20,20), 
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show small icons"}, 
+                    {"icon": "system/fileviewer/list.ico", "text": "List", "size":(20,20),
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show item list"},  
+                    {"icon": "system/fileviewer/details.ico", "text": "Details", "size":(20,20), 
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show item details"}, 
+                ],
+                [
+                    {"icon": "system/fileviewer/tiles.ico", "text": "Tiles", "size":(20,20), 
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show item tiles"}, 
+                    {"icon": "system/fileviewer/content.ico", "text": "Content", "size":(20,20), 
+                     "stylesheet": file_viewer_btn_style.render(background="transparent"), 
+                     "style": Qt.ToolButtonTextBesideIcon, 'tip': "show item details"}, 
+                ],
+            ], {
+                "alignment_flag": Qt.AlignLeft, 
+            }),
+        ])
+        self.widgetGroupAt("Layout").memberAt(0).setFixedWidth(430)
+        self.extraLargeIconsBtn = self.widgetGroupAt("Layout").memberAt(0).widget().btns[0]
+        self.mediumIconsBtn = self.widgetGroupAt("Layout").memberAt(0).widget().btns[2]
+        # self.mediumIconsBtn.setFixedWidth(135)
+        # print("Medium Icons Button:", self.mediumIconsBtn.text())
+        # self.extraLargeIconsBtn.setFixedWidth(150)
         self.xdgOpenWidget = self.initXdgOpenWidget()
         self.addWidgetGroup("Open", [
             (self.xdgOpenWidget, {}),
             ([
                 {
                     "icon": "system/fileviewer/browser.svg",
-                    "text": "Open with\nterminal",
+                    "text": "Open web\nlayout",
                     "tip": "Open selected item in terminal",
                     "stylesheet": file_viewer_btn_style.render(background="transparent"),
                     "style": Qt.ToolButtonTextUnderIcon,
@@ -1710,7 +1959,7 @@ class FileViewerMenuNew(DashRibbonMenu):
                 },
                 {
                     "icon": "system/fileviewer/terminal.svg",
-                    "text": "Open in\nbrowser",
+                    "text": "Open in\nterminal",
                     "tip": "Open selected item in webview",
                     "stylesheet": file_viewer_btn_style.render(background="transparent"),
                     "style": Qt.ToolButtonTextUnderIcon,
@@ -1719,10 +1968,81 @@ class FileViewerMenuNew(DashRibbonMenu):
             ], {
                "alignment_flag": Qt.AlignCenter, 
                "orient": "horizontal",
-            })
+               "spacing": 0,
+            }),
+            ({
+                "icon": "system/fileviewer/properties.ico",
+                "text": "Properties\n▾",
+                "tip": "Open properites for selected item(s)",
+                "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                "style": Qt.ToolButtonTextUnderIcon,
+                "size": (40,40),
+            },{}),
+            ([
+                {
+                    "icon": "system/fileviewer/edit.ico",
+                    "text": "Edit",
+                    "tip": "Edit selected item",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+                    "icon": "system/fileviewer/history.ico",
+                    "text": "History",
+                    "tip": "Open file history",
+                    "stylesheet": file_viewer_btn_style.render(background="transparent"),
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+            ], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+            }),
         ])
+        self.webLayoutBtn = self.widgetGroupAt("Open").memberAt(1).btns[0]
+        self.terminalBtn = self.widgetGroupAt("Open").memberAt(1).btns[1]
+        self.propertiesBtn = self.widgetGroupAt("Open").memberAt(2)
+        self.addWidgetGroup("Share", [
+            ([
+                [
+                    {"icon": "youtube.png", "size":(35,35),
+                    'tip': "share video on youtube"},
+                    {"icon": "twitter.png", "size":(35,35),
+                    'tip': "share on twitter"},
+                    {"icon": "reddit.png", "size":(35,35),
+                    'tip': "share on reddit"},                
+                ],
+                [
+                    {"icon": "facebook.png", "size":(35,35),
+                    'tip': "share on facebook"},
+                    {"icon": "instagram.png", "size":(35,35),
+                    'tip': "share image on instagram"},
+                    {"icon": "whatsapp.png", "size":(35,35),
+                    'tip': "share on whatsapp"},  
+                ],
+            ], {
+                "alignment_flag": Qt.AlignCenter, 
+            }),
+        ])
+        self.widgetGroupAt("Share").memberAt(0).setFixedWidth(200)
         self.browserBtn = self.widgetGroupAt("Open").memberAt(1).btns[0]
         self.terminalBtn = self.widgetGroupAt("Open").memberAt(1).btns[1]
+        self.selectAllBtn = self.widgetGroupAt("Select").memberAt(0).btns[0]
+        self.clearBtn = self.widgetGroupAt("Select").memberAt(0).btns[1]
+        self.invertBtn = self.widgetGroupAt("Select").memberAt(0).btns[2] 
+        # hide file kind/type specific tools:
+        for group_name in self:
+            if group_name.lower().strip().endswith("tools"):
+                self.widgetGroupAt(group_name).hide()
+
+    def connectFileViewerWidget(self, widget):
+        self.widget = widget
+        # self.renameBtn.clicked.connect(widget.renameDialog)
+        self.clearBtn.clicked.connect(widget.clearSelection)
+        self.selectAllBtn.clicked.connect(widget.selectAll)
+        self.invertBtn.clicked.connect(widget.invertSelection)
+        self.webLayoutBtn.clicked.connect(widget.openFileInWebView)
 
     def updateMimeBtn(self, mimetype: str, 
                       icon: QIcon, path: str):
@@ -1763,64 +2083,158 @@ class FileViewerMenuNew(DashRibbonMenu):
 
         return xdgOpenWidget
 
+# folder bar navigation button.
+class FileViewerFolderBtn(QToolButton):
+    def __init__(self, path: str="", name: str="", widget=None,
+                 accent_color: str="gray", stylesheet: str="",
+                 parent: Union[None, QWidget]=None):
+        super(FileViewerFolderBtn, self).__init__(parent)
+        self.accent_color = accent_color
+        self.widget = widget
+        self.path = path
+        print(f"path: {path}")
+        tip = f"got to {path}"
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        if name == "/":
+            self.setIcon(FigD.Icon("system/fileviewer/harddrive.png"))
+        else: self.setText(name)
+        if self.widget:
+            self.clicked.connect(partial(self.widget.open, path))
+        self.setStyleSheet(stylesheet)
+
+    def contextMenuEvent(self, event):
+        self.contextMenu = QMenu()
+        parent = Path(self.path).parent
+        parent = str(parent)
+        # print("parent:", parent)
+        for full_path in os.listdir(parent):
+            full_path = os.path.join(parent, full_path)
+            # print(f"full_path: {full_path}")
+            if os.path.isdir(full_path) and full_path != self.path:
+                name = Path(full_path).name
+                if name.startswith("."): continue
+                self.contextMenu.addAction(name, partial(self.widget.open, full_path))
+                # print("name:", name)
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, 
+            accent_color=self.accent_color
+        )
+        self.contextMenu.popup(event.globalPos())
+
+# folder bar button.
+class FileViewerFolderNavBtn(QToolButton):
+    def __init__(self, icon: str="", tip: str="", 
+                 parent: Union[None, QWidget]=None,
+                 stylesheet: str=""):
+        super(FileViewerFolderNavBtn, self).__init__(parent)
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        icon = os.path.join("system/fileviewer", icon)
+        self.setIcon(FigD.Icon(icon))
+        self.setStyleSheet(stylesheet)
+
 # folder bar buttons.
-class FileViewerFolderBar(QWidget):
-    def __init__(self, parent: Union[None, QWidget]=None):
+class FileViewerFolderBar(QScrollArea):
+    def __init__(self, accent_color: str="gray", 
+                 parent: Union[None, QWidget]=None):
         super(FileViewerFolderBar, self).__init__(parent)
+        self.accent_color = accent_color
         self.layout = QHBoxLayout()
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(5)
+        # wrapper widget.
+        self.wrapper = QWidget()
+        self.wrapper.setStyleSheet("background: transparent; border: 0px;")
+        self.wrapper.setLayout(self.layout)
+        # path stored in the folder bar.
         self.path = ""
-        
-        self.setLayout(self.layout)
+        # set layout for the wrapper.
+        self.wrapper.setLayout(self.layout)
         self.setObjectName("FileViewerFolderBar")
         self.selectedIndex = 0 
         self.folderBtns = []
-        self.folderBtnStyle = '''
+        self.folderBtnStyle = """
         QToolButton {
             color: #fff;
             border: 0px;
             font-size: 17px;
-            font-weight: bold;
-            font-family: 'Be Vietnam Pro', sans-serif;
-            padding-top: 2px;
-            padding-bottom: 2px;
-            border-radius: 3px;
-            background: #484848;
-            margin-left: 1px;
-            margin-right: 1px;
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+            text-align: center;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
         }
         QToolButton:hover {
             color: #292929;
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+            border: 1px solid #0a4c70;
+            border-radius: 2px;
+            background: rgba(105, 191, 238, 150);
         }
         QToolTip {
             color: #fff;
             border: 0px;
             background: #000;
-        }'''
-        self.folderBtnSelStyle = '''
+        }"""
+        self.folderBtnSelStyle = """
         QToolButton {
-            border: 0px;
             color: #292929;
             font-size: 17px;
             font-weight: bold;
-            font-family: 'Be Vietnam Pro', sans-serif;
-            padding-top: 2px;
-            padding-bottom: 2px;
-            border-radius: 3px;
-            margin-left: 1px;
-            margin-right: 1px;
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+            text-align: center;
+            border-radius: 2px;
+            border: 1px solid #0a4c70;
+            font-family: "Be Vietnam Pro";
+            background: rgba(105, 191, 238, 150);
         }
         QToolTip {
             color: #fff;
             border: 0px;
             background: #000;
-        }'''
+        }"""
+        # self.folderBtnStyle = '''
+        # QToolButton {
+        #     color: #fff;
+        #     border: 0px;
+        #     font-size: 17px;
+        #     font-weight: bold;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     padding-top: 2px;
+        #     padding-bottom: 2px;
+        #     border-radius: 3px;
+        #     background: #484848;
+        #     margin-left: 1px;
+        #     margin-right: 1px;
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+        # }
+        # QToolButton:hover {
+        #     color: #292929;
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+        # }
+        # QToolTip {
+        #     color: #fff;
+        #     border: 0px;
+        #     background: #000;
+        # }'''
+        # self.folderBtnSelStyle = '''
+        # QToolButton {
+        #     border: 0px;
+        #     color: #292929;
+        #     font-size: 17px;
+        #     font-weight: bold;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     padding-top: 2px;
+        #     padding-bottom: 2px;
+        #     border-radius: 3px;
+        #     margin-left: 1px;
+        #     margin-right: 1px;
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+        # }
+        # QToolTip {
+        #     color: #fff;
+        #     border: 0px;
+        #     background: #000;
+        # }'''
         self.backBtn = self.initFolderNavBtn(
             icon="prev.svg",
             tip="go back (tied to webview.back)",
@@ -1829,8 +2243,23 @@ class FileViewerFolderBar(QWidget):
             icon="next.svg",
             tip="go forward (tied to webview.forward)",
         )
+        self.reloadBtn = self.initFolderNavBtn(
+            icon="reload.svg",
+            tip="go forward (tied to webview.forward)",
+        )
+        self.upBtn = self.initFolderNavBtn(
+            icon="up.svg",
+            tip="go forward (tied to webview.forward)",
+        )
+        self.upBtn.setFixedHeight(24)
         self.backBtn.setFixedHeight(24)
+        self.reloadBtn.setFixedHeight(24)
         self.forwardBtn.setFixedHeight(24)
+        # set stuff
+        self.setWidget(self.wrapper)
+        self.setWidgetResizable(True)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def toggle(self):
         FigD.debug("toggling folderbar visibility")
@@ -1839,13 +2268,11 @@ class FileViewerFolderBar(QWidget):
         else: self.show()
 
     def __len__(self):
-        return len(self.folderBtns)+3
+        return len(self.folderBtns)+4+1
 
     def addSpacer(self):
-        widget = QWidget()
-        # widget.setAttribute(Qt.WA_TranslucentBackground)
-        widget.setStyleSheet("background: transparent;")
-        # widget.setStyleSheet("background: red;")
+        widget = QWidget() # widget.setAttribute(Qt.WA_TranslucentBackground)
+        widget.setStyleSheet("background: transparent;") # widget.setStyleSheet("background: red;")
         widget.setFixedWidth(10)
         self.layout.insertWidget(0, widget)
 
@@ -1897,44 +2324,45 @@ class FileViewerFolderBar(QWidget):
         self.folderBtns[-1].setStyleSheet(self.folderBtnSelStyle)
         self.layout.addStretch(1)
         self.addSpacer()
+        self.layout.insertWidget(0, self.reloadBtn)
+        self.layout.insertWidget(0, self.upBtn)
         self.layout.insertWidget(0, self.forwardBtn)
         self.layout.insertWidget(0, self.backBtn)
 
     def connectWidget(self, widget):
         self.widget = widget
-        self.backBtn.clicked.connect(
-            widget.webview.back
-        )
-        self.forwardBtn.clicked.connect(
-            widget.webview.forward
-        )
+        self.upBtn.clicked.connect(widget.openParent)
+        self.backBtn.clicked.connect(widget.webview.back)
+        self.reloadBtn.clicked.connect(widget.webview.reload)
+        self.forwardBtn.clicked.connect(widget.webview.forward)
 
-    def initFolderNavBtn(self, icon: str, 
-                         tip: str="some tip"):
-        btn = QToolButton(self)
-        tip = tip
-        btn.setToolTip(tip)
-        icon = os.path.join("system/fileviewer", icon)
-        btn.setIcon(FigD.Icon(icon))
-        btn.setStyleSheet(self.folderBtnStyle)
+    def initFolderNavBtn(self, icon: str, tip: str="some tip"):
+        btn = FileViewerFolderNavBtn(
+            parent=self, tip=tip, icon=icon, 
+            stylesheet=self.folderBtnStyle,
+        )
         btn.setFixedHeight(24)
 
         return btn 
 
     def initFolderBtn(self, name, full_path):
-        btn = QToolButton(self)
-        tip = f"got to {full_path}"
-        btn.setToolTip(tip)
-        if name == "/":
-            btn.setIcon(FigD.Icon(
-                "system/fileviewer/harddrive.png"
-            ))
-        else: btn.setText(name)
-        if self.widget:
-            btn.clicked.connect(
-                lambda: self.widget.open(full_path)
-            )
-        btn.setStyleSheet(self.folderBtnStyle)
+        # btn = QToolButton(self)
+        # tip = f"got to {full_path}"
+        # btn.setToolTip(tip)
+        # if name == "/":
+        #     btn.setIcon(FigD.Icon(
+        #         "system/fileviewer/harddrive.png"
+        #     ))
+        # else: btn.setText(name)
+        # if self.widget:
+        #     btn.clicked.connect(
+        #         lambda: self.widget.open(full_path)
+        #     )
+        # btn.setStyleSheet(self.folderBtnStyle)
+        btn = FileViewerFolderBtn(
+            name=name, path=str(full_path), widget=self.widget, 
+            stylesheet=self.folderBtnStyle, accent_color=self.accent_color,
+        )
         btn.setFixedHeight(24)
 
         return btn 
@@ -1947,31 +2375,30 @@ class FileViewerShortcutBtn(QToolButton):
                  size: Tuple[int, int]=(25,25),
                  tip: str=""):
         super(FileViewerShortcutBtn, self).__init__(parent)
-        self.btnStyle = '''
+        #/* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */s
+        self.btnStyle = """
         QToolButton {
             color: #fff;
             border: 0px;
-            font-size: 16px;
+            font-size: 17px;
+            padding-top: 5px;
             font-weight: bold;
             text-align: center;
-            padding-top: 5px;
             padding-left: 10px;
             padding-bottom: 5px;
             background: transparent;
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
         }
         QToolButton:hover {
             color: #292929;
+            border-radius: 5px;
             border: 1px solid #0a4c70;
-            background: rgba(105, 191, 238, 180);
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+            background: rgba(105, 191, 238, 150);
         }
         QToolTip {
             color: #fff;
             border: 0px;
             background: #000;
-        }'''
+        }"""
         if text is None:
             text = Path(path).name
         self.setStyleSheet(self.btnStyle)
@@ -1984,8 +2411,8 @@ class FileViewerShortcutBtn(QToolButton):
         self.setToolTip(tip)
         self.setStatusTip(tip)
         self.path = path
-        self.setFixedWidth(300)
-        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # self.setFixedWidth(300)
     def connectWidget(self, widget):
         self.widget = widget
         self.clicked.connect(self.onClick)
@@ -1993,18 +2420,16 @@ class FileViewerShortcutBtn(QToolButton):
     def onClick(self):
         self.widget.open(self.path)
 
-
-class FileViewerSideBar(QWidget):
+# file viewer navigation pane.
+class FileViewerNavPane(QScrollArea):
     def __init__(self, parent: Union[None, QWidget]=None):
-        super(FileViewerSideBar, self).__init__(parent)
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        # shortcuts.
-        self.shortcutBtns = []
-        # bookmarks.
-        self.bookmarkBtns = []
+        super(FileViewerNavPane, self).__init__(parent)
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.shortcutBtns = [] # shortcuts.
+        self.bookmarkBtns = [] # bookmarks.
         home = os.path.expanduser("~")
-        self.layout.setSpacing(0)
+        self.vboxlayout.setSpacing(0)
         self.recentBtn = self.initShortcutBtn(
             path=os.path.join(home, "Recent"),
             icon="recent.svg",
@@ -2048,19 +2473,32 @@ class FileViewerSideBar(QWidget):
             tip="open templates folder",
         )
         # add buttons to layout.
-        self.layout.addWidget(self.recentBtn)
-        self.layout.addWidget(self.homeBtn)
-        self.layout.addWidget(self.desktopBtn)
-        self.layout.addWidget(self.documentsBtn)
-        self.layout.addWidget(self.downloadsBtn)
-        self.layout.addWidget(self.musicBtn)
-        self.layout.addWidget(self.picturesBtn)
-        self.layout.addWidget(self.templatesBtn)
-        self.layout.addStretch(1)
-        self.setLayout(self.layout)
+        self.vboxlayout.addWidget(self.recentBtn, 1)
+        self.vboxlayout.addWidget(self.homeBtn, 1)
+        self.vboxlayout.addWidget(self.desktopBtn, 1)
+        self.vboxlayout.addWidget(self.documentsBtn, 1)
+        self.vboxlayout.addWidget(self.downloadsBtn, 1)
+        self.vboxlayout.addWidget(self.musicBtn, 1)
+        self.vboxlayout.addWidget(self.picturesBtn, 1)
+        self.vboxlayout.addWidget(self.templatesBtn, 1)
+        self.vboxlayout.addStretch(1)
+        # wrapper widget.
+        self.wrapper = QWidget()
+        self.wrapper.setStyleSheet("background: transparent; border: 0px;")
+        self.wrapper.setLayout(self.vboxlayout)
+        self.setWidget(self.wrapper)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWidgetResizable(True)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        # self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setStyleSheet("""
+        QScrollArea {
+            border: 0px;
+            background: transparent;
+        }""")
 
     def toggle(self):
-        FigD.debug("toggling folderbar visibility")
+        # FigD.debug("toggling folderbar visibility")
         if self.isVisible():
             self.hide()
         else: self.show()
@@ -2098,12 +2536,91 @@ class FileViewerSideBar(QWidget):
         for btn in self.shortcutBtns:
             btn.connectWidget(widget)
 
+# PDF webview.
+class FileViewerPDFWebView(DebugWebView):
+    def __init__(self, accent_color: str="gray", 
+                 parent: Union[QWidget, None]=None):
+        super(FileViewerPDFWebView, self).__init__(
+            accent_color=accent_color, 
+            parent=parent,
+        )
 
-class FileViewerOverviewPanel(QWidget):
-    def __init__(self, parent: Union[QWidget, None]=None):
-        super(FileViewerOverviewPanel, self).__init__(parent)
+    def loadPDF(self, path: str):
+        global PDFJS_VIEWER_PATH
+        viewer_url = QUrl.fromLocalFile(PDFJS_VIEWER_PATH).toString()
+        html = jinja2.Template(r"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Hello world!</title>
+        </head>
+        <body>
 
+            <div>
+            <h2>File Preview</h2>
+                <div>
+                    <iframe id="pdf-js-viewer" src="{{ VIEWER_URL }}?file={{ URL }}" title="{{ PATH }}" frameborder="0" width="500" height="600"></iframe>
+                </div>
 
+            </div>
+        </body>
+        </html>""").render(VIEWER_URL=viewer_url, PATH=path, 
+                           URL=QUrl.fromLocalFile(path).toString(QUrl.FullyEncoded))
+        load_url = FigD.createTempUrl(html)
+        print(html)
+        # load_url = QUrl.fromUserInput(f'{viewer_url}{path}') 
+        print(f"loaded PDF url: {load_url.toString(QUrl.FullyEncoded)}")
+        self.load(load_url)
+# preview of a file:
+# 1. text, pdf, image, gif: webview
+# 2. audio, video: vlc player.
+# 3. 3D models: stl viewer.
+class FileViewerPreviewPanel(QWidget):
+    def __init__(self, accent_color: str="gray", 
+                 parent: Union[QWidget, None]=None):
+        super(FileViewerPreviewPanel, self).__init__(parent)
+        self.mime_db = QMimeDatabase()
+        self.vboxlayout = QVBoxLayout()
+        self.web_preview = FileViewerPDFWebView(accent_color=accent_color)
+        self.web_preview.hide()
+        self.default = QLabel()
+        self.default.setText("No preview available")
+        self.default.setStyleSheet("""
+        QWidget {
+            color: #6e6e6e;
+            background: transparent;
+        }""")
+        self.vboxlayout.addWidget(self.web_preview)
+        self.vboxlayout.addWidget(self.default)
+        self.setLayout(self.vboxlayout)
+        # self.model_preview = FileViewerModelPreview()
+        # self.model_preview.hide()
+        # self.media_preview = FileViewerMediaPreview()
+        # self.media_preview.hide()
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+    def open(self, paths: List[str]):
+        path = paths[0]
+        mimetype = self.mime_db.mimeTypeForFile(path).name()
+        print(f"previewing {path} out of {paths} with mimetype: {mimetype}")
+        if mimetype.startswith("text") or mimetype.startswith("image"):
+            self.web_preview.show()
+            self.web_preview.load(QUrl.fromLocalFile(path))
+            self.web_preview.setZoomFactor(1.25)
+            self.default.hide()
+        elif mimetype in ["application/pdf"]:
+            self.web_preview.show()
+            self.web_preview.loadPDF(path)
+            self.web_preview.setZoomFactor(1.25)
+            self.default.hide()
+        else:
+            self.web_preview.hide()
+            self.default.show()
+
+# key press searching bar.
 class FileViewerKeyPressSearch(QLineEdit):
     def __init__(self):
         super(FileViewerKeyPressSearch, self).__init__()
@@ -2131,9 +2648,8 @@ class FileViewerWidget(QMainWindow):
     # changeTabIcon = pyqtSignal(str)
     zoomChanged = pyqtSignal(float)
     changeTabTitle = pyqtSignal(str)
+    selectionChanged = pyqtSignal(list)
     def __init__(self, parent: Union[None, QWidget]=None, 
-                 logo: Union[None, str, QIcon]=None, 
-                 dangle_folderbar: bool=False,
                  zoom_factor: float=1.35, **args):
         super(FileViewerWidget, self).__init__(parent)
         self.thumbnail_thread_pool = []
@@ -2146,19 +2662,11 @@ class FileViewerWidget(QMainWindow):
         self.browser = self.webview
         self.browser.zoomChanged.connect(self.signalZoom)
         self.zoom_factor = zoom_factor
-        self.menu = FileViewerMenu()
-        self.menu1 = FileViewerMenuNew(accent_color=accent_color)
-        self.menu1.setFixedHeight(120)
+        # self.menu = FileViewerMenu()
+        self.menu = FileViewerMenu(accent_color=accent_color)
+        self.menu.setFixedHeight(120)
+        self.menu.connectFileViewerWidget(self)
         self.font_color = args.get("font_color", '#fff')
-        # data
-        # set logo.
-        if isinstance(logo, QIcon):
-            self.setWindowIcon(logo)
-        elif isinstance(logo, str):
-            FigD.debug("FileViewerWidget logo:", logo)
-            self.setWindowIcon(
-                FigD.Icon("system/fileviewer/logo.svg")
-            )
         self.background_image = QUrl.fromLocalFile(
             args.get("background")
         ).toString()
@@ -2179,15 +2687,18 @@ class FileViewerWidget(QMainWindow):
         self.systemHandler.connectChannel(self.channel)
         self.webview.page().setWebChannel(self.channel)
         
-        self.folderbar = FileViewerFolderBar()
+        self.folderbar = FileViewerFolderBar(accent_color=accent_color)
         self.folderbar.setFixedHeight(30)
         # self.folderbar.hide()
-        self.sidebar = FileViewerSideBar()
-        self.sideArea = wrapInScrollArea(self.sidebar)
-        self.sideArea.hide()
-        self.overviewPanel = FileViewerOverviewPanel()
-        self.overviewArea = wrapInScrollArea(self.overviewPanel)
-        self.overviewArea
+        self.navpane = FileViewerNavPane()
+        self.navpane.hide()
+        self.previewPanel = FileViewerPreviewPanel(
+            accent_color=accent_color,
+        )
+        self.previewPanel.hide()
+        self.selectionChanged.connect(self.previewPanel.open)
+        self.CtrlShiftU = FigDShortcut(QKeySequence("Ctrl+Shift+U"), self, "Toggle preview pane visibility")
+        self.CtrlShiftU.activated.connect(self.previewPanel.toggle)
         # searchbar.
         self.foldersearchbar = FileViewerFolderSearchBar()
         self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -2195,10 +2706,23 @@ class FileViewerWidget(QMainWindow):
         self.statusbar = FileViewerStatus(self, self.webview)
         # clipboard access.
         self.clipboard = QApplication.clipboard()
+        # terminal.
+        from fig_dash.ui.system.terminal import RedirectShellContainer
+        self.terminal = RedirectShellContainer(accent_color=accent_color)
+        self.terminal.hide()
         # connect to browser buttom.
-        browserBtn = self.menu.opengroup.browserBtn
-        browserBtn.clicked.connect(self.openFileInWebView)
-        # # shortcuts.
+        # browserBtn = self.menu.opengroup.browserBtn
+        # browserBtn.clicked.connect(self.openFileInWebView)
+        # shortcuts.
+        self.CtrlShiftB = FigDShortcut(
+            QKeySequence("Ctrl+Shift+B"), self,
+            "Toggle bookmarks and quick access bar"
+        )
+        self.CtrlShiftB.activated.connect(self.navpane.toggle)
+        self.CtrlB = FigDShortcut(
+            QKeySequence("Ctrl+B"), self,
+            "Bookmark currently opened folder"
+        )
         self.SelectAll = FigDShortcut(
             QKeySequence.SelectAll, self, 
             "Select all files/folders"
@@ -2218,16 +2742,70 @@ class FileViewerWidget(QMainWindow):
             QKeySequence("Ctrl+Shift+F"), self,
             "Open file explorer search bar"
         )
+        self.CtrlShiftT = FigDShortcut(QKeySequence("Ctrl+Shift+T"), self, "Toggle terminal visibility")
+        self.CtrlShiftT.activated.connect(self.terminal.toggle)
         # self.SelectAll.setEnabled(False)
     
         # add the dev tools button to the view group.
         self.webview.devToolsBtn.setText("dev\ntools")
         self.webview.devToolsBtn.setIconSize(QSize(25,25))
         self.webview.devToolsBtn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
+        # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
+        # add more panels to web view splitter.
+        self.webview.splitter.insertWidget(0, self.navpane)
+        self.webview.splitter.addWidget(self.previewPanel)
+        self.webview.splitter.setSizes([200, 600, 200, 200])
+        self.webview.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
+        fsbar_wrapper = self.initFolderSearchBar()
+        self.CtrlShiftF.activated.connect(fsbar_wrapper.show)        
+        # if args.get("parentless", False):
+        #     self.menuArea = self.wrapInScrollArea(self.menu)
+        #     self.menuArea.setFixedHeight(130)
+        #     self.layout.insertWidget(0, self.menuArea)
+        # else:
+        #     self.layout.insertWidget(0, self.menu)
+        
+        # menu area.
+        # self.menuArea = wrapInScrollArea(self.menu)
+        # self.menuArea.setFixedHeight(130)
+        # self.menuArea.hide()
+        # vertical splitter: webview splitter + terminal.
+        self.vsplitter = QSplitter(Qt.Vertical)
+        self.vsplitter.addWidget(self.webview.splitter)
+        self.vsplitter.addWidget(self.terminal)
+        # build central widget.
+        self.layout.insertWidget(0, self.vsplitter, 0)
+        self.layout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
+        self.layout.insertWidget(0, self.folderbar, 0)
+        # self.layout.insertWidget(0, self.menuArea)
+        self.layout.insertWidget(0, self.menu)
+        # key press search bar.
+        self.keypress_search = FileViewerKeyPressSearch()
+        self.keypress_search.connectWidget(self)
+        self.keypress_search.hide()
+        # central widget.
+        self.central_widget = QWidget()
+        self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
+        self.central_widget.setLayout(self.layout)
+        # set central widget.
+        self.setCentralWidget(self.central_widget)
+        self.webview.urlChanged.connect(self.onUrlChange)
+        # self.menu.connectWidget(self)
+        self.folderbar.connectWidget(self)
+        self.webview.connectWidget(self)
+        self.navpane.connectWidget(self)
+        # connect Esc key shortcut to Esc handler.
+        self.webview.Esc.setEnabled(False)
+        self.EscKey = FigDShortcut(
+            QKeySequence("Esc"), self,
+            "Unselect selected files/folders"
+        )
+        self.EscKey.activated.connect(self.EscHandler)
+
+    def initFolderSearchBar(self) -> QWidget:
         fsbar_wrapper = QWidget()
         fsbar_close_btn = QToolButton()
         fsbar_close_btn.setIcon(FigD.Icon("system/fileviewer/close.svg"))
@@ -2242,48 +2820,8 @@ class FileViewerWidget(QMainWindow):
         fsbar_wrapper.setLayout(fsbar_layout)
         fsbar_wrapper.hide()
         fsbar_wrapper.setFixedHeight(34)
-        self.CtrlShiftF.activated.connect(fsbar_wrapper.show)
 
-        self.layout.insertWidget(0, self.webview.splitter, 0)
-        self.layout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
-        if not dangle_folderbar:
-            self.layout.insertWidget(0, self.folderbar, 0)
-        # if args.get("parentless", False):
-        #     self.menuArea = self.wrapInScrollArea(self.menu)
-        #     self.menuArea.setFixedHeight(130)
-        #     self.layout.insertWidget(0, self.menuArea)
-        # else:
-        #     self.layout.insertWidget(0, self.menu)
-        self.menuArea = wrapInScrollArea(self.menu)
-        self.menuArea.setFixedHeight(130)
-        self.menuArea.hide()
-        self.layout.insertWidget(0, self.menuArea)
-        self.layout.insertWidget(0, self.menu1)
-        # self.layout.addStretch(1)
-
-        self.webview.splitter.insertWidget(0, self.sideArea)
-        self.webview.splitter.setSizes([200, 600, 200])
-        self.webview.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.keypress_search = FileViewerKeyPressSearch()
-        self.keypress_search.connectWidget(self)
-        self.keypress_search.hide()
-
-        self.central_widget = QWidget()
-        self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
-        self.central_widget.setLayout(self.layout)
-        self.setCentralWidget(self.central_widget)
-        self.webview.urlChanged.connect(self.onUrlChange)
-        self.menu.connectWidget(self)
-        self.folderbar.connectWidget(self)
-        self.webview.connectWidget(self)
-        self.sidebar.connectWidget(self)
-        # connect Esc key shortcut to Esc handler.
-        self.webview.Esc.setEnabled(False)
-        self.EscKey = FigDShortcut(
-            QKeySequence("Esc"), self,
-            "Unselect selected files/folders"
-        )
-        self.EscKey.activated.connect(self.EscHandler)
+        return fsbar_wrapper
 
     def EscHandler(self):
         '''handle ESC key'''
@@ -2424,7 +2962,7 @@ class FileViewerWidget(QMainWindow):
             # file icon: file:///usr/share/icons/Humanity/mimes/48/text-plain.svg
         elif item_type == "file": 
             path = self.createFile()
-            icon = "file:///usr/share/icons/breeze/mimetypes/32/text-plain.svg"
+            icon = "file:///usr/share/icons/breeze/mimetypes/64/text-plain.svg"
             # folder icon: file:///usr/share/icons/Humanity/places/64/inode-directory.svg
         name = Path(path).name
         self.webview.createItem(path, name, icon, hidden=False) 
@@ -2520,6 +3058,7 @@ class FileViewerWidget(QMainWindow):
             self.dash_window.tabs.setTabText(i, folder)
         except AttributeError:
             FigD.error("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
+        print(f"history: {self.webview.history().items()}")
         # expand user.
         folder = os.path.expanduser(folder) 
         self.changeTabTitle.emit(Path(folder).name)
@@ -2559,12 +3098,11 @@ class FileViewerWidget(QMainWindow):
             hidden_count += 1
         # get number of items, folder, files and hidden
         self.statusbar.updateBreakdown(
-            files=file_count,
+            files=file_count, hidden=hidden_count,
             items=len(self.listed_filenames),
-            hidden=hidden_count,
             folders=folder_count,
         )
-
+        # iterate over full paths.
         for path in full_paths:
             self.loaded_file_items.append({
                 "path": path, 
@@ -2596,7 +3134,7 @@ class FileViewerWidget(QMainWindow):
         # ]
         icon_theme_devices_path = "/usr/share/icons/breeze/devices/48"
         icon_theme_places_path = "/usr/share/icons/breeze/places/64"
-        icon_theme_mimes_path = "/usr/share/icons/breeze/mimetypes/32"
+        icon_theme_mimes_path = "/usr/share/icons/breeze/mimetypes/64"
         # if os.path.exists(icon_theme_places_path):
         icon_paths = []
         for name, mimetype, full_path in icons:
@@ -2708,17 +3246,18 @@ class FileViewerWidget(QMainWindow):
     def updateSelection(self, item):
         '''update widget state when currently selected item is changed'''
         self.selected_item = item
+        self.selectionChanged.emit([self.selected_item])
         _, file_ext = os.path.splitext(item)
         if file_ext == "":
             file_ext = ".ext"
         icon = self.getIcon(item)
         mimetype = self.mime_database.mimeTypeForFile(item).name()
-        self.menu.filegroup.updateExt(file_ext)
-        self.menu.opengroup.updateMimeBtn(
-            mimetype=mimetype, 
-            icon=icon, path=item
-        )
-        self.menu1.updateMimeBtn(
+        # self.menu.filegroup.updateExt(file_ext)
+        # self.menu.opengroup.updateMimeBtn(
+        #     mimetype=mimetype, 
+        #     icon=icon, path=item
+        # )
+        self.menu.updateMimeBtn(
             mimetype=mimetype, 
             icon=icon, path=item
         )
@@ -2770,7 +3309,7 @@ class FileViewerWidget(QMainWindow):
             )
             self.keypress_search.setText(letter.lower())
         except (TypeError, ValueError) as e:
-            FigD.error("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
+            print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
             # fail silently.
         super(FileViewerWidget, self).keyPressEvent(event)
 
@@ -2845,6 +3384,7 @@ class FileViewerWidget(QMainWindow):
     def wrapInScrollArea(self, widget):
         scrollArea = QScrollArea()
         scrollArea.setWidget(widget)
+        scrollArea.setWidgetResizable(True)
         scrollArea.setAttribute(Qt.WA_TranslucentBackground)
         scrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scrollArea.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -2889,8 +3429,7 @@ def test_fileviewer():
     accent_color = FigDAccentColorMap["fileviewer"]
     widget_args = {
         "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
-        "font_color": "#fff", "parentless": True, "dangle_folderbar": True,
-        "accent_color": accent_color,
+        "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
     # open path.
     try: 
@@ -2903,8 +3442,7 @@ def test_fileviewer():
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
                             titlebar_callbacks={
                                 "viewSourceBtn": fileviewer.viewSource,
-                            }, title_widget=fileviewer.folderbar, 
-                            widget_factory=fileviewer_factory, 
+                            }, widget_factory=fileviewer_factory, 
                             widget_args=widget_args)
 
     window = styleWindowStatusBar(window, widget=fileviewer)

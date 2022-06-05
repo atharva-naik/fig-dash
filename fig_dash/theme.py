@@ -20,7 +20,7 @@ FigDAccentColorMap = {
 }
 FigDSystemAppIconMap = {
     "clipboard": FigD.icon("system/clipboard/logo.png"), 
-    "fileviewer": FigD.icon("system/fileviewer/logo.svg"),
+    "fileviewer": FigD.icon("system/fileviewer/logo.ico"),
     "imageviewer": FigD.icon("system/imageviewer/logo.svg"),
     # "mailviewer": "",
     "videoplayer": FigD.icon("system/videoplayer/logo.png"),

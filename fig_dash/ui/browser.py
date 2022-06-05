@@ -21,11 +21,9 @@ from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QS
 from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
-from fig_dash.ui import DashWidgetGroup
 from fig_dash.utils import QFetchIcon, collapseuser
-from fig_dash.api.system.translate import DashTranslator
 from fig_dash.api.browser.extensions import ExtensionManager
-    
+from fig_dash.ui import DashWidgetGroup, styleContextMenu, styleTextEditMenuIcons
 
 ON_POSIX = 'posix' in sys.builtin_module_names
 WEBPAGE_TERMINAL_JS = '''
@@ -264,75 +262,59 @@ class DevToolsBtn(QToolButton):
     def leaveEvent(self, event):
         self.setIcon(FigD.Icon(self.inactive_icon))
         super(DevToolsBtn, self).leaveEvent(event)
-
-
-class PyDevToolsBtn(QToolButton):
-    def __init__(self, parent: Union[None, QWidget]=None, 
-                size: Tuple[int, int]=(23,23)):
-        super(PyDevToolsBtn, self).__init__(parent)
-        self.inactive_icon = "browser/dev_tools.svg"
-        self.active_icon = "browser/dev_tools_active.svg"
-        self.setIcon(FigD.Icon(self.inactive_icon))
-        self.setIconSize(QSize(*size))
-        self.setToolTip("open python devtools")
-        self.setStyleSheet('''
-        QToolButton {
-            border: 0px;
-            background: transparent;
-        }''')
-
-
-class PyDevToolsView(QWidget):
-    def __init__(self):
-        super(PyDevToolsView, self).__init__()
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
+# class PyDevToolsBtn(QToolButton):
+#     def __init__(self, parent: Union[None, QWidget]=None, 
+#                 size: Tuple[int, int]=(23,23)):
+#         super(PyDevToolsBtn, self).__init__(parent)
+#         self.inactive_icon = "browser/dev_tools.svg"
+#         self.active_icon = "browser/dev_tools_active.svg"
+#         self.setIcon(FigD.Icon(self.inactive_icon))
+#         self.setIconSize(QSize(*size))
+#         self.setToolTip("open python devtools")
+#         self.setStyleSheet('''
+#         QToolButton {
+#             border: 0px;
+#             background: transparent;
+#         }''')
+# class PyDevToolsView(QWidget):
+#     def __init__(self):
+#         super(PyDevToolsView, self).__init__()
+#         self.layout = QVBoxLayout()
+#         self.layout.setContentsMargins(0, 0, 0, 0)
+#         self.layout.setSpacing(0)
         
-        self.execBtn = QToolButton()
-        self.execBtn.setText("run")
-        self.layout.addWidget(self.execBtn)
+#         self.execBtn = QToolButton()
+#         self.execBtn.setText("run")
+#         self.layout.addWidget(self.execBtn)
 
-        self.input = QPlainTextEdit()
-        self.input.setPlainText("input")
-        self.output = QTextEdit()
-        self.output.setText("output")
-        self.output.setReadOnly(True)
-        # bind events.
-        self.execBtn.clicked.connect(self.exec)
-        # self.input.returnPressed.connect(self.exec)
-        self.outputHistory = []
-        self.layout.addWidget(self.input)
-        self.layout.addWidget(self.output)
-        self.setLayout(self.layout)
-        self.setStyleSheet("""
-        QLineEdit {
-            color: #000;
-            background: #fff;
-        }
-        QTextEdit {
-            color: #000;
-            background: #fff;
-        }""")
-    # def _exec(self, code: str):
-    #     Vars = {}
-    #     try:
-    #         exec(code, globals(), Vars)
-    #         Result = Vars.get('Result')
-    #     except Exception:
-    #         Result = E
-    #     return Result
-    def exec(self):
-        code = self.input.toPlainText()
-        # codeEvalOutput = str(self._exec(code))
-        # self.outputHistory.append(codeEvalOutput)
-        try:
-            exec(code)
-        except Exception as e:
-            print("\x1b[31;1mbrowser.exec\x1b[0m", e)
-            self.output.setText(str(e))
-
-
+#         self.input = QPlainTextEdit()
+#         self.input.setPlainText("input")
+#         self.output = QTextEdit()
+#         self.output.setText("output")
+#         self.output.setReadOnly(True)
+#         # bind events.
+#         self.execBtn.clicked.connect(self.exec)
+#         # self.input.returnPressed.connect(self.exec)
+#         self.outputHistory = []
+#         self.layout.addWidget(self.input)
+#         self.layout.addWidget(self.output)
+#         self.setLayout(self.layout)
+#         self.setStyleSheet("""
+#         QLineEdit {
+#             color: #000;
+#             background: #fff;
+#         }
+#         QTextEdit {
+#             color: #000;
+#             background: #fff;
+#         }""")
+#     def exec(self):
+#         code = self.input.toPlainText()
+#         try:
+#             exec(code)
+#         except Exception as e:
+#             print("\x1b[31;1mbrowser.exec\x1b[0m", e)
+#             self.output.setText(str(e))
 class BrowserViewGroup(DashWidgetGroup):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(BrowserViewGroup, self).__init__(parent, "View")
@@ -351,7 +333,7 @@ class BrowserViewGroup(DashWidgetGroup):
             self.dash_window.page_info.toggle
         )
 
-
+# browser menu.
 class BrowserMenu(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(BrowserMenu, self).__init__(parent)
@@ -633,6 +615,7 @@ class CustomWebPage(QWebEnginePage):
                  dash_window=None, search_panel=None, 
                  **kwargs) -> None:
         super(CustomWebPage, self).__init__(*args, **kwargs)
+        from fig_dash.api.system.translate import DashTranslator
         if search_panel is not None:
             self.search_panel = search_panel
             self.findTextFinished.connect(
@@ -828,14 +811,12 @@ class ZoomFactor:
 class DebugWebView(QWebEngineView):
     zoomChanged = pyqtSignal(float)
     backgroundChanged = pyqtSignal(int, int, int)
-    def __init__(self, parent=None,
-                 zoomFactor=1.25, 
-                 dev_tools_zoom=1.35):
+    def __init__(self, parent: Union[QWidget, None]=None, zoomFactor: float=1.25, 
+                 dev_tools_zoom: float=1.35, accent_color: str="green"):
         super(DebugWebView, self).__init__(parent)
+        self.accent_color = accent_color
         self.devTools = self.initDevTools()
-        self.devCloseBtn.clicked.connect(
-            self.devTools.hide
-        )
+        self.devCloseBtn.clicked.connect(self.devTools.hide)
         self.devToolsBtn = DevToolsBtn(self)    
         self.dev_tools_zoom = dev_tools_zoom
         self.devToolsBtn.clicked.connect(self.toggleDevTools)
@@ -1072,27 +1053,34 @@ class DebugWebView(QWebEngineView):
         super(DebugWebView, self).load(url)
 
     def contextMenuEvent(self, event):
-        self.menu = self.page().createStandardContextMenu()
-        # print(dir(self.menu))
-        
-        # update palette.
-        palette = self.menu.palette()
-        palette.setColor(QPalette.Base, QColor(0,0,0))
-        palette.setColor(QPalette.Text, QColor(125,125,125))
-        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        print(vars(QPalette))
-        palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-        palette.setColor(QPalette.Window, QColor(48,48,48))
-        palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
-        self.menu.setPalette(palette)
-        # apply rounding mask.
-        roundingPath = QPainterPath()
-        self.menu.popup(event.globalPos())
-        roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
-        mask = QRegion(roundingPath.toFillPolygon().toPolygon())
-        self.menu.setMask(mask)
-
+        self.contextMenu = self.page().createStandardContextMenu()
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+        for action in self.contextMenu.actions():
+            if action.text() == "Back":
+                action.setShortcut(QKeySequence.Back)
+            elif action.text() == "Forward":
+                action.setShortcut(QKeySequence.Forward)
+            elif action.text() == "Reload":
+                action.setShortcut(QKeySequence.Refresh)
+        self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+        self.contextMenu.popup(event.globalPos())
+        # # update palette.
+        # palette = self.menu.palette()
+        # palette.setColor(QPalette.Base, QColor(0,0,0))
+        # palette.setColor(QPalette.Text, QColor(125,125,125))
+        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+        # print(vars(QPalette))
+        # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+        # palette.setColor(QPalette.Window, QColor(48,48,48))
+        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
+        # # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
+        # self.menu.setPalette(palette)
+        # # apply rounding mask.
+        # roundingPath = QPainterPath()
+        # self.menu.popup(event.globalPos())
+        # roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
+        # mask = QRegion(roundingPath.toFillPolygon().toPolygon())
+        # self.menu.setMask(mask)
     def alert(self, msg: str):
         self.page().runJavaScript(f"alert(`{msg}`);")
 
