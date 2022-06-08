@@ -1,18 +1,21 @@
 # fig-dash
-An intelligent workspace, with a chromium browser instance at the centerstage and multiple helper widgets to boost your productivity. This is an opensource hobby project.
+A virtual desktop experience in the form of a lightweight pyqt5 app suite.
 
 ## Aims of this project
 ### Current Agenda
-1. Emultate the rich set of features current browser possess with QWebEngineView (bookmarking)
+1. Basic set of applications like a text editor, code editor, file viewer/explorer, browser, image, audio and video viewers, weather, clock etc.
+2. Create an API to allow development of Fig style applications
+3. Create a virtual desktop application using QMdiWindow for multi window management.
+4. Allow for opening of system apps (for Ubuntu only for now, other Linux distros, Windows and MacOS may be targeted later)
+<!-- 1. Emultate the rich set of features current browser possess with QWebEngineView (bookmarking)
 2. Create rich set of widgets and a carefully designed dashboard to boost productivity of the average PC user.
-3. Log usage data like time spent browsing various topics, calendar based event scheduling, screen time analysis etc., visualize it and generate insights
-
-### Future Steps
+3. Log usage data like time spent browsing various topics, calendar based event scheduling, screen time analysis etc., visualize it and generate insights -->
+<!-- ### Future Steps
 1. Allow external windows as tabs as well so that they can be managed by a single window
-2. Create an automated pipeline that can share results of logged data and possibly recommend changes to increase productivity.
-
+2. Create an automated pipeline that can share results of logged data and possibly recommend changes to increase productivity. -->
 ## Screenshots
-Screenshots/showcase 
+Screenshots/showcase of currently developed apps. These are subject to rapid change as this project is still in its nascent stages. Any recommendations/feedback may be directed to the github issues page. 
+<!-- A dedicated email address might be instated if this project recieves interest. -->
 1. Fig Dash Home Page.
 ![Homepage](https://github.com/atharva-naik/fig-dash/blob/main/showcase/homepage1.png?raw=true)
 2. System app launcher.
