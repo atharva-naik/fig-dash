@@ -1232,13 +1232,18 @@ class FigDAppContainer(QApplication):
 
 class FigDTabWidget(QTabWidget):
     def __init__(self, widget_factory=None, window_factory=None, 
-                parent: Union[None, QWidget]=None, 
-                widget_args={}, window_args={}):
+                 parent: Union[None, QWidget]=None, tab_icon: str="",
+                 tab_title: str="New tab", widget_args={}, window_args={}):
         super(FigDTabWidget, self).__init__(parent)
+        # tab icon and title for new tabs.
+        self.tab_icon = FigD.Icon(tab_icon)
+        self.tab_title = tab_title
+        # window and widget factories and arguments.
         self.window_factory = window_factory
         self.widget_factory = widget_factory
         self.window_args = window_args
         self.widget_args = widget_args 
+        # set style sheet.
         self.setStyleSheet("""
         QTabWidget {
             color: #fff;
@@ -1367,7 +1372,7 @@ class FigDTabWidget(QTabWidget):
             widget.changeTabTitle.connect(self.changeCurrentTabIcon)
         if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
-        i = self.addTab(widget, FigD.Icon("system/fileviewer/new_tab_icon.svg"), "Home")
+        i = self.addTab(widget, self.tab_icon, self.tab_title)
         self.setCurrentIndex(i)
 
     def openWindow(self):
@@ -1686,6 +1691,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     layout.addWidget(titlebar)
     if add_tabs:
         tabwidget = FigDTabWidget(
+            tab_title=tab_title, tab_icon=tab_icon,
             widget_args=args.get("widget_args", {}),
             window_args=args.get("window_args", {}),
             widget_factory=args.get("widget_factory"),

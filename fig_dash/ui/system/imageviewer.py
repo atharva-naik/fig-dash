@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 print("fig_dash::ui::system::imageviewer")
-import PIL
-import bs4
-import time
 import base64
-import platform
+import PIL, bs4
+import requests
 import svgpathtools
 from typing import *
-import os, io, re, sys
 from pathlib import Path
+from functools import partial
 from PIL import Image, ImageCms
+import os, io, re, sys, time, platform
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
@@ -19,7 +18,7 @@ from fig_dash.theme import FigDAccentColorMap
 from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
+from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QRectF, QTimer, QUrl, QThread, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
 from PyQt5.QtWidgets import QAction, QWidget, QCompleter, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
@@ -151,18 +150,80 @@ QScrollBar::sub-line:vertical {
     subcontrol-origin: margin;
 }
 '''
-class ImageViewerViewGroup(DashWidgetGroup):
-	def __init__(self, parent: Union[None, QWidget]=None):
-		super(ImageViewerViewGroup, self).__init__(parent, "View")
-		toggleWidget = QWidget()
-		toggleWidget.setStyleSheet("background: transparent; color: #fff;")
-		toggleLayout = QVBoxLayout()
-		toggleLayout.setContentsMargins(0, 0, 0, 0)
-		toggleLayout.setSpacing(0)
-		toggleWidget.setLayout(toggleLayout)
-		# add widgets to widget group.
-		self.addWidget(toggleWidget)
+class ImageViewerSVGLoader(QObject):
+	finished = pyqtSignal()
+	bytesFetched = pyqtSignal(str)
+	def __init__(self):
+		super(ImageViewerSVGLoader, self).__init__()
 
+	def load(self, url):
+		data = requests.get(url).text
+		self.bytesFetched.emit(data)
+		self.finished.emit()
+
+# search for images/enter URLs.
+class ImageViewerSearchBar(QLineEdit):
+	def __init__(self, accent_color: str="gray", 
+				 parent: Union[QWidget, None]=None):
+		super(ImageViewerSearchBar, self).__init__(parent)
+		self.accent_color = accent_color
+        # create actions.
+		caseAction = self.addAction(
+            FigD.Icon("browser/case.svg"), 
+            QLineEdit.TrailingPosition
+        )
+		searchAction = self.addAction(
+            FigD.Icon("system/imageviewer/search.svg"), 
+            QLineEdit.LeadingPosition
+        )
+		# respond to triggering of actions.
+		caseAction.triggered.connect(self.toggleCaseSensitivity)
+		self.setStyleSheet("""
+        QLineEdit {
+            color: #fff;
+            padding: 5px;
+            background: #292929;
+            border-radius: 5px;
+        }""")
+		self.setClearButtonEnabled(True)
+		self.setPlaceholderText("Search for images locally or on the web")
+		self.history = []
+		# completer.
+		self.qcompleter = QCompleter()
+		# model.
+		self.stringModel = QStringListModel(self.history)
+		# set model for completer.
+		self.qcompleter.setModel(self.stringModel)
+		# set completer.
+		self.setCompleter(self.qcompleter)
+		self.setMinimumWidth(600)
+
+	def contextMenuEvent(self, event):
+		self.contextMenu = self.createStandardContextMenu()
+		self.contextMenu = styleContextMenu(
+			self.contextMenu, 
+			self.accent_color,
+		)
+		self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+		self.contextMenu.popup(event.globalPos())
+
+	def toggleCaseSensitivity(self):
+		if self.qcompleter.caseSensitivity() == Qt.CaseSensitive:
+			print("case insensitive")
+			self.qcompleter.setCaseSensitivity(Qt.CaseInsensitive)
+		else: 
+			print("case sensitive")
+			self.qcompleter.setCaseSensitivity(Qt.CaseSensitive)
+
+	def append(self, url_or_path: Union[str, QUrl]):
+		if isinstance(url_or_path, QUrl):
+			url_or_path = url_or_path.toString()
+		self.history.append(url_or_path)
+		self.stringModel = QStringListModel(self.history)
+		self.qcompleter.setModel(self.qcompleter)
+		self.setCompleter(self.qcompleter)
+
+# ribbon menu.
 class ImageViewerMenu(DashRibbonMenu):
 	def __init__(self, accent_color: str="green", 
 				 parent: Union[None, QWidget]=None):
@@ -614,12 +675,9 @@ class ImageViewerSVGTree(QWidget):
 
 
 class ImageViewerEffectsPanel(QWidget):
-	pass # effects: rotoscope, pixelate.
+	pass # effects: rotoscope, pixelate, vignette, red eye removal, distortion, sharpen, custom kernel application.
 
-class ImageViewerLayers(QWidget):
-	pass
-
-
+# sliders for applying filters.
 class ImageViewerFilterSlider(QWidget):
 	imageChanged = pyqtSignal() 
 	def __init__(self, text: str, icon: str="", icon_size: Tuple[int,int]=(25,25),
@@ -931,37 +989,6 @@ class ImageViewerFiltersPanel(QWidget):
 		}
 		self.setFilterValues(**filterState)
 
-# search bar to search google/enter URLs.
-class ImageViewerURLSearchBar(QLineEdit):
-    def __init__(self, parent: Union[None, QWidget]=None):
-        super(ImageViewerURLSearchBar, self).__init__(parent)
-        # create actions.
-        caseAction = self.addAction(
-            FigD.Icon("browser/case.svg"), 
-            QLineEdit.TrailingPosition
-        )
-        searchAction = self.addAction(
-            FigD.Icon("browser/search.svg"), 
-            QLineEdit.LeadingPosition
-        )
-        self.setStyleSheet("""
-        QLineEdit {
-            color: #fff;
-            padding: 5px;
-            background: #292929;
-            border-radius: 5px;
-        }""")
-        self.setPlaceholderText("Search system apps")
-        completer = QCompleter()
-        stringModel = QStringListModel()
-        stringModel.setStringList(list(
-            FigDSystemAppLauncherMap.keys()
-        ))
-        completer.setModel(stringModel)
-        self.setCompleter(completer)
-        self.setMinimumWidth(600)
-        self.setClearButtonEnabled(True)
-
 # image viewer plain text edit.
 class ImageViewerPlainTextEdit(QPlainTextEdit):
 	def __init__(self, *args, accent_color: str="green", **kwargs):
@@ -1042,6 +1069,8 @@ class ImageViewerMetaDataPanel(QWidget):
 				p = prf.profile
 				colorspace = f"{p.xcolor_space}"
 				colorprofile = p.profile_description
+				if p.icc_measurement_condition is None: p.icc_measurement_condition = {}
+				if p.clut is None: p.clut = {}
 				measurement_condition = "<br>"+"<br>".join([f"{k}: {v}" for k,v in p.icc_measurement_condition.items()])
 				clut = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.clut.items()])
 
@@ -1085,6 +1114,7 @@ class ImageViewerMetaDataPanel(QWidget):
 					<b>Blue Colorant:</b> ({", ".join([f"{c:.2f}" for c in p.blue_colorant[0]])}) ({", ".join([f"{c:.2f}" for c in p.blue_colorant[1]])}) <br>
 					<b>Green Colorant:</b> ({", ".join([f"{c:.2f}" for c in p.green_colorant[0]])}) ({", ".join([f"{c:.2f}" for c in p.green_colorant[1]])}) <br>
 				</div><br>"""
+				if p.intent_supported is None: p.intent_supported = {}
 				supported = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.intent_supported.items()])
 				INTENT_INFO = f"""
 				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Intent Information</span>
@@ -1117,6 +1147,11 @@ class ImageViewerMetaDataPanel(QWidget):
 			width = "scalable"
 			height = "scalable"
 			hasAlpha = "Not meaningful for svg"
+			print(e)
+		except IsADirectoryError as e:
+			width = "-"
+			height = "-"
+			hasAlpha = "-"
 			print(e)
 		fileSize = self.info.size()
 		self.panel.setPlainText("")
@@ -1164,10 +1199,10 @@ class ImageViewerSidePanel(QTabWidget):
 		self.effects_panel = ImageViewerEffectsPanel()
 		self.filetree = ImageViewerFileTree()
 		self.svgtree = ImageViewerSVGTree()
-		self.layers = ImageViewerLayers()
+		# self.layers = ImageViewerLayers()
 		self.addTab(self.filetree, "Folders")
 		self.addTab(self.svgtree, "Elements")
-		self.addTab(self.layers, "Layers")
+		# self.addTab(self.layers, "Layers")
 		self.addTab(self.filters_panel, "Filters")
 		self.addTab(self.effects_panel, "Effects")
 		self.setStyleSheet("""color: #fff; background: #292929;""")
@@ -1305,6 +1340,7 @@ class ImageViewerWebView(DebugWebView):
         #     for action in self.menu.actions():
         #         print(action.text())
 class ImageViewerWidget(QWidget):
+    changeTabTitle = pyqtSignal(str)
     """
     [summary]
     Widget for viewing images
@@ -1360,6 +1396,8 @@ class ImageViewerWidget(QWidget):
 			accent_color=accent_color,
 			imageviewer=self,
 		)
+        self.searchbar = ImageViewerSearchBar(accent_color=accent_color)
+        self.searchbar.returnPressed.connect(self.searchImage)
         self.side_panel.filters_panel.imageChanged.connect(self._decide_on_save)
 		
         self.metadata_panel = ImageViewerMetaDataPanel(accent_color=accent_color)
@@ -1372,6 +1410,7 @@ class ImageViewerWidget(QWidget):
         # self.filetree.hide()
         self.browser.splitter.insertWidget(0, self.side_panel)
         self.browser.splitter.addWidget(self.metadata_panel)
+        layout.addWidget(self.searchbar)
         layout.addWidget(self.browser.splitter)
         # set layout.
         self.setLayout(layout)
@@ -1398,6 +1437,12 @@ class ImageViewerWidget(QWidget):
                 fp.write(img_bytes)
         elif base64_str is None:
             print("\x1b[34;1mCouldn't save image: base64_str=None\x1b[0m")
+
+    def searchImage(self):
+        query_or_url = self.searchbar.text()
+        url = QUrl.fromUserInput(query_or_url)
+        if url.toString() != "":
+            self.openUrl(url)
 
     def saveImage(self):
         if self.save_ptr is None:
@@ -1480,36 +1525,35 @@ class ImageViewerWidget(QWidget):
     def onLoadFinished(self):        
         self.browser.loadDevTools()
         # self.browser.page().runJavaScript("viewer.full();")
-    def openUrl(self, path: str):
-        from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
-        filename_without_ext = str(Path(path).stem)
-        isdir = os.path.isdir(path)
-        # populate gallery info if path points to a folder.
-        gallery_info = []
-        if isdir:
-            for iter_file in os.listdir(path):
-                iter_file = os.path.join(path, iter_file)
-                mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
-                if not mimetype.startswith("image"):
-                    continue
-                url = QUrl.fromLocalFile(iter_file).toString()
-                gallery_info.append((url, Path(iter_file).stem))
-        url = QUrl.fromLocalFile(path).toString()
-        html = ImageViewerHTML.render({
-            "FILEPATH": path,
-            "FILEPATH_URL": url,
-            "FILENAME_WITHOUT_EXT": filename_without_ext,
-            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-            "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-            "PATH_IS_FOLDER": isdir,
-            "GALLERY_INFO": gallery_info,
-			"CSS_GRAD": self.css_grad,
-        })
-        if self.window_ptr is not None:
-            self.setWindowTitle(filename_without_ext)
-        render_url = FigD.createTempUrl(html)
-        self.browser.load(render_url)
-
+    # def openUrl(self, path: str):
+    #     from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
+    #     filename_without_ext = str(Path(path).stem)
+    #     isdir = os.path.isdir(path)
+    #     # populate gallery info if path points to a folder.
+    #     gallery_info = []
+    #     if isdir:
+    #         for iter_file in os.listdir(path):
+    #             iter_file = os.path.join(path, iter_file)
+    #             mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
+    #             if not mimetype.startswith("image"):
+    #                 continue
+    #             url = QUrl.fromLocalFile(iter_file).toString()
+    #             gallery_info.append((url, Path(iter_file).stem))
+    #     url = QUrl.fromLocalFile(path).toString()
+    #     html = ImageViewerHTML.render({
+    #         "FILEPATH": path,
+    #         "FILEPATH_URL": url,
+    #         "FILENAME_WITHOUT_EXT": filename_without_ext,
+    #         "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+    #         "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
+    #         "PATH_IS_FOLDER": isdir,
+    #         "GALLERY_INFO": gallery_info,
+	# 		"CSS_GRAD": self.css_grad,
+    #     })
+    #     if self.window_ptr is not None:
+    #         self.setWindowTitle(filename_without_ext)
+    #     render_url = FigD.createTempUrl(html)
+    #     self.browser.load(render_url)
     def toggleAutoSave(self, state: int):
         """toggle auto save state of the image viewer"""
         print(state)
@@ -1530,6 +1574,55 @@ class ImageViewerWidget(QWidget):
         self.menu = menu
         self.menu.hide()
 
+    def launchSVGLoadWorker(self, url: str):
+        # thread and worker.
+        self.__svg_load_thread = QThread()
+        self.__svg_load_worker = ImageViewerSVGLoader()
+        # move worker to thread.
+        self.__svg_load_worker.moveToThread(self.__svg_load_thread)
+		# thread slots.
+        self.__svg_load_thread.started.connect(partial(self.__svg_load_worker.load, url))
+        self.__svg_load_thread.finished.connect(self.__svg_load_thread.deleteLater)
+		# worker slots.
+        self.__svg_load_worker.bytesFetched.connect(self.svgDataRecieved)
+        self.__svg_load_worker.finished.connect(self.__svg_load_thread.quit)
+        self.__svg_load_worker.finished.connect(self.__svg_load_worker.deleteLater)
+        # start thread.
+        self.__svg_load_thread.start()
+
+    def svgDataRecieved(self, svgBytes: bytes):
+        print(svgBytes)
+        self.svg_data = svgBytes
+        self.svg_data = self.loadSVGData(svg_data=self.svg_data)
+
+    def openUrl(self, url: Union[QUrl, str]):
+        from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
+        if isinstance(url, QUrl):
+            url = url.toString()
+        self.changeTabTitle.emit(url)
+        self.svg_data = None
+        self.path_ptr = None
+        if url.endswith(".svg"):
+            FigD.debug("launched SVG data loading worker")
+            self.launchSVGLoadWorker(
+			    QUrl(url).toString(QUrl.FullyEncoded)
+		    )
+		# load SVG data.
+        self.svgtree.tree.clear()
+        self.svgtree.details_pane.setText("click on an element in the SVG tree to view details")
+        html = ImageViewerHTML.render({
+            "FILEPATH": url,
+            "FILEPATH_URL": url,
+            "FILENAME_WITHOUT_EXT": url,
+            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+            "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
+            "PATH_IS_FOLDER": False,
+            "GALLERY_INFO": [],
+			"CSS_GRAD": self.css_grad,
+        })
+        render_url = FigD.createTempUrl(html)
+        self.browser.load(render_url)        
+
     def open(self, path: str):
         from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         self.svg_data = None
@@ -1538,10 +1631,11 @@ class ImageViewerWidget(QWidget):
         self.metadata_panel.update(path)
         self.path_ptr = path
         filename_without_ext = str(Path(path).stem)
+        self.changeTabTitle.emit(filename_without_ext)
         isdir = os.path.isdir(path)
 		# load SVG data.
         self.svgtree.tree.clear()
-        self.svgtree.details_pane.setText("click on element on the SVG tree to view details")
+        self.svgtree.details_pane.setText("click on an element in the SVG tree to view details")
         if path.endswith(".svg"):
             svg_data = open(path).read()
             self.loadSVGData(svg_data=svg_data)
@@ -1567,8 +1661,6 @@ class ImageViewerWidget(QWidget):
             "GALLERY_INFO": gallery_info,
 			"CSS_GRAD": self.css_grad,
         })
-        if self.window_ptr is not None:
-            self.setWindowTitle(filename_without_ext)
         render_url = FigD.createTempUrl(html)
         self.browser.load(render_url)
         # self.filetree.setRootPath(path)
@@ -1611,18 +1703,11 @@ def launch_imageviewer(app):
 	)
     CtrlB.activated.connect(imageviewer.side_panel.toggle)
 
-def test_imageviewer():
-    FigD("/home/atharva/GUI/fig-dash/resources")
-    s = time.time()
-    app = FigDAppContainer(sys.argv)
-    print(f"app created in: {time.time()-s}")
-    # accent color and css grad color.
-    s = time.time()
-    accent_color = FigDAccentColorMap["imageviewer"]
-    grad_colors = extract_colors_from_qt_grad(accent_color)
-    css_grad = create_css_grad(grad_colors)
-    print(f"grads & accents in: {time.time()-s}")
-    # create ribbon menu for imageviewer.
+def imageviewer_factory(**args):
+	# create ribbon menu for imageviewer.
+    css_grad = args.get("accent_color", 'yellow')
+    openpath = args.get("openpath", FigD.icon("system/imageviewer/lenna.png"))
+    accent_color = args.get("accent_color", 'yellow')
     s = time.time()
     menu = ImageViewerMenu(accent_color=accent_color)
     menu.setFixedHeight(110)
@@ -1640,7 +1725,37 @@ def test_imageviewer():
     imageviewer.connectMenu(menu)
     imageviewer.centralLayout.insertWidget(0, menu)
     imageviewer.setStyleSheet("background: transparent; border: 0px;")
+    CtrlB = FigDShortcut(
+		QKeySequence("Ctrl+B"), imageviewer, 
+		"Toggle side pannel visibility"
+	)
+    CtrlB.activated.connect(imageviewer.side_panel.toggle)
+    imageviewer.open(openpath)
 
+    return imageviewer
+
+def test_imageviewer():
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    s = time.time()
+    app = FigDAppContainer(sys.argv)
+    print(f"app created in: {time.time()-s}")
+    # accent color and css grad color.
+    s = time.time()
+    accent_color = FigDAccentColorMap["imageviewer"]
+    grad_colors = extract_colors_from_qt_grad(accent_color)
+    css_grad = create_css_grad(grad_colors)
+    print(f"grads & accents in: {time.time()-s}")
+
+    try: openpath = sys.argv[1]
+    except IndexError: # openpath = "~/Pictures/atharva.jpg"
+        openpath = FigD.icon("system/imageviewer/lenna.png") 
+		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+    widget_args = {
+		"css_grad": css_grad,
+		"openpath": openpath,
+		"accent_color": accent_color,
+	}
+    imageviewer = imageviewer_factory(**widget_args)
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", 
 		icon="system/imageviewer/logo.svg",
@@ -1648,21 +1763,10 @@ def test_imageviewer():
 		titlebar_callbacks={
 			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
-		}
+		}, widget_factory=imageviewer_factory,
+        widget_args=widget_args,
 	)
     window.show()
-
-    try: openpath = sys.argv[1]
-    except IndexError:
-        # openpath = "~/Pictures/atharva.jpg"
-        openpath = FigD.icon("system/imageviewer/lenna.png") 
-		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
-    imageviewer.open(openpath)
-    CtrlB = FigDShortcut(
-		QKeySequence("Ctrl+B"), imageviewer, 
-		"Toggle side pannel visibility"
-	)
-    CtrlB.activated.connect(imageviewer.side_panel.toggle)
     app.exec()
 
 # main class

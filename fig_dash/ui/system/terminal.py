@@ -16,8 +16,9 @@ from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wra
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports.
 from PyQt5.QtGui import QIcon, QColor, QWindow, QTextFormat, QKeySequence#, QFont, QImage, QPixmap, QKeySequence#, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QTimer, QProcess, QStringListModel, pyqtSlot
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QTimer, QProcess, QStringListModel, pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QHBoxLayout, QMenu, QCompleter
+from fig_dash.utils import collapseuser
 
 # ribbon menu for DashTerminalMenu.
 class DashTerminalMenu(DashWidgetGroup):
@@ -244,6 +245,7 @@ class TerminalCommandOutput(QPlainTextEdit):
 
 
 class RedirectShellContainer(QWidget):
+    pathChanged = pyqtSignal(str)
     def __init__(self, path: str="~", accent_color: str="gray", 
                  parent: Union[None, QWidget]=None):
         super(RedirectShellContainer, self).__init__(parent)
@@ -304,6 +306,7 @@ class RedirectShellContainer(QWidget):
                 os.chdir(path)
                 self.path = path
                 self.pathLabel.setPath(self.path)
+                self.pathChanged.emit(collapseuser(path))
             else:
                 ansi = f"\x1b[31;1mbash: {path}\x1b[0m" 
                 html = self.output_formatter.convert(ansi)
@@ -463,6 +466,7 @@ class TerminalMenu(QWidget):
 
 
 class DashTerminalWidget(QWidget):
+    changeTabTitle = pyqtSignal(str)
     """
     A terminal widget that can handle various backends:
     tsh, csh, bash shell (gnome), web terminal (custom) etc.
@@ -484,6 +488,15 @@ class DashTerminalWidget(QWidget):
         self.vboxlayout.addWidget(self.gnome_terminal)
         # set layout.
         self.setLayout(self.vboxlayout)
+        shell = self._gnome_terminal.gnomeShellUI.shell
+        if hasattr(shell, "pathChanged"):
+            shell.pathChanged.connect(self.signalTitleChange)
+        else: 
+            print("ui::system::terminal::DashTerminalWidget missing pathChanged")
+
+    def signalTitleChange(self, path: str):
+        # FigD.debug(f"emitted changeTabTitle({path})")
+        self.changeTabTitle.emit(path)
 
 def launch_terminal(app):
     icon = FigDSystemAppIconMap["terminal"]
@@ -492,16 +505,24 @@ def launch_terminal(app):
     window = wrapFigDWindow(terminal, icon=icon, 
                             accent_color=accent_color,
                             width=900, height=500)
-    window.show()    
+    window.show()
+
+def terminal_factory(**args):
+    return DashTerminalWidget(**args)  
 
 def test_terminal():
     app = FigDAppContainer(sys.argv)
     icon = FigDSystemAppIconMap["terminal"]
     accent_color = FigDAccentColorMap["terminal"]
-    terminal = DashTerminalWidget(term="redirect", accent_color=accent_color)
-    window = wrapFigDWindow(terminal, icon=icon,
-                            accent_color=accent_color,
-                            width=900, height=500)
+    widget_args = {
+        "term": 'redirect',
+        "accent_color": accent_color,
+    }
+    terminal = terminal_factory(**widget_args)
+    window = wrapFigDWindow(terminal, icon=icon, accent_color=accent_color, width=900, 
+                            height=500, widget_factory=terminal_factory, widget_args=widget_args, 
+                            tab_icon=FigD.icon("system/terminal/logo.svg"), 
+                            tab_title=f"New {widget_args['term']} terminal")
     window.CtrlB = QShortcut(QKeySequence("Ctrl+B"), window)
     window.CtrlB.activated.connect(terminal.logWindow.toggle)
     window.show()

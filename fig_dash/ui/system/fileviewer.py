@@ -23,7 +23,7 @@ from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, 
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
-from PyQt5.QtWebEngineWidgets import QWebEnginePage
+from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineSettings
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor, QKeySequence, QPalette
 from PyQt5.QtCore import Qt, QSize, QFileInfo, QUrl, QMimeDatabase, pyqtSlot, pyqtSignal, QObject, QThread, QFileSystemWatcher
 from PyQt5.QtWidgets import QWidget, QSplitter, QMainWindow, QApplication, QErrorMessage, QLabel, QLineEdit, QToolBar, QMenu, QToolButton, QSizePolicy, QFrame, QAction, QActionGroup, QLayout, QVBoxLayout, QHBoxLayout, QGridLayout, QGraphicsDropShadowEffect, QFileIconProvider, QSlider, QComboBox, QCompleter, QDirModel, QScrollArea
@@ -2154,7 +2154,7 @@ class FileViewerFolderBtn(QToolButton):
         self.is_selected = False
         self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
         self.setStyleSheet(self.folderBtnStyle)
-        
+
     def enterEvent(self, event):
         self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
         super().enterEvent(event)
@@ -2597,13 +2597,28 @@ class FileViewerNavPane(QScrollArea):
             btn.connectWidget(widget)
 
 # PDF webview.
-class FileViewerPDFWebView(DebugWebView):
+class FileViewerPreviewWebView(DebugWebView):
     def __init__(self, accent_color: str="gray", 
                  parent: Union[QWidget, None]=None):
-        super(FileViewerPDFWebView, self).__init__(
+        super(FileViewerPreviewWebView, self).__init__(
             accent_color=accent_color, 
             parent=parent,
         )
+
+    def loadTextFile(self, path: str):
+        html = jinja2.Template(r"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>{{ PATH }}</title>                
+            </head>
+            <body style="background-color: #292929;">
+                <pre style="word-wrap: break-word; white-space: pre-wrap; font-size: 14px; color: #fff; font-family: 'Be Vietnam Pro';">{{ DATA }}</pre>
+            </body>
+        </html>""").render(PATH=path, DATA=open(path).read())
+        self.setZoomFactor(1.25)
+        url = FigD.createTempUrl(html)
+        self.load(url)
     # def _loadPDF(self, path: str):
     #     global PDFJS_VIEWER_PATH
     #     viewer_url = QUrl.fromLocalFile(PDFJS_VIEWER_PATH).toString()
@@ -2633,6 +2648,7 @@ class FileViewerPDFWebView(DebugWebView):
     def loadPDF(self, path: str):
         print(QUrl.fromUserInput(path))
         self.load(QUrl.fromUserInput(path))
+        self.setZoomFactor(1.25)
 # preview of a file:
 # 1. text, pdf, image, gif: webview
 # 2. audio, video: vlc player.
@@ -2643,7 +2659,7 @@ class FileViewerPreviewPanel(QWidget):
         super(FileViewerPreviewPanel, self).__init__(parent)
         self.mime_db = QMimeDatabase()
         self.vboxlayout = QVBoxLayout()
-        self.web_preview = FileViewerPDFWebView(accent_color=accent_color)
+        self.web_preview = FileViewerPreviewWebView(accent_color=accent_color)
         self.web_preview.hide()
         self.default = QLabel()
         self.default.setText("No preview available")
@@ -2668,7 +2684,11 @@ class FileViewerPreviewPanel(QWidget):
         path = paths[0]
         mimetype = self.mime_db.mimeTypeForFile(path).name()
         print(f"previewing {path} out of {paths} with mimetype: {mimetype}")
-        if mimetype.startswith("text") or mimetype.startswith("image"):
+        if mimetype.startswith("text") and mimetype != "text/html":
+            self.web_preview.show()
+            self.web_preview.loadTextFile(path)
+            self.default.hide()
+        elif mimetype == "text/html" or mimetype.startswith("image"):
             self.web_preview.show()
             self.web_preview.load(QUrl.fromLocalFile(path))
             self.web_preview.setZoomFactor(1.25)
@@ -2676,7 +2696,6 @@ class FileViewerPreviewPanel(QWidget):
         elif mimetype in ["application/pdf"]:
             self.web_preview.show()
             self.web_preview.loadPDF(path)
-            self.web_preview.setZoomFactor(1.25)
             self.default.hide()
         else:
             self.web_preview.hide()
@@ -3462,23 +3481,6 @@ def test_fileviewer():
     import sys
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
-    # fileviewer.setStyleSheet("background: tranparent; border: 0px;")
-    # QFontDatabase.addApplicationFont(
-    #     FigD.font("BeVietnamPro-Regular.ttf")
-    # )
-    # fileviewer.setGeometry(200, 200, 800, 600)
-    # fileviewer.setWindowFlags(Qt.WindowStaysOnTopHint)
-    # fileviewer.statusBar().addWidget(
-    #     fileviewer.statusbar
-    # )
-    # app.setWindowIcon(FigD.Icon("system/fileviewer/logo.svg"))
-    # try: 
-    #     path = os.path.expanduser(sys.argv[1])
-    # except IndexError: 
-    #     path = os.path.expanduser("~")
-    # fileviewer.open(path)
-    # fileviewer.show()
-    # app.exec()
     # get accent color & icon.
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
