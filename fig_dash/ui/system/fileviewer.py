@@ -37,7 +37,7 @@ from PyQt5.QtWidgets import QWidget, QSplitter, QMainWindow, QApplication, QErro
 # linkedin
 # https://www.linkedin.com/sharing/share-offsite/?url={enc_url}
 def blank(*args, **kwargs):
-    FigD.debug(args, kwargs)
+    print("\x1b[33;1minside blank:\x1b[0m", args, kwargs)
 FILE_VIEWER_CACHE_PATH = os.path.expanduser("~/.cache/fig_dash/fileviewer/thumbnails")
 class EventHandler(QObject):
     def __init__(self, fileviewer):
@@ -54,7 +54,7 @@ class EventHandler(QObject):
 
     @pyqtSlot(str)
     def triggerContextMenu(self, path: str):
-        FigD.debug(f"context menu triggered for {path}")
+        print(f"context menu triggered for {path}")
 
     @pyqtSlot(str, str)
     def triggerRename(self, id: str, new_name: str):
@@ -154,6 +154,8 @@ class PyMuPdfThumbnailer:
             print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.EmptyFileError", e)
         except fitz.fitz.FileNotFoundError as e:
             print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised fitz.fitz.FileNotFoundError", e)
+        except ValueError as e:
+            print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised ValueError", e)
 
 # File viewer thumbnailing backend worker.
 class FileViewerThumbnailer(QObject):
@@ -186,7 +188,7 @@ class FileViewerThumbnailer(QObject):
         import fitz
         import fitz.fitz
         if self.__file_path is None:
-            FigD.debug("file path not set")
+            print("file path not set")
             return
         path = self.__file_path
         path = os.path.expanduser(path)
@@ -286,10 +288,10 @@ class FileViewerStatus(QWidget):
         shortcut = data.get("shortcut", False)
         symbolic = data.get("symbolic", False)
         if symbolic:
-            FigD.debug("is a symlink")
+            print("is a symlink")
             self.symlink.setIcon(FigD.Icon("system/fileviewer/symlink.svg"))
         if shortcut:
-            FigD.debug("is a shortcut")
+            print("is a shortcut")
             self.shortcut.setIcon(FigD.Icon("system/fileviewer/shortcut.png"))
 
         self.selected.setText(f" selected: {name}")
@@ -401,7 +403,7 @@ class FileViewerWebView(DebugWebView):
     def contextMenuEvent(self, event):
         '''show the orchared context menu (not specific to a selected item)'''
         data = self.page().contextMenuData()
-        FigD.debug(data)
+        print(data)
         if data.mediaType() == 0:
             self.orchardMenu.popup(event.globalPos())
         elif data.mediaType() == 1:
@@ -1152,14 +1154,14 @@ class XdgOpenDropdown(QComboBox):
     def getAppsList(self, mimetype: str):
         '''get list of apps available for a given mimetype.'''
         apps = self.mime_to_apps(mimetype)
-        FigD.debug(mimetype)
+        print(mimetype)
         self.desktop_files = []
         app_names = []
         for app in apps:
             desktop_file = DesktopFile(app)
             # desktop_file.read()
             self.desktop_files.append(desktop_file)
-            FigD.debug(desktop_file)
+            print(desktop_file)
             app_names.append(desktop_file.app_name)
 
         return app_names
@@ -1646,7 +1648,7 @@ class FileViewerMenuOld(QWidget):
         return sep
 
     def toggle(self):
-        FigD.debug("\x1b[34;1mtoggling menu\x1b[0m")
+        print("\x1b[34;1mtoggling menu\x1b[0m")
         if self.scroll_area_ptr:
             self.scroll_area_ptr.toggle()
 
@@ -2089,6 +2091,42 @@ class FileViewerFolderBtn(QToolButton):
                  accent_color: str="gray", stylesheet: str="",
                  parent: Union[None, QWidget]=None):
         super(FileViewerFolderBtn, self).__init__(parent)
+        self.folderBtnStyle = """
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 17px;
+            text-align: center;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
+        }
+        QToolButton:hover {
+            color: #292929;
+            border: 1px solid #0a4c70;
+            border-radius: 2px;
+            background: rgba(105, 191, 238, 150);
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }"""
+        self.folderBtnSelStyle = """
+        QToolButton {
+            color: #292929;
+            font-size: 17px;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 2px;
+            border: 1px solid #0a4c70;
+            font-family: "Be Vietnam Pro";
+            background: rgba(105, 191, 238, 150);
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }"""
         self.accent_color = accent_color
         self.widget = widget
         self.path = path
@@ -2098,10 +2136,33 @@ class FileViewerFolderBtn(QToolButton):
         self.setStatusTip(tip)
         if name == "/":
             self.setIcon(FigD.Icon("system/fileviewer/harddrive.png"))
-        else: self.setText(name)
+        else: 
+            self.setText(name)
+            self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
+            self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         if self.widget:
             self.clicked.connect(partial(self.widget.open, path))
         self.setStyleSheet(stylesheet)
+        self.is_selected = False
+
+    def select(self):
+        self.is_selected = True
+        self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
+        self.setStyleSheet(self.folderBtnSelStyle)
+
+    def deselect(self):
+        self.is_selected = False
+        self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
+        self.setStyleSheet(self.folderBtnStyle)
+        
+    def enterEvent(self, event):
+        self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if not self.is_selected:
+            self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
+        super().leaveEvent(event)
 
     def contextMenuEvent(self, event):
         self.contextMenu = QMenu()
@@ -2262,7 +2323,7 @@ class FileViewerFolderBar(QScrollArea):
         # self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
     def toggle(self):
-        FigD.debug("toggling folderbar visibility")
+        print("toggling folderbar visibility")
         if self.isVisible():
             self.hide()
         else: self.show()
@@ -2283,7 +2344,7 @@ class FileViewerFolderBar(QScrollArea):
             if item is not None:
                 item.widget().setParent(None)
             else: pass
-    # FigD.debug(f"fileviewer.FileViewerFolderBar.clear({i}):", e)
+
     def getSubPaths(self, path):
         sub_paths = []
         path = Path(path)
@@ -2297,8 +2358,8 @@ class FileViewerFolderBar(QScrollArea):
         if self.path.startswith(path):
             for i, sub_path in enumerate(self.getSubPaths(path)):
                 if sub_path == path: break
-            self.folderBtns[self.selectedIndex].setStyleSheet(self.folderBtnStyle)
-            self.folderBtns[i].setStyleSheet(self.folderBtnSelStyle)
+            self.folderBtns[self.selectedIndex].deselect()
+            self.folderBtns[i].select()
             self.selectedIndex = i
             return
         # clear layout
@@ -2321,7 +2382,7 @@ class FileViewerFolderBar(QScrollArea):
             self.folderBtns.append(btn)
         
         self.folderBtns = self.folderBtns[::-1]
-        self.folderBtns[-1].setStyleSheet(self.folderBtnSelStyle)
+        self.folderBtns[-1].select()
         self.layout.addStretch(1)
         self.addSpacer()
         self.layout.insertWidget(0, self.reloadBtn)
@@ -2498,7 +2559,6 @@ class FileViewerNavPane(QScrollArea):
         }""")
 
     def toggle(self):
-        # FigD.debug("toggling folderbar visibility")
         if self.isVisible():
             self.hide()
         else: self.show()
@@ -2544,33 +2604,35 @@ class FileViewerPDFWebView(DebugWebView):
             accent_color=accent_color, 
             parent=parent,
         )
+    # def _loadPDF(self, path: str):
+    #     global PDFJS_VIEWER_PATH
+    #     viewer_url = QUrl.fromLocalFile(PDFJS_VIEWER_PATH).toString()
+    #     html = jinja2.Template(r"""
+    #     <!DOCTYPE html>
+    #     <html>
+    #     <head>
+    #         <title>Hello world!</title>
+    #     </head>
+    #     <body>
 
+    #         <div>
+    #         <h2>File Preview</h2>
+    #             <div>
+    #                 <iframe id="pdf-js-viewer" src="{{ VIEWER_URL }}?file={{ URL }}" title="{{ PATH }}" frameborder="0" width="500" height="600"></iframe>
+    #             </div>
+
+    #         </div>
+    #     </body>
+    #     </html>""").render(VIEWER_URL=viewer_url, PATH=path, 
+    #                        URL=QUrl.fromLocalFile(path).toString(QUrl.FullyEncoded))
+    #     load_url = FigD.createTempUrl(html)
+    #     print(html)
+    #     # load_url = QUrl.fromUserInput(f'{viewer_url}{path}') 
+    #     print(f"loaded PDF url: {load_url.toString(QUrl.FullyEncoded)}")
+    #     self.load(load_url)
     def loadPDF(self, path: str):
-        global PDFJS_VIEWER_PATH
-        viewer_url = QUrl.fromLocalFile(PDFJS_VIEWER_PATH).toString()
-        html = jinja2.Template(r"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Hello world!</title>
-        </head>
-        <body>
-
-            <div>
-            <h2>File Preview</h2>
-                <div>
-                    <iframe id="pdf-js-viewer" src="{{ VIEWER_URL }}?file={{ URL }}" title="{{ PATH }}" frameborder="0" width="500" height="600"></iframe>
-                </div>
-
-            </div>
-        </body>
-        </html>""").render(VIEWER_URL=viewer_url, PATH=path, 
-                           URL=QUrl.fromLocalFile(path).toString(QUrl.FullyEncoded))
-        load_url = FigD.createTempUrl(html)
-        print(html)
-        # load_url = QUrl.fromUserInput(f'{viewer_url}{path}') 
-        print(f"loaded PDF url: {load_url.toString(QUrl.FullyEncoded)}")
-        self.load(load_url)
+        print(QUrl.fromUserInput(path))
+        self.load(QUrl.fromUserInput(path))
 # preview of a file:
 # 1. text, pdf, image, gif: webview
 # 2. audio, video: vlc player.
@@ -2602,7 +2664,7 @@ class FileViewerPreviewPanel(QWidget):
             self.hide()
         else: self.show()
 
-    def open(self, paths: List[str]):
+    def generatePreview(self, paths: List[str]):
         path = paths[0]
         mimetype = self.mime_db.mimeTypeForFile(path).name()
         print(f"previewing {path} out of {paths} with mimetype: {mimetype}")
@@ -2666,6 +2728,7 @@ class FileViewerWidget(QMainWindow):
         self.menu = FileViewerMenu(accent_color=accent_color)
         self.menu.setFixedHeight(120)
         self.menu.connectFileViewerWidget(self)
+        self.menu.hide()
         self.font_color = args.get("font_color", '#fff')
         self.background_image = QUrl.fromLocalFile(
             args.get("background")
@@ -2696,7 +2759,7 @@ class FileViewerWidget(QMainWindow):
             accent_color=accent_color,
         )
         self.previewPanel.hide()
-        self.selectionChanged.connect(self.previewPanel.open)
+        self.selectionChanged.connect(self.previewPanel.generatePreview)
         self.CtrlShiftU = FigDShortcut(QKeySequence("Ctrl+Shift+U"), self, "Toggle preview pane visibility")
         self.CtrlShiftU.activated.connect(self.previewPanel.toggle)
         # searchbar.
@@ -3015,7 +3078,7 @@ class FileViewerWidget(QMainWindow):
                 QWebEnginePage.ViewSource
             )
         except Exception as e: 
-            FigD.error("ui::system::fileviewer::FileViewerWidget.viewSource", e)
+            print("ui::system::fileviewer::FileViewerWidget.viewSource", e)
 
     def createThumbnailWorker(self, path: str, thumb_size: int) -> QThread:
         s = time.time()
@@ -3052,12 +3115,10 @@ class FileViewerWidget(QMainWindow):
         from fig_dash.utils import collapseuser
         from fig_dash.ui.js.fileviewer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
         '''open a file/folder location.'''
-        try:
-            FigD.debug(self.dash_window)
+        try: # print(self.dash_window)
             i = self.dash_window.tabs.currentIndex()
             self.dash_window.tabs.setTabText(i, folder)
-        except AttributeError:
-            FigD.error("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
+        except AttributeError: pass # print("FileViewerWidget: \x1b[31;1mnot connected to a DashWindow\x1b[0m")
         print(f"history: {self.webview.history().items()}")
         # expand user.
         folder = os.path.expanduser(folder) 
@@ -3074,7 +3135,7 @@ class FileViewerWidget(QMainWindow):
         try:
             os.scandir(folder)
         except PermissionError as e:
-            FigD.error("fileviewer.open", e)
+            print("fileviewer.open", e)
             self.errorDialog(str(e))
             return
         self.folder = Path(folder)
@@ -3200,13 +3261,7 @@ class FileViewerWidget(QMainWindow):
                     continue
                 path = "/usr/share/icons/breeze/mimetypes/32/text-plain.svg"
                 icon_paths.append(QUrl.fromLocalFile(path).toString())    
-        FigD.debug("url: "+self.webview.url().toString()) 
-        # def chunk_string(string, k=12):
-        #     result = []
-        #     for i in range(0, len(string), k):
-        #         result.append(string[i:i+k])
 
-        #     return result
         def format_listed(prelisted):
             listed = []
             for rec in prelisted:
@@ -3241,7 +3296,7 @@ class FileViewerWidget(QMainWindow):
         s = time.time()
         for path in full_paths: 
             self.createThumbnailWorker(path=path, thumb_size=240)
-        FigD.debug(f"**created thumbnail workers in {time.time()-s}s**")
+        print(f"\x1b[32;1m**created thumbnail workers in {time.time()-s}s**\x1b[0m")
 
     def updateSelection(self, item):
         '''update widget state when currently selected item is changed'''
@@ -3378,7 +3433,7 @@ class FileViewerWidget(QMainWindow):
             f.write(self.viewer_html)
 
     def connectWindow(self, window):
-        FigD.debug("FileViewerWidget: connected to DashWindow")
+        print("FileViewerWidget: connected to DashWindow")
         self.dash_window = window
 
     def wrapInScrollArea(self, widget):

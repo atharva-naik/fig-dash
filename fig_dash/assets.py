@@ -3,6 +3,7 @@
 '''Asset management for FigD'''
 print("fig_dash::ui::assets")
 import os
+import shutil
 import jinja2
 import logging
 import coloredlogs
@@ -14,6 +15,7 @@ from PyQt5.QtGui import QIcon, QFont
 class AssetManager:
     '''A class to bundle path completion resources for fig'''
     def __init__(self, resource_dir: str="~/GUI/fig-dash/resources"):
+        self.temp_file_ctr = 0
         resource_dir = os.path.expanduser(resource_dir)
         # print(f"reading resources from: {resource_dir}")
         self.ResourcePath = resource_dir
@@ -40,6 +42,7 @@ class AssetManager:
         self.theme_dir = os.path.join(resource_dir, "theme")
         self.static_dir = os.path.join(resource_dir, "static")
         self.locale_dir = os.path.join(resource_dir, "locales")
+        self.temp_foldir = os.path.join(self.static_dir, "TEMP_FILES")
         self.wallpaper_dir = os.path.join(resource_dir, "wallpapers")
         self.wallpaper_paths = []
         for category in os.listdir(self.wallpaper_dir):
@@ -109,20 +112,24 @@ class AssetManager:
         return QUrl.fromLocalFile(filePath).toString()
 
     def createTempUrl(self, content: str) -> QUrl:
+        os.makedirs(self.temp_foldir, exist_ok=True)
         tempPath = os.path.join(
-            self.static_dir,
-            "temp_file_123456789.html"
+            self.temp_foldir,
+            f"{self.temp_file_ctr}.html"
         )
+        self.temp_file_ctr += 1
         with open(tempPath, "w") as f:
             f.write(content)
         
         return QUrl.fromLocalFile(tempPath)
 
     def createTempPath(self, content: str) -> str:
+        os.makedirs(self.temp_foldir, exist_ok=True)
         tempPath = os.path.join(
-            self.static_dir,
-            "temp_file_123456789.html"
+            self.temp_foldir,
+            f"{self.temp_file_ctr}.html"
         )
+        self.temp_file_ctr += 1
         with open(tempPath, "w") as f:
             f.write(content)
         
@@ -130,14 +137,10 @@ class AssetManager:
 
     def __del__(self):
         '''delete temporary file.'''
-        tempPath = os.path.join(
-            self.static_dir,
-            "temp_file_123456789.html"
-        )
-        try: os.remove(tempPath)
-        except FileNotFoundError:
-            pass
-
+        if self.temp_foldir.endswith("TEMP_FILES"):
+            print(f"deleting temp_foldir: {self.temp_foldir}")
+        # try: shutil.rmtree(self.temp_dir)
+        # except FileNotFoundError: pass
     def Icon(self, name:str) -> QIcon :
         '''return QIcon'''
         icon_path = self.icon(name)
@@ -152,8 +155,9 @@ class AssetManager:
 
         return font
 
-
+# asset manager.
 FigD = AssetManager()
 if __name__ == "__main__":
     FigD = AssetManager("resources")
+    tempURL = FigD.createTempUrl("lol wow")
     print(FigD.icon("titlebar/close.png"))

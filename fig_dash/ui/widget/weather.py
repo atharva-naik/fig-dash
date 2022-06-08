@@ -132,7 +132,7 @@ class WeatherWidgetMenu(DashRibbonMenu):
         super(WeatherWidgetMenu, self).__init__(
             parent=parent, group_names=[
                 "File", "View", "Convert", "Search", "Filters"
-            ]
+            ], accent_color=accent_color
         )
         self.addWidgetGroup("File", [
             ({

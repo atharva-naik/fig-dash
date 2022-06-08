@@ -17,7 +17,7 @@ class Toggle(QCheckBox):
                  checked_color: str="#00B0FF", handle_color: Union[QColor, int]=Qt.white):
         super(Toggle, self).__init__(parent)
         self._bar_text = "off"
-        print(f"\x1b[34;1mbar_color:\x1b[0m {bar_color}")
+        # print(f"\x1b[34;1mbar_color:\x1b[0m {bar_color}")
         # Save our properties on the object via self, so we can access them later
         # in the paintEvent.
         def qt_grad_from_str(qt_grad_str: str) -> Union[QLinearGradient, QRadialGradient, QConicalGradient]:
@@ -42,7 +42,7 @@ class Toggle(QCheckBox):
         elif isinstance(bar_color, int) or isinstance(bar_color, QColor):
             self._bar_brush = QBrush(bar_color)
         self._bar_checked_brush = QBrush(QColor(checked_color).lighter())
-        print(f"bar checked brush: {QColor(checked_color).lighter().name()}")
+        # print(f"bar checked brush: {QColor(checked_color).lighter().name()}")
         self._handle_brush = QBrush(handle_color)
         self._handle_checked_brush = QBrush(QColor(checked_color))
         # Setup the rest of the widget.
@@ -139,7 +139,7 @@ class AnimatedToggle(Toggle):
         self._pulse_unchecked_animation = QBrush(QColor(pulse_unchecked_color))
         pulse_checked_color = QColor(pulse_checked_color).lighter()
         pulse_checked_color.setAlphaF(0.6)
-        print(f"pulse checked color: {pulse_checked_color.name()}")
+        # print(f"pulse checked color: {pulse_checked_color.name()}")
         self._pulse_checked_animation = QBrush(pulse_checked_color)
 
     @pyqtSlot(int)

@@ -371,7 +371,44 @@ class TitleBarCloseBtn(QToolButton):
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
 
+# title bar button that shows menu if it is clicked.
+class TitleBarClickMenuBtn(QToolButton):
+    def __init__(self, menu: QWidget=None, tip: str="a tip", icon: str="",
+                 parent: Union[None, QWidget]=None, accent_color: str="red", 
+                 icon_size: Tuple[int,int]=(22,22), stylesheet: str=""):
+        super(TitleBarClickMenuBtn, self).__init__(parent)
+        self.accent_color = accent_color
+        if stylesheet == "":
+            self.setStyleSheet(window_title_btn_style)
+        self.setToolTip(tip)
+        self.setIcon(FigD.Icon(icon))
+        self.setIconSize(QSize(*icon_size))
+        if menu: self.setContextMenu(menu)
+        self.clicked.connect(self.clickedEvent)
+    # def setCorrection(self, x: int, y: int=6):
+    #     self.x_corr = x
+    #     self.y_corr = y
+    def setContextMenu(self, menu: QWidget):
+        self.contextMenu = menu
+        if isinstance(menu, QMenu):
+            self.contextMenu = styleContextMenu(
+                self.contextMenu, 
+                accent_color=self.accent_color
+            )
+        elif hasattr(menu, "setAccentColor"):
+            self.contextMenu.setAccentColor(self.accent_color)
 
+    def clickedEvent(self):
+        p = self.mapToGlobal(QPoint(0, 0))
+        if not hasattr(self, "contextMenu"): return
+        if isinstance(self.contextMenu, QMenu):
+            self.contextMenu.popup(QPoint(p.x(), p.y()))
+        else: 
+            FigD.debug("self.contextMenu.clickedEvent")
+            self.contextMenu.move(p.x(), p.y())
+            self.contextMenu.show()
+
+# title bar shortcut button.
 class TitleBarShortcutsBtn(QToolButton):
     def __init__(self, titlebar=None,
                  size: Tuple[int,int]=(22,22)):
@@ -386,13 +423,11 @@ class TitleBarShortcutsBtn(QToolButton):
         self.clicked.connect(self.clickedEvent)
 
     def clickedEvent(self):
-        p = QPoint(self.x(), self.y())
         window =  self.titlebar.window
-        pos = self.mapToGlobal(p)
+        p = self.mapToGlobal(QPoint(0, 0))
         # create window shortcuts page.
         window.shortcuts_pane = window.createShortcutsPane()
-        print(pos.x()-352, pos.y()+6)
-        window.shortcuts_pane.move(pos.x()-352, pos.y()+6)
+        window.shortcuts_pane.move(p.x(), p.y())
         window.shortcuts_pane.show()
 
     def contextMenuEvent(self, event):
@@ -403,8 +438,8 @@ class TitleBarShortcutsBtn(QToolButton):
         window.shortcuts_pane = window.createShortcutsPane()
         window.shortcuts_pane.move(x, y)
         window.shortcuts_pane.show()
-        # print(window.printShortcuts())
-        # self.menu.popup(event.globalPos())
+
+# minimize button for the titlebar.
 class TitleBarMinimizeBtn(QToolButton):
     def __init__(self, callback=None, 
                  size: Tuple[int,int]=(22,22)):
@@ -492,8 +527,12 @@ class TitleBarRibbonCollapseBtn(QToolButton):
             self.clicked.connect(callback)
         self.menu = QMenu()
         self.menu.addAction(
-            FigD.Icon("titlebar/hide.svg"),
-            "Hide menu",
+            FigD.Icon("widget/show.svg"),
+            "Show ribbon",
+        )
+        self.menu.addAction(
+            FigD.Icon("widget/hide.svg"),
+            "Hide ribbon",
         )
         self.menu.addAction(
             FigD.Icon("titlebar/widgets_bar.svg"), 
@@ -705,7 +744,7 @@ class WindowTitleBar(QToolBar):
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
-        print(f"\x1b[33;1mwhere:\x1b[0m {where}")
+        # print(f"\x1b[33;1mwhere:\x1b[0m {where}")
         self.callbacks = callbacks
         self.background = background
         # set icon size and movability.
@@ -770,10 +809,12 @@ class WindowTitleBar(QToolBar):
             "titlebar/accent_color.png",
             tip="pick a new accent color",
         )
-        self.settingsBtn = self.initTitleBtn(
-            "titlebar/settings.svg",
-            tip="open window settings",
+        self.settingsBtn = TitleBarClickMenuBtn(
+            icon="titlebar/settings.svg",
+            tip="open window/app settings",
+            accent_color=background,
         )
+        # self.initTitleBtn("titlebar/settings.svg", tip="open window settings")
         self.shortcutsBtn = TitleBarShortcutsBtn(titlebar=self)
         # zoom slider
         self.zoomSlider = ZoomSlider()

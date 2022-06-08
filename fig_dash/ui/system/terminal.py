@@ -50,6 +50,7 @@ class TerminalCommandInput(QLineEdit):
         QLineEdit {
             color: #fff;
             padding: 0px;
+            font-size: 19px;
             border-radius: 5px;
             background: transparent;
             /* background: #292929; */
@@ -161,7 +162,7 @@ class TerminalPathLabel(QTextEdit):
             color: #fff;
             margin: 0px;
             padding: 0px;
-            font-size: 17px;
+            font-size: 18px;
             /* background: black; */
             background: transparent;
         }""")
@@ -187,9 +188,16 @@ class TerminalCommandOutput(QPlainTextEdit):
             background: transparent;
             /* background: rgba(41, 41, 41, 0.8); */
         }""")
+        self.lineno_ctr = 0
+        self.setReadOnly(True)
         self.accent_color = accent_color
-        self.menu = self.createStandardContextMenu()
+        self.contextMenu = self.createStandardContextMenu()
     
+    def appendCmdOutput(self, html: str):
+        self.lineno_ctr += 1
+        html = f"<span style='color: #4e9a06;'>[</span><span style='color: #8ae234; font-weight: bold;'>{self.lineno_ctr}</span><span style='color: #4e9a06;'>]</span>" + html
+        self.appendHtml(html)
+
     def clearOutput(self):
         """
         Clear the QPlainTextEdit (similar to clear command on a terminal)
@@ -197,10 +205,10 @@ class TerminalCommandOutput(QPlainTextEdit):
         self.setPlainText("")
 
     def contextMenuEvent(self, event): 
-        self.menu = self.createStandardContextMenu()
-        self.menu = styleContextMenu(self.menu, self.accent_color)
-        self.menu = styleTextEditMenuIcons(self.menu)
-        self.menu.popup(event.globalPos())
+        self.contextMenu = self.createStandardContextMenu()
+        self.menu = styleContextMenu(self.contextMenu, self.accent_color)
+        self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+        self.contextMenu.popup(event.globalPos())
 
 
 class RedirectShellContainer(QWidget):
@@ -257,7 +265,7 @@ class RedirectShellContainer(QWidget):
             if not os.path.isdir(path):
                 ansi = f"bash: cd: {path}: Not a directory"
                 html = self.output_formatter.convert(ansi)
-                self.output.appendHtml(html)                
+                self.output.appendCmdOutput(html)                
             elif os.path.exists(path): # print(path)
                 os.chdir(path)
                 self.path = path
@@ -265,7 +273,7 @@ class RedirectShellContainer(QWidget):
             else:
                 ansi = f"\x1b[31;1mbash: {path}\x1b[0m" 
                 html = self.output_formatter.convert(ansi)
-                self.output.appendHtml(html)
+                self.output.appendCmdOutput(html)
         elif cmd == "exit":
             # TODO: change this to tab close.
             QApplication.instance().quit()
@@ -281,7 +289,7 @@ class RedirectShellContainer(QWidget):
             else:
                 ansi = "\x1b[31;1m"+"".join(stderr)+"\x1b[0m"
             html = self.output_formatter.convert(ansi)
-            self.output.appendHtml(html)
+            self.output.appendCmdOutput(html)
         self.input.setText("")
         # print(cmd)
 

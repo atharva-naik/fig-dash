@@ -8,12 +8,12 @@ from pathlib import Path
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.titlebar import TitleBar, WindowTitleBar, ZoomSlider
+from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QSize, QEvent, pyqtSignal
-from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy
 
 
 class FigDShortcut(QShortcut):
@@ -148,6 +148,21 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/delete_disabled.svg")
     ),
 }
+def setAccentColorAlpha(bg, alpha: int=150):
+    qt_grad_elem = bg.split("stop")[0].strip()
+    hex_color_list = ["#"+i.split("#")[-1].split()[0].replace(")","").replace(",","") for i in bg.split("stop")[1:]]
+    stop = 0
+    for hex_str in hex_color_list:
+        red = QColor(hex_str).red()
+        blue = QColor(hex_str).blue()
+        green = QColor(hex_str).green()
+        qt_grad_elem += f" stop : {stop} rgba({red}, {green}, {blue}, {alpha}),"
+        stop += 1/len(hex_color_list)
+    qt_grad_elem = qt_grad_elem[:-1]
+    qt_grad_elem += ")"
+    # FigD.debug(qt_grad_elem)
+    return qt_grad_elem
+
 def extractFromAccentColor(bg, where="back"):
     if ("qlineargradient" in bg or "qconicalgradient" in bg) and (where=="back"):
         extractedColor = bg.split(":")[-1].strip()
@@ -321,6 +336,8 @@ class DashWidgetGroupBtn(QToolButton):
         text = args.get("text")
         style = args.get("style")
         fg_color = args.get("fg_color", "#eb5f34")
+        background = args.get("background", "transparent")
+        border_color = extractFromAccentColor(background)
         stylesheet = args.get("stylesheet")
         self.is_text_button = True
         self.hover_response = "background"
@@ -340,8 +357,8 @@ class DashWidgetGroupBtn(QToolButton):
         self.setIconSize(QSize(*size))
         self.setToolTip(tip)
         self.setStatusTip(tip)
+        bgWithAlpha = setAccentColorAlpha(background, alpha=150)
         # stylesheet attributes.
-        background = args.get("background", "transparent")
         # print(font_size)
         if stylesheet:
             self.setStyleSheet(stylesheet)
@@ -351,11 +368,12 @@ class DashWidgetGroupBtn(QToolButton):
                 color: #fff;
                 border: 0px;
                 font-size: 14px;
-                border-radius: 5px;
+                border-radius: 2px;
                 background: transparent;
             }
             QToolButton:hover {
                 color: #292929;
+                border: 1px solid {{ border_color }};
                 background: {{ background }};
                 /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
             }
@@ -364,7 +382,8 @@ class DashWidgetGroupBtn(QToolButton):
                 border: 0px;
                 background: #000;
             }''').render(
-                    background=background,
+                    background=bgWithAlpha,
+                    border_color=border_color,
                 )
             )
         else:
@@ -470,7 +489,7 @@ class DashWidgetGroup(QWidget):
             layout = QVBoxLayout()
         if spacing is not None:
             layout.setSpacing(spacing)
-            print(f"{self.groupLabelName.text()}: layout.setSpacing({spacing})")
+            # print(f"{self.groupLabelName.text()}: layout.setSpacing({spacing})")
         layout.setContentsMargins(0, 0, 0, 0)
         btnGroup.layout = layout
         btnGroup.setLayout(layout)
@@ -562,7 +581,7 @@ class DashWidgetGroup(QWidget):
     def enterEvent(self, event):
         """on entering highlight the group's background and it's name"""
         # print("\x1b[34;1menterEvent\x1b[0m")
-        self.setBackgroundColor((255,255,255,50))
+        self.setBackgroundColor((255,255,255,20))
         self.groupLabelName.setStyleSheet("""
         QLabel {
             border: 0px;
@@ -598,10 +617,17 @@ class DashWidgetGroup(QWidget):
 class DashRibbonMenu(QWidget):
     def __init__(self, group_names: List[str]=[], 
                  parent: Union[None, QWidget]=None,
-                 contents_margins=(5, 0, 5, 0),
-                 accent_color: str="gray"):
+                 accent_color: str="gray", where: str="back",
+                 contents_margins=(5, 0, 5, 0)):
         super(DashRibbonMenu, self).__init__(parent)
         self.accent_color = accent_color
+        # drop shadow.
+        drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+        drop_shadow = QGraphicsDropShadowEffect()
+        drop_shadow.setColor(QColor(drop_shadow_color))
+        drop_shadow.setBlurRadius(10)
+        drop_shadow.setOffset(0, 0)
+        self.setGraphicsEffect(drop_shadow)
         self.separators = []
         # create the scoll area.
         self.__scroll_area = QScrollArea()
@@ -739,6 +765,394 @@ class DashRibbonMenu(QWidget):
                     widget_group.addWidget(btnGroup, 0, Qt.AlignVCenter)
 
         return widget_group
+# settings slider.
+class FigDSlider(QWidget):
+    changed = pyqtSignal(float)
+    updatedSlider = pyqtSignal()
+    updatedReadout = pyqtSignal()
+    displayChanged = pyqtSignal(int)
+    def __init__(self, text: str="", value: int=0, minm: int=0, 
+                 maxm: int=100, plus: bool=False, minus: bool=False,
+                 accent_color: str="gray", orient: str="horizontal",
+                 where: str="back", parent: Union[None, QWidget]=None):
+        super(FigDSlider, self).__init__(parent)
+        self.accent_color = accent_color
+        self.vboxlayout = QVBoxLayout()
+        self.hboxlayout = QHBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        # horizontal slider area box.
+        self.sliderbox = QWidget()
+        self.sliderbox.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            font-size: 17px;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self.sliderbox.setLayout(self.hboxlayout)
+        # slider.
+        if orient == "horizontal":
+            self.slider = QSlider(Qt.Horizontal)
+        elif orient == "vertical":
+            self.slider = QSlider(Qt.Vertical)
+        self.slider.setFixedWidth(130)
+        self.slider.setValue(value)
+        self.slider.setMinimum(minm)
+        self.slider.setMaximum(maxm)
+        # slider current value.
+        self.readout = QLineEdit()
+        self.readout.setStyleSheet("""
+        QLineEdit {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            background: #292929;
+            border-radius: 2px;
+        }""")
+        self.readout.setFixedWidth(50)
+        self.readout.setText(str(value))
+        self.readout.setAlignment(Qt.AlignLeft)
+        # build horizontal layout (slider+readout)
+        self.hboxlayout.addWidget(self.readout)
+        if minus:
+            self.minusBtn = self.initSliderBoxBtn(
+                text="-", tip="decrease slider value",
+                accent_color=accent_color, where=where,
+            )
+            self.minusBtn.clicked.connect(self.decrease)
+            self.hboxlayout.addWidget(self.minusBtn)
+        self.hboxlayout.addWidget(self.slider)
+        if plus:
+            self.plusBtn = self.initSliderBoxBtn(
+                text="+", tip="increase slider value",
+                accent_color=accent_color, where=where,
+            )
+            self.plusBtn.clicked.connect(self.increase)
+            self.hboxlayout.addWidget(self.plusBtn)
+        self.hboxlayout.addStretch(1)
+        # build widget vertical layout.
+        self.setLayout(self.vboxlayout)
+        if text != "":
+            # slider name.
+            self.label = QLabel()
+            self.label.setStyleSheet("""
+            QLabel {
+                color: #fff;
+                font-size: 18px;
+                background: transparent;
+                font-family: "Be Vietnam Pro";
+            }""")
+            self.label.setText(text)
+            self.vboxlayout.addWidget(self.label)
+        self.vboxlayout.addWidget(self.sliderbox)
+        self.slider.valueChanged.connect(self.updateFromSlider)
+        self.readout.textChanged.connect(self.updateFromReadout)
+        self.convertedValue = self.convertValue(value)
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+
+    def increase(self):
+        value = self.slider.value()+1
+        value = min(value, self.slider.maximum())
+        self.slider.setValue(value)
+        self.readout.setText(str(value))
+        self.convertedValue = self.convertValue(value)
+
+    def decrease(self):
+        value = self.slider.value()-1
+        value = max(value, self.slider.minimum())
+        self.slider.setValue(value)
+        self.readout.setText(str(value))
+        self.convertedValue = self.convertValue(value)
+
+    def setAccentColor(self, accent_color: str, where: str="back"):
+        self.accent_color = accent_color
+        # extract border color from the accent color.
+        borderColor = extractFromAccentColor(
+            accent_color, where=where
+        )
+        stylesheet = """
+        QToolButton {
+            font-size: 30px;
+            border-radius: 2px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: """+accent_color+""";
+            /* border: 1px solid """+borderColor+"""; */
+        }"""
+        if hasattr(self, "plusBtn"):
+            self.plusBtn.setStyleSheet(stylesheet)
+            self.plusBtn.setMaximumWidth(25)
+            self.plusBtn.setMaximumHeight(25)
+        if hasattr(self, "minusBtn"):
+            self.minusBtn.setStyleSheet(stylesheet)
+            self.minusBtn.setMaximumWidth(25)
+            self.minusBtn.setMaximumHeight(25)
+
+    def initSliderBoxBtn(self, text: str="", icon=None, tip: str="a tip",
+                         accent_color: str="gray", where: str="back"):
+        btn = QToolButton()
+        if icon: 
+            btn.setIcon(FigD.Icon(icon))
+        else: btn.setText(text)
+        btn.setToolTip(tip)
+        btn.setStatusTip(tip)
+        # extract border color from the accent color.
+        borderColor = extractFromAccentColor(accent_color, where=where)
+        # set style sheet.
+        btn.setStyleSheet("""
+        QToolButton {
+            font-size: 20px;
+            border-radius: 2px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: """+accent_color+""";
+            /* border: 1px solid """+borderColor+"""; */
+        }""")
+
+        return btn
+
+    def updateFromReadout(self):
+        try: value = int(self.readout.text())
+        except ValueError: return
+        self.convertedValue = self.convertValue(value)
+        self.slider.setValue(value)
+        self.changed.emit(self.convertedValue)
+        self.displayChanged.emit(value)
+        self.updatedReadout.emit()
+
+    def convertValue(self, value: int) -> float:
+        """default conversion function. Redefine it for your custom slider.
+        This functions purpose is to respect the difference in the scale of 
+        values displayed in the UI and the scale of values needed by your 
+        backend. E.g. opacity might be needed on a scale of 0-1 but the dev
+        wants the user to pick on a scaled up integer percentage scale of 0 to 100.
+        This function is responsible for that conversion from 0-100 to 0-1 for 
+        the backend.
+
+        Args:
+            value (int): the value currently shown on the UI.
+
+        Returns:
+            float: the value needed by the backend.
+        """
+        return value
+
+    def updateFromSlider(self, value: int):
+        self.convertedValue = self.convertValue(value)
+        self.changed.emit(self.convertedValue)
+        self.readout.setText(str(value))
+        self.displayChanged.emit(value)
+        self.updatedSlider.emit()
+
+# opacity slider
+class FigDOpacitySlider(FigDSlider):
+    def convertValue(self, value: int) -> float:
+        value = max(min(value, 100), 0)
+        value /= 100
+        return value
+
+# settings menu for a FigDWindow type.
+class FigDWindowSettingsMenu(QMainWindow):
+    clicked = pyqtSignal(int) 
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FigDWindowSettingsMenu, self).__init__(parent)
+        self.separators = []
+        self.toggles = []
+        self.sliders = []
+        self.btns = []
+        self.__icon_size = QSize(25, 25)
+        # container scroll area.
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+        # menu object.
+        self.menu = QWidget()
+        self.menu.setObjectName("FigDWindowSettingsMenu")
+        # menu vertical lauyout.
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(10, 10, 10, 10)
+        self.vboxlayout.setSpacing(0)
+        # make the window transparent.
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setWindowFlags(Qt.Popup) 
+        self.addSlider("Opacity", class_=FigDOpacitySlider, 
+                        value=100, plus=True, minus=True)
+        self.addButton("New tab", shortcut="Ctrl+T")
+        self.addButton("New window", shortcut="Ctrl+N")
+        self.addSeparator()
+        self.addButton("Light/dark theme")
+        self.addButton("Use system theme")
+        self.addSeparator()
+        self.addButton("Mute notifications", shortcut="Alt+Shift+M")
+        self.addButton("Manage notifications")
+        self.addSeparator()
+        self.addButton("Manage permissions")
+        self.addButton("More settings ...")
+        self.vboxlayout.addStretch(1)
+        self.menu.setLayout(self.vboxlayout)
+        # set menu to scroll area.
+        self.scroll.setWidget(self.menu)
+        self.setCentralWidget(self.scroll)
+
+    def connectWindow(self, window: QMainWindow):
+        self.__window_ptr = window
+        opacity = self.__window_ptr.windowOpacity()
+
+    def signalBtnClick(self, i: int):
+        self.clicked.emit(i)
+        self.hide()
+
+    def setIconSize(self, size: QSize):
+        self.__icon_size = size
+
+    def addSlider(self, text: str="", class_=None, **kwargs):
+        if class_:
+            slider = class_(text=text, **kwargs)
+        else:
+            slider = FigDSlider(text=text, **kwargs)
+        self.sliders.append(slider)
+        self.vboxlayout.addWidget(slider)
+        # slider = QWidget()
+        # slider.setToolTip(tip)
+        # slider.setStatusTip(tip)
+        # slider.setStyleSheet("""
+        # QWidget {
+        #     font-size: 18px;
+        #     background: transparent;
+        #     font-family: "Be Vietnam Pro";
+        # }
+        # QLabel {
+        #     padding: 5px;
+        #     padding-left: 0px;
+        #     font-size: 18px;
+        #     background: transparent;
+        #     font-family: "Be Vietnam Pro";            
+        # }""")
+        # layout = QHBoxLayout()
+        # layout.setContentsMargins(0, 0, 0, 0)
+        # layout.setSpacing(5)
+        # slider.setLayout(layout)
+        # # QSlider.
+        # _slider = QSlider(Qt.Horizontal)
+        # _slider.setValue(value)
+        # _slider.setMaximum(maxm)
+        # _slider.setMinimum(minm)
+        # slider._slider = slider
+        # # Slider QLabel.
+        # label = QLabel()
+        # label.setText(text+f" {value}")
+        # # build layout.
+        # layout.addWidget(label)
+        # layout.addWidget(_slider)
+
+    def addToggle(self, text: str=""):
+        pass
+
+    def addButton(self, text: str, icon: str="", tip="", 
+                  shortcut: Union[str, None]=None):
+        btn = QWidget()
+        layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+        btn.setLayout(layout)
+        # QToolButton part of the context menu button.
+        _btn = QToolButton()
+        _btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        if icon == "": _btn.setIcon(FigD.Icon(icon))
+        _btn.setIconSize(self.__icon_size)
+        _btn.setText(text)
+        if tip != "": 
+            _btn.setToolTip(tip)
+            _btn.setStatusTip(tip)
+        _btn.clicked.connect(partial( 
+            self.signalBtnClick, 
+            len(self.btns),
+        ))
+        btn._btn = btn
+        # shortcut label.
+        label = QLabel()
+        label.setText(shortcut)
+        # build button layout.
+        layout.addWidget(_btn)
+        layout.addStretch(1)
+        layout.addWidget(label)
+        btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.vboxlayout.addWidget(btn)
+        self.btns.append(btn)
+
+    def addWidget(self, *args, **kwargs):
+        self.vboxlayout.addWidget(*args, **kwargs)
+
+    def addSeparator(self):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #292929; margin: 5px;''')
+        sep.setLineWidth(1) # sep.setMaximumWidth(110)
+        self.separators.append(sep)
+        self.vboxlayout.addWidget(sep)
+
+    def setAccentColor(self, accent_color: str, where: str="back"):
+        self.accent_color = accent_color
+        self.menu.setStyleSheet("""
+        QWidget#FigDWindowSettingsMenu {
+            background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+            color: #fff;
+            padding: 10px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-family: "Be Vietnam Pro";
+        }""")
+        for btn in self.btns:
+            btn.setStyleSheet("""
+            QWidget {
+                padding: 3px;
+                padding-left: 0px;
+                border-radius: 5px;
+                background: transparent;
+                font-size: 18px;
+                font-family: "Be Vietnam Pro";
+            }
+            QWidget:hover {
+                color: #292929;
+                background: """+self.accent_color+""";
+            }
+            QToolButton:hover {
+                color: #292929;
+            }
+            QLabel {
+                color: #6e6e6e;
+                background: transparent;
+                font-size: 18px;
+                font-family: "Be Vietnam Pro";
+            }
+            QLabel:hover {
+                color: #292929;
+            }""")
+        for slider in self.sliders:
+            slider.setAccentColor(
+                accent_color, 
+                where=where,
+            )
+        """
+        QMenu#FigDMenu::item {
+            padding: {{ PADDING }}px;
+        }
+        QMenu#FigDMenu::item:selected {
+            color: #292929; 
+            border-radius: 5px;
+            background-color: {{ ACCENT_COLOR }}; 
+        }
+        QMenu#FigDMenu:separator {
+            background: #292929;
+        }
+        """
 
 # dash widget simplified ribbon menu.
 class DashWidgetSimplifiedRibbonMenu(QWidget):
@@ -911,6 +1325,16 @@ class FigDTabWidget(QTabWidget):
         self.CloseTab.activated.connect(self.closeCurrentTab)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
+    def onCurrentWidget(self, func: str="", args: list=[], kwargs: dict={}):
+        if func == "": return
+        widget = self.currentWidget()
+        obj = widget
+        for attr in func.split("."):
+            if hasattr(obj, attr):
+                obj = getattr(obj, attr)
+            else: return
+        obj(*args, **kwargs)
+
     def onTabChange(self):
         widget = self.currentWidget()
         # if hasattr(widget, "signalZoom"):
@@ -943,8 +1367,8 @@ class FigDTabWidget(QTabWidget):
             widget.changeTabTitle.connect(self.changeCurrentTabIcon)
         if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
-        self.addTab(widget, FigD.Icon("system/fileviewer/new_tab_icon.svg"), "Home")
-        self.setCurrentIndex(self.count())
+        i = self.addTab(widget, FigD.Icon("system/fileviewer/new_tab_icon.svg"), "Home")
+        self.setCurrentIndex(i)
 
     def openWindow(self):
         if self.window_factory is None: return
@@ -1071,6 +1495,7 @@ class FigDWindow(QMainWindow):
         # account for QShortcuts.
         covered_keys = {}
         for shortcut in self.findChildren(QShortcut):
+            if shortcut in covered_keys: continue
             if isinstance(shortcut, FigDShortcut):
                 vboxlayout.addWidget(
                     self.createShortcutLine(
@@ -1159,6 +1584,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         title_widget=args.get("title_widget"),
         where=_where,
     )
+    settingsMenu = FigDWindowSettingsMenu()
+    titlebar.settingsBtn.setContextMenu(settingsMenu)
     tab_icon = args.get("tab_icon", "icon.svg")
     tab_title = args.get("tab_title", "New tab")
     if animated: titlebar.setAnimatedTitle(title)
@@ -1185,7 +1612,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     centralWidget.setStyleSheet("""
     QWidget#FigDUI {
         border-radius: 20px;
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
+        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 1), stop : 0.143 rgba(22, 22, 22, 1), stop : 0.286 rgba(27, 27, 27, 1), stop : 0.429 rgba(32, 32, 32, 1), stop : 0.571 rgba(37, 37, 37, 1), stop : 0.714 rgba(41, 41, 41, 1), stop : 0.857 rgba(46, 46, 46, 1), stop : 1.0 rgba(51, 51, 51, 1));
     }
     QScrollBar:vertical {
         border: 0px solid #999999;
@@ -1273,7 +1700,9 @@ def wrapFigDWindow(widget: QWidget, **args):
 
     window = FigDWindow(widget=centralWidget, **args)
     window.appName = title
+    window.setWindowOpacity(1)
     window.connectTitleBar(titlebar)
+    settingsMenu.connectWindow(window)
     # changeZoom function may not exist.
     try:
         zoomSlider = titlebar.zoomSlider
@@ -1289,7 +1718,12 @@ def wrapFigDWindow(widget: QWidget, **args):
             QKeySequence("Ctrl+Shift+M"), window,
             "Toggle ribbon menu"
         )
-        window.CtrlShiftM.activated.connect(widget.menu.toggle)
+        if add_tabs:
+            window.CtrlShiftM.activated.connect(
+                partial(tabwidget.onCurrentWidget, "menu.toggle")
+            )
+        else:
+            window.CtrlShiftM.activated.connect(widget.menu.toggle)
     except Exception as e: print(e)
     # connect full screen action.
     try:

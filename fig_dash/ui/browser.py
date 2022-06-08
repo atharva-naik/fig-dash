@@ -1266,17 +1266,16 @@ class Browser(DebugWebView):
         self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
         self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        
-        # set true if clipboard permission is granted.
-        # self.settings().setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
-        # set true to allow spatial navigation
-        # self.settings().setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.ScrollAnimatorEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
-        # other flags.
+        self.settings().setAttribute(QWebEngineSettings.PdfViewerEnabled, True)
+        # set true if clipboard permission is granted.
+        # self.settings().setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
+        # set true to allow spatial navigation
+        # self.settings().setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
         self.progress = 0
         self._is_bookmarked = False
         self._is_terminalized = False
