@@ -1401,9 +1401,19 @@ class FigDWindow(QMainWindow):
         self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
         self.setCentralWidget(widget)
         self.installEventFilter(self)
+        self.FnF11 = FigDShortcut(
+            QKeySequence("F11"), 
+            self, "Toggle fullscreen mode"
+        )
+        self.FnF11.activated.connect(self.toggleFullScreen)
         self.titlebar = None
         self.shortcuts_pane = self.createShortcutsPane()
 
+    def toggleFullScreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else: self.showFullScreen()
+        # FigD.debug("toggling fullscreen mode")
     def printShortcuts(self):
         for action in self.findChildren(QAction):
             shortcuts = [s.toString() for s in action.shortcuts()]

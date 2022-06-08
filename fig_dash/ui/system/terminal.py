@@ -155,8 +155,10 @@ class TerminalCommandInput(QLineEdit):
 
 
 class TerminalPathLabel(QTextEdit):
-    def __init__(self, parent: Union[QWidget, None]=None):
+    def __init__(self, accent_color: str="gray", 
+                 parent: Union[QWidget, None]=None):
         super(TerminalPathLabel, self).__init__(parent=parent)
+        self.accent_color = accent_color
         self.setStyleSheet("""
         QTextEdit {
             color: #fff;
@@ -166,16 +168,46 @@ class TerminalPathLabel(QTextEdit):
             /* background: black; */
             background: transparent;
         }""")
+        self.path = ""
         self.setReadOnly(True)
         self.setFixedHeight(25)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
-    def setText(self, text):
+    def contextMenuEvent(self, event):
+        self.contextMenu = self.createStandardContextMenu()
+        self.contextMenu.addAction(
+            FigD.Icon("system/fileviewer/copy_filepath.png"),
+            "Copy path to clipboard",
+            self.copyPathToClipboard,
+        )
+        self.contextMenu.addAction(
+            FigD.Icon("system/fileviewer/copy_as_url.svg"),
+            "Copy path as url",
+            self.copyPathAsUrl,
+        )
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, 
+            self.accent_color
+        )
+        self.contextMenu.popup(event.globalPos())
+
+    def copyPathToClipboard(self):
+        QApplication.clipboard().setText(self.path)
+
+    def copyPathAsUrl(self):
+        url = QUrl.fromLocalFile(self.path).toString()
+        QApplication.clipboard().setText(url)
+
+    def setPath(self, path: str):
+        self.path = os.path.expanduser(path)
+        self.setText(path)
+
+    def setText(self, text: str):
         text = contract_path(text)
         text = f"<span style='color: #ff0032; font-weight: bold;'>&nbsp; └─── </span><span style='color: #ddff80; font-weight: bold;'>{getpass.getuser()}@{socket.gethostname()}</span>:<span style='color: #44fc94; font-weight: bold'>{text}</span>"
         super(TerminalPathLabel, self).setHtml(text)
 
-
+# html output produced after running the terminal command.
 class TerminalCommandOutput(QPlainTextEdit):
     """The output area for terminal command output"""
     def __init__(self, path: str="", accent_color: str="gray", 
@@ -220,8 +252,10 @@ class RedirectShellContainer(QWidget):
         os.chdir(path)
         self.input = TerminalCommandInput(path=path, accent_color=accent_color)
         self.output = TerminalCommandOutput(accent_color=accent_color)
-        self.pathLabel = TerminalPathLabel()
-        self.pathLabel.setText(path)
+        self.pathLabel = TerminalPathLabel(
+            accent_color=accent_color,
+        )
+        self.pathLabel.setPath(path)
         self.input.returnPressed.connect(self.runCommand)
         self.input.textChanged.connect(self.expandPaths)
         # create VBoxLayout.
@@ -269,7 +303,7 @@ class RedirectShellContainer(QWidget):
             elif os.path.exists(path): # print(path)
                 os.chdir(path)
                 self.path = path
-                self.pathLabel.setText(self.path)
+                self.pathLabel.setPath(self.path)
             else:
                 ansi = f"\x1b[31;1mbash: {path}\x1b[0m" 
                 html = self.output_formatter.convert(ansi)
@@ -291,8 +325,10 @@ class RedirectShellContainer(QWidget):
             html = self.output_formatter.convert(ansi)
             self.output.appendCmdOutput(html)
         self.input.setText("")
-        # print(cmd)
 
+    def changeZoom(self, zoomValue: float):
+        print(zoomValue)
+        # print(cmd)
 class GnomeShellContainer(QWidget):
     '''You can display images with lsix.'''
     def __init__(self, term: str="xterm", accent_color: str="gray", 
