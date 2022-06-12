@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 print("fig_dash::ui::system::imageviewer")
 import base64
+import argparse
 import PIL, bs4
 import requests
 import svgpathtools
@@ -15,9 +16,9 @@ from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
 # from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDNavBar, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
 # PyQt5 imports
-from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
+from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontMetricsF, QPalette, QPainterPath, QRegion, QTransform
 from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QRectF, QTimer, QUrl, QThread, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
 from PyQt5.QtWidgets import QAction, QWidget, QCompleter, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
@@ -157,71 +158,11 @@ class ImageViewerSVGLoader(QObject):
 		super(ImageViewerSVGLoader, self).__init__()
 
 	def load(self, url):
-		data = requests.get(url).text
+		try: data = requests.get(url).text
+		except requests.exceptions.InvalidSchema as e:
+			print("\x1b[31;1mui::system::imageviewer::ImageViewerSVGLoader.load:\x1b[0m", e)
 		self.bytesFetched.emit(data)
 		self.finished.emit()
-
-# search for images/enter URLs.
-class ImageViewerSearchBar(QLineEdit):
-	def __init__(self, accent_color: str="gray", 
-				 parent: Union[QWidget, None]=None):
-		super(ImageViewerSearchBar, self).__init__(parent)
-		self.accent_color = accent_color
-        # create actions.
-		caseAction = self.addAction(
-            FigD.Icon("browser/case.svg"), 
-            QLineEdit.TrailingPosition
-        )
-		searchAction = self.addAction(
-            FigD.Icon("system/imageviewer/search.svg"), 
-            QLineEdit.LeadingPosition
-        )
-		# respond to triggering of actions.
-		caseAction.triggered.connect(self.toggleCaseSensitivity)
-		self.setStyleSheet("""
-        QLineEdit {
-            color: #fff;
-            padding: 5px;
-            background: #292929;
-            border-radius: 5px;
-        }""")
-		self.setClearButtonEnabled(True)
-		self.setPlaceholderText("Search for images locally or on the web")
-		self.history = []
-		# completer.
-		self.qcompleter = QCompleter()
-		# model.
-		self.stringModel = QStringListModel(self.history)
-		# set model for completer.
-		self.qcompleter.setModel(self.stringModel)
-		# set completer.
-		self.setCompleter(self.qcompleter)
-		self.setMinimumWidth(600)
-
-	def contextMenuEvent(self, event):
-		self.contextMenu = self.createStandardContextMenu()
-		self.contextMenu = styleContextMenu(
-			self.contextMenu, 
-			self.accent_color,
-		)
-		self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
-		self.contextMenu.popup(event.globalPos())
-
-	def toggleCaseSensitivity(self):
-		if self.qcompleter.caseSensitivity() == Qt.CaseSensitive:
-			print("case insensitive")
-			self.qcompleter.setCaseSensitivity(Qt.CaseInsensitive)
-		else: 
-			print("case sensitive")
-			self.qcompleter.setCaseSensitivity(Qt.CaseSensitive)
-
-	def append(self, url_or_path: Union[str, QUrl]):
-		if isinstance(url_or_path, QUrl):
-			url_or_path = url_or_path.toString()
-		self.history.append(url_or_path)
-		self.stringModel = QStringListModel(self.history)
-		self.qcompleter.setModel(self.qcompleter)
-		self.setCompleter(self.qcompleter)
 
 # ribbon menu.
 class ImageViewerMenu(DashRibbonMenu):
@@ -551,81 +492,6 @@ class ImageViewerSVGTree(QWidget):
 		}""")
 		
 		return pane
-
-	# def unfoldPath(self, path_key, path):
-	# 	ctr = 0
-	# 	op = {path_key: {}}
-	# 	path = svgpathtools.parse_path(path)
-	# 	# print("path_key =", path_key)
-	# 	for part in path:
-	# 		record = {}
-	# 		record["end"] = str(part.end)
-	# 		record["start"] = str(part.start)
-	# 		if isinstance(part, svgpathtools.path.Line): 
-	# 			op[path_key][f"line#{ctr}"] = record
-	# 		elif isinstance(part, svgpathtools.path.Arc):
-	# 			record["large arc"] = str(part.large_arc)
-	# 			record["rotation"] = str(part.rotation)
-	# 			record["radius"] = str(part.radius)
-	# 			record["sweep"] = str(part.sweep)
-	# 			op[path_key][f"arc#{ctr}"] = record
-	# 		ctr += 1
-
-	# 	return op
-
-	# def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
-	# 	if node.name == "path":
-	# 		path_d = str(node.attrs["d"])
-	# 		return self.unfoldPath(key, path_d)
-	# 		# svgpathtools.parse_path(path_d)
-	# 	elif node.name == "g":
-	# 		tree = {key: {}}
-	# 		subctr = 0
-	# 		for subnode in node:
-	# 			if str(subnode).strip() == "": continue
-	# 			tree[key][subnode.name+f"#{subctr}"] = self.parseSVGNode(subnode, key=subnode.name)
-	# 			subctr += 1
-	# 		return tree
-	# 	elif node.name == "rect":
-	# 		record = {
-	# 			"id": node.attrs.get("id", "-"),
-	# 			"fill": node.attrs.get("fill", "-"),
-	# 			"width": node.attrs.get("width", "-"),
-	# 			"height": node.attrs.get("height", "-"),
-	# 			"opacity": node.attrs.get("opacity", "-"),
-	# 		}
-	# 		return record
-	# 	elif node.name == "title":
-	# 		record = {
-	# 			"id": node.attrs.get("id", "-"),
-	# 			"text": node.text,
-	# 		}
-	# 		return record
-	# 	else: return {}
-
-	# def buildTreeItems(self, tree):
-	# 	treeItems = []
-	# 	for name, subtree in tree.items():
-	# 		if name.startswith("path"):
-	# 			treeItem = QTreeWidgetItem([name])
-	# 			# treeItem = QTreeWidgetItem(self.tree, [name])
-	# 			# print(tree)
-	# 			for key, record in subtree[name].items():
-	# 				childItem = QTreeWidgetItem([key])
-	# 				treeItem.addChild(childItem)
-	# 				self._tree_records[getAbsolutePath(childItem)] = record
-	# 		elif name.startswith("g"):
-	# 			treeItem = QTreeWidgetItem([name])
-	# 			for subname, subtree in tree[name].items():
-	# 				subTreeItem = self.buildTreeItems(subtree)
-	# 				treeItem.addChild(subTreeItem)
-	# 		else: # rect etc.
-	# 			record = subtree
-	# 			treeItem = QTreeWidgetItem(self.tree, [name])
-	# 			self._tree_records[getAbsolutePath(treeItem)] = record
-	# 		treeItems.append(treeItem)
-
-	# 	return treeItems
 
 	def loadSVGData(self, svg_data: str="") -> dict:
 		"""
@@ -1255,42 +1121,55 @@ class ImageViewerWebView(DebugWebView):
         # menu.setGraphicsEffect(background_blur)
         # data = self.page().contextMenuData()
         menu = styleContextMenu(menu, accent_color=self.accent_color)
+        copyMenu = None
+        copyImageAddress = None
         for action in menu.actions():
-            # buddself.addAction(action)
-            # self.contextMenuActions.append(action)
-            # self.contextMenuActions[-1].setShortcutContext(Qt.WidgetWithChildrenShortcut)
-            if action.text() == "Save page":
-                action.setIcon(FigD.Icon("system/imageviewer/save_page.svg"))
-                action.setShortcut(QKeySequence("Ctrl+Shift+S"))
-            elif action.text() == "View page source":
-                action.setShortcut(QKeySequence("Ctrl+U"))
-                action.setIcon(FigD.Icon("titlebar/source.svg"))
-            elif action.text() == "Back":
+            if action.text() == "Back":
                 action.setShortcut(QKeySequence.Back)
                 if action.isEnabled():
-                    action.setIcon(FigD.Icon("system/imageviewer/prev.svg"))
+                    action.setIcon(FigD.Icon("lineedit/prev.svg"))
                 else:
-                    action.setIcon(FigD.Icon("system/imageviewer/prev_disabled.svg"))
+                    action.setIcon(FigD.Icon("lineedit/prev_disabled.svg"))
             elif action.text() == "Forward":
                 action.setShortcut(QKeySequence.Forward)
                 if action.isEnabled():
-                    action.setIcon(FigD.Icon("system/imageviewer/next.svg"))
+                    action.setIcon(FigD.Icon("lineedit/next.svg"))
                 else:
-                    action.setIcon(FigD.Icon("system/imageviewer/next_disabled.svg"))
+                    action.setIcon(FigD.Icon("lineedit/next_disabled.svg"))
             elif action.text() == "Reload":
                 action.setShortcut(QKeySequence.Refresh)
-                action.setIcon(FigD.Icon("system/imageviewer/reload.svg"))
+                action.setIcon(FigD.Icon("lineedit/reload.svg"))
+            elif action.text() == "Save page":
+                action.setIcon(FigD.Icon("system/imageviewer/save_page.svg"))
+                action.setShortcut(QKeySequence("Ctrl+Shift+S"))
+                # action_texts = [a.text() for a in menu.actions()]
+                # if "Save image" not in action_texts:
+                #     print("adding save image")
+                #     saveAction = QAction()
+                #     saveAction.setText("Save image")
+                #     saveAction.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
+                #     saveAction.setShortcut(QKeySequence.Save)
+                #     saveAction.triggered.connect(self.imageviewer.saveImage)
+                #     menu.insertAction(action, saveAction)
             elif action.text() == "Save image":
                 action.setShortcut(QKeySequence.Save)
                 action.setIcon(FigD.Icon("system/imageviewer/save_image.svg"))
                 action.triggered.connect(self.imageviewer.saveImage)
+            elif action.text() == "View page source":
+                action.setShortcut(QKeySequence("Ctrl+U"))
+                action.setIcon(FigD.Icon("titlebar/source.svg"))
             elif action.text() == "Copy image":
-                action.setShortcut(QKeySequence.Copy)
-                action.setIcon(FigD.Icon("browser/copy.svg"))
+                action.setVisible(False)
+                copyMenu = menu.addMenu(FigD.Icon("browser/copy.svg"), "Copy")
+                copyMenu = styleContextMenu(copyMenu, self.accent_color)
+                # action.setShortcut(QKeySequence.Copy)
+                # action.setIcon(FigD.Icon("browser/copy.svg"))
                 # action.triggered.connect(self.imageviewer.copyImageToClipboard)
             elif action.text() == "Copy image address":
-                action.setShortcut(QKeySequence("Ctrl+Shift+C"))
-                action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
+                copyImageAddress = action
+                copyImageAddress.setVisible(False)
+                # action.setShortcut(QKeySequence("Ctrl+Shift+C"))
+                # action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
             elif action.text() == "Inspect":
                 self.inspect_action = action
                 action.setVisible(False) # hide original aspect action.
@@ -1304,6 +1183,23 @@ class ImageViewerWebView(DebugWebView):
                     self.inspectTriggered
                 ) 
             self.activateShortcut(action)
+        if copyMenu:
+            copyMenu.addAction(
+				FigD.Icon("system/imageviewer/copy_image.svg"), "Copy image",
+				self.imageviewer.copyImageToClipboard, QKeySequence.Copy,
+		    )
+            copyMenu.addAction(
+				FigD.Icon("system/imageviewer/copy_image_address.svg"), "Copy address",
+				copyImageAddress.trigger, QKeySequence("Ctrl+Shift+C"),
+		    )
+            copyMenu.addAction(
+				FigD.Icon("browser/copy.svg"), "Copy base64",
+				copyImageAddress.trigger,
+		    )
+            copyMenu.addAction(
+				FigD.Icon("system/imageviewer/copy_bytes.png"), 
+				"Copy bytes", copyImageAddress.trigger,
+		    )
         # js snippets.
         zoomInJS = 'document.getElementsByClassName("viewer-zoom-in")[0].click();'
         zoomOutJS = 'document.getElementsByClassName("viewer-zoom-out")[0].click();'
@@ -1314,21 +1210,54 @@ class ImageViewerWebView(DebugWebView):
         flipVJS = 'document.getElementsByClassName("viewer-flip-vertical")[0].click();'
         # additional ImageViewer actions.
         menu.addSeparator()
-        menu.addAction(FigD.Icon("titlebar/zoom_in.svg"), "Zoom in", lambda: self.page().runJavaScript(zoomInJS))
-        menu.addAction(FigD.Icon("titlebar/zoom_out.svg"), "Zoom out", lambda: self.page().runJavaScript(zoomOutJS))
-        menu.addAction("Original size", lambda: self.page().runJavaScript(origSizeJS))
-        menu.addSeparator()
-        menu.addAction(
-			FigD.Icon("system/imageviewer/rotate_cc.svg"), "Rotate 90° clockwise", 
+        # menu.addAction(
+		# 	FigD.Icon("system/imageviewer/rotate_cc.svg"), "Rotate 90° clockwise", 
+		# 	lambda: self.page().runJavaScript(rotateCCJS)
+		# )
+        # menu.addAction(
+		# 	FigD.Icon("system/imageviewer/rotate_ac.svg"), "Rotate 90° anti-clockwise", 
+		# 	lambda: self.page().runJavaScript(rotateACJS)
+		# )
+        zoomMenu = menu.addMenu(FigD.Icon("titlebar/zoom_in.svg"), "Zoom")
+        zoomMenu = styleContextMenu(zoomMenu, accent_color=self.accent_color)
+        zoomMenu.addAction(
+			FigD.Icon("titlebar/zoom_in.svg"), "Zoom in", 
+			lambda: self.page().runJavaScript(zoomInJS),
+			QKeySequence.ZoomIn,
+		)
+        zoomMenu.addAction(
+			FigD.Icon("titlebar/zoom_out.svg"), "Zoom out", 
+			lambda: self.page().runJavaScript(zoomOutJS),
+			QKeySequence.ZoomOut,
+		)
+        zoomMenu.addAction("Original size", lambda: self.page().runJavaScript(origSizeJS))
+        rotateMenu = menu.addMenu(FigD.Icon("system/imageviewer/rotate_cc.svg"), "Rotate")
+        rotateMenu = styleContextMenu(rotateMenu, accent_color=self.accent_color)
+        rotateMenu.addAction(
+			FigD.Icon("system/imageviewer/rotate_cc.svg"), "90° clockwise", 
 			lambda: self.page().runJavaScript(rotateCCJS)
 		)
-        menu.addAction(
-			FigD.Icon("system/imageviewer/rotate_ac.svg"), "Rotate 90° anti-clockwise", 
+        rotateMenu.addAction(
+			FigD.Icon("system/imageviewer/rotate_cc.svg"), "180° clockwise", 
+			lambda: self.page().runJavaScript(rotateCCJS+"\n"+rotateCCJS)
+		)
+        rotateMenu.addAction(
+			FigD.Icon("system/imageviewer/rotate_ac.svg"), "90° anti-clockwise", 
 			lambda: self.page().runJavaScript(rotateACJS)
 		)
-        menu.addSeparator()
-        menu.addAction(FigD.Icon("system/imageviewer/flip_horizontal.svg"), "Flip horizontally", lambda: self.page().runJavaScript(flipHJS))
-        menu.addAction(FigD.Icon("system/imageviewer/flip_vertical.svg"), "Flip vertically", lambda: self.page().runJavaScript(flipVJS))
+        rotateMenu.addAction(
+			FigD.Icon("system/imageviewer/rotate_ac.svg"), "180° anti-clockwise", 
+			lambda: self.page().runJavaScript(rotateACJS+"\n"+rotateACJS)
+		)
+        flipMenu = menu.addMenu(FigD.Icon("system/imageviewer/flip_horizontal.svg"), "Flip")
+        flipMenu = styleContextMenu(flipMenu, accent_color=self.accent_color)
+        flipMenu.addAction(
+			FigD.Icon("system/imageviewer/flip_horizontal.svg"), 
+			"Horizontal", lambda: self.page().runJavaScript(flipHJS))
+        flipMenu.addAction(
+			FigD.Icon("system/imageviewer/flip_vertical.svg"), 
+			"Vertical", lambda: self.page().runJavaScript(flipVJS)
+		)
 
         return menu
 
@@ -1340,6 +1269,7 @@ class ImageViewerWebView(DebugWebView):
         #     for action in self.menu.actions():
         #         print(action.text())
 class ImageViewerWidget(QWidget):
+    changeTabIcon = pyqtSignal(str)
     changeTabTitle = pyqtSignal(str)
     """
     [summary]
@@ -1368,6 +1298,7 @@ class ImageViewerWidget(QWidget):
         self.path_ptr = None
         self.save_ptr = None
         self.__auto_save = False
+        self._is_js_toolbar_visible = args.get("add_js_toolbar", False)
 		# arguments.
         print(args.keys())
         self.svg_data = None
@@ -1380,6 +1311,7 @@ class ImageViewerWidget(QWidget):
         self.CtrlS = FigDShortcut(QKeySequence.Save, self, "Save image")
         self.CtrlS.activated.connect(self.saveImage)
         self.CtrlShiftK = FigDShortcut(QKeySequence("Ctrl+Shift+K"), self, "Toggle metadata panel visibility.")
+        self.ShiftF = FigDShortcut(QKeySequence("Shift+F"), self, "Toggle navbar visibility")
         # create layout
         layout = QVBoxLayout()
         # TODO: Check if margin is needed anymore at all.
@@ -1396,7 +1328,14 @@ class ImageViewerWidget(QWidget):
 			accent_color=accent_color,
 			imageviewer=self,
 		)
-        self.searchbar = ImageViewerSearchBar(accent_color=accent_color)
+        self.navbar = FigDNavBar(
+			search_prompt="Search for images locally or on the web",
+			navbtns=["back", "forward", "reload"], accent_color=accent_color, 
+		)
+        self.navbar.connectBrowser(self.browser)
+        self.navbar.hide()
+        self.ShiftF.activated.connect(self.navbar.toggle)
+        self.searchbar = self.navbar.searchbar
         self.searchbar.returnPressed.connect(self.searchImage)
         self.side_panel.filters_panel.imageChanged.connect(self._decide_on_save)
 		
@@ -1410,7 +1349,7 @@ class ImageViewerWidget(QWidget):
         # self.filetree.hide()
         self.browser.splitter.insertWidget(0, self.side_panel)
         self.browser.splitter.addWidget(self.metadata_panel)
-        layout.addWidget(self.searchbar)
+        layout.addWidget(self.navbar)
         layout.addWidget(self.browser.splitter)
         # set layout.
         self.setLayout(layout)
@@ -1422,8 +1361,30 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
+    def setJSToolBarVisible(self, value: bool):
+        self._is_js_toolbar_visible = value
+        if value: self.showJSToolBar()
+        else: self.hideJSToolBar()
+
+    def toggleJSToolBar(self):
+        if self.isJSToolBarVisible():
+            self.setJSToolBarVisible(False)
+            self.hideJSToolBar()
+        else: 
+            self.setJSToolBarVisible(True)
+            self.showJSToolBar()
+
+    def showJSToolBar(self):
+        self.page().runJavaScript("document.getElementsByClassName('viewer-toolbar')[0].style.display=''")
+
+    def hideJSToolBar(self):
+        self.page().runJavaScript("document.getElementsByClassName('viewer-toolbar')[0].style.display='none'")
+
+    def changeZoom(self, zoomValue: float):
+        self.browser.setZoomFactor(zoomValue/100)
+
     def _decide_on_save(self):
-        print(f"triggered auto save: {self.autoSave()}")
+        # print(f"triggered auto save: {self.autoSave()}")
         if self.autoSave():
             print("saving changes")
             self.saveImage() 
@@ -1440,8 +1401,12 @@ class ImageViewerWidget(QWidget):
 
     def searchImage(self):
         query_or_url = self.searchbar.text()
+        if os.path.exists(query_or_url):
+            self.open(query_or_url)
+            return
         url = QUrl.fromUserInput(query_or_url)
         if url.toString() != "":
+            self.searchbar.append(url)
             self.openUrl(url)
 
     def saveImage(self):
@@ -1479,14 +1444,27 @@ class ImageViewerWidget(QWidget):
         self.svgtree.loadSVGData(svg_data)
 
     def viewSource(self):
+        import jinja2
         # print("showing source")
         # print(self.svg_data)
         textarea = QPlainTextEdit()
-        if self.svg_data: 
-            textarea.setPlainText(str(self.svg_data))
+        textarea.setStyleSheet("background: #292929; color: #fff; font-family: 'Be Vietnam Pro'")
+		# code to set tab distance.
+        textarea.setTabStopWidth(
+			QFontMetricsF(
+				textarea.font()
+			).horizontalAdvance(' ')*4
+		)
+        textarea.setTabStopDistance(
+			QFontMetricsF(
+				textarea.font()
+			).horizontalAdvance(' ') * 4
+		)
+        if self.svg_data and self.path_ptr: 
+            content = open(self.path_ptr).read()
+            textarea.setPlainText(content)
         else:
             textarea.setPlainText("Not an SVG (no source available)")
-        textarea.setStyleSheet("background: #292929; color: #fff;")
         window = wrapFigDWindow(textarea)
         window.show()
 
@@ -1525,35 +1503,6 @@ class ImageViewerWidget(QWidget):
     def onLoadFinished(self):        
         self.browser.loadDevTools()
         # self.browser.page().runJavaScript("viewer.full();")
-    # def openUrl(self, path: str):
-    #     from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
-    #     filename_without_ext = str(Path(path).stem)
-    #     isdir = os.path.isdir(path)
-    #     # populate gallery info if path points to a folder.
-    #     gallery_info = []
-    #     if isdir:
-    #         for iter_file in os.listdir(path):
-    #             iter_file = os.path.join(path, iter_file)
-    #             mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
-    #             if not mimetype.startswith("image"):
-    #                 continue
-    #             url = QUrl.fromLocalFile(iter_file).toString()
-    #             gallery_info.append((url, Path(iter_file).stem))
-    #     url = QUrl.fromLocalFile(path).toString()
-    #     html = ImageViewerHTML.render({
-    #         "FILEPATH": path,
-    #         "FILEPATH_URL": url,
-    #         "FILENAME_WITHOUT_EXT": filename_without_ext,
-    #         "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-    #         "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-    #         "PATH_IS_FOLDER": isdir,
-    #         "GALLERY_INFO": gallery_info,
-	# 		"CSS_GRAD": self.css_grad,
-    #     })
-    #     if self.window_ptr is not None:
-    #         self.setWindowTitle(filename_without_ext)
-    #     render_url = FigD.createTempUrl(html)
-    #     self.browser.load(render_url)
     def toggleAutoSave(self, state: int):
         """toggle auto save state of the image viewer"""
         print(state)
@@ -1595,11 +1544,16 @@ class ImageViewerWidget(QWidget):
         self.svg_data = svgBytes
         self.svg_data = self.loadSVGData(svg_data=self.svg_data)
 
+    def isJSToolBarVisible(self):
+        return self._is_js_toolbar_visible
+
     def openUrl(self, url: Union[QUrl, str]):
         from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         if isinstance(url, QUrl):
             url = url.toString()
+        self.searchbar.append(url)
         self.changeTabTitle.emit(url)
+        self.changeTabIcon.emit(FigD.Icon("system/fileviewer/browser.svg"))
         self.svg_data = None
         self.path_ptr = None
         if url.endswith(".svg"):
@@ -1614,7 +1568,9 @@ class ImageViewerWidget(QWidget):
             "FILEPATH": url,
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": url,
-            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS.render(
+				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"'
+			),
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": False,
             "GALLERY_INFO": [],
@@ -1626,12 +1582,17 @@ class ImageViewerWidget(QWidget):
     def open(self, path: str):
         from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         self.svg_data = None
+        self.searchbar.append(path)
+        if path != os.path.expanduser(path):
+            self.searchbar.append(os.path.expanduser(path))
         path = os.path.expanduser(path)
         self.file_watcher.addPath(path)
         self.metadata_panel.update(path)
         self.path_ptr = path
         filename_without_ext = str(Path(path).stem)
+        self.searchbar.append(filename_without_ext)
         self.changeTabTitle.emit(filename_without_ext)
+        self.changeTabIcon.emit(path)
         isdir = os.path.isdir(path)
 		# load SVG data.
         self.svgtree.tree.clear()
@@ -1655,7 +1616,9 @@ class ImageViewerWidget(QWidget):
             "FILEPATH": path,
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": filename_without_ext,
-            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
+            "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS.render(
+				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"'
+			),
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
             "GALLERY_INFO": gallery_info,
@@ -1708,6 +1671,7 @@ def imageviewer_factory(**args):
     css_grad = args.get("accent_color", 'yellow')
     openpath = args.get("openpath", FigD.icon("system/imageviewer/lenna.png"))
     accent_color = args.get("accent_color", 'yellow')
+    add_js_toolbar = args.get("add_js_toolbar", False)
     s = time.time()
     menu = ImageViewerMenu(accent_color=accent_color)
     menu.setFixedHeight(110)
@@ -1716,8 +1680,9 @@ def imageviewer_factory(**args):
     # create imageviewer widget.
     s = time.time()
     imageviewer = ImageViewerWidget(
-		css_grad=css_grad,
+		css_grad=css_grad, 
 		accent_color=accent_color,
+		add_js_toolbar=add_js_toolbar,
 	)
     print(f"ImageViewerWidget created in: {time.time()-s}")
     s = time.time()
@@ -1734,42 +1699,83 @@ def imageviewer_factory(**args):
 
     return imageviewer
 
-def test_imageviewer():
-    FigD("/home/atharva/GUI/fig-dash/resources")
-    s = time.time()
-    app = FigDAppContainer(sys.argv)
-    print(f"app created in: {time.time()-s}")
+def imageviewer_window_factory(**args):
     # accent color and css grad color.
-    s = time.time()
+    LENNA_PATH = FigD.icon("system/imageviewer/lenna.png")
     accent_color = FigDAccentColorMap["imageviewer"]
-    grad_colors = extract_colors_from_qt_grad(accent_color)
-    css_grad = create_css_grad(grad_colors)
-    print(f"grads & accents in: {time.time()-s}")
-
-    try: openpath = sys.argv[1]
-    except IndexError: # openpath = "~/Pictures/atharva.jpg"
-        openpath = FigD.icon("system/imageviewer/lenna.png") 
-		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
     widget_args = {
-		"css_grad": css_grad,
-		"openpath": openpath,
+		"css_grad": create_css_grad(extract_colors_from_qt_grad(accent_color)),
+		"openpath": args.get("openpath", LENNA_PATH),
 		"accent_color": accent_color,
+        "add_js_toolbar": args.get("add_js_toolbar", False),
 	}
     imageviewer = imageviewer_factory(**widget_args)
     window = wrapFigDWindow(
-		imageviewer, title="Image Viewer", 
-		icon="system/imageviewer/logo.svg",
-		accent_color=accent_color, name="imageviewer",
+		imageviewer, title="Image Viewer", icon="system/imageviewer/logo.svg",
+		accent_color=accent_color, name="imageviewer", widget_args=widget_args,
+        widget_factory=imageviewer_factory, window_args=args, 
 		titlebar_callbacks={
 			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
-		}, widget_factory=imageviewer_factory,
-        widget_args=widget_args,
+		}, window_factory=imageviewer_window_factory,
+	)
+
+    return window
+
+def parse_imageviewer_args():
+	parser = argparse.ArgumentParser("system imageviewer application for Fig Dashboard")
+	parser.add_argument("-p", "--path", type=str, help="path to opened image", 
+						default=FigD.icon("system/imageviewer/lenna.png"))
+	parser.add_argument("-jt", "--add_js_toolbar", action="store_true", 
+						help="add javascript based toolbar to imageviewer web view.")
+
+	return parser.parse_args()
+
+def test_imageviewer():
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    app = FigDAppContainer(sys.argv)
+    args = parse_imageviewer_args()
+    # openpath = "~/Pictures/atharva.jpg"
+	# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+    window = imageviewer_window_factory(
+		openpath=args.path, 
+		add_js_toolbar=args.add_js_toolbar,
 	)
     window.show()
     app.exec()
-
-# main class
+# def test_imageviewer():
+#     FigD("/home/atharva/GUI/fig-dash/resources")
+#     s = time.time()
+#     app = FigDAppContainer(sys.argv)
+#     print(f"app created in: {time.time()-s}")
+#     # accent color and css grad color.
+#     s = time.time()
+#     accent_color = FigDAccentColorMap["imageviewer"]
+#     grad_colors = extract_colors_from_qt_grad(accent_color)
+#     css_grad = create_css_grad(grad_colors)
+#     print(f"grads & accents in: {time.time()-s}")
+#     try: openpath = sys.argv[1]
+#     except IndexError: # openpath = "~/Pictures/atharva.jpg"
+#         openpath = FigD.icon("system/imageviewer/lenna.png") 
+# 		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
+#     widget_args = {
+# 		"css_grad": css_grad,
+# 		"openpath": openpath,
+# 		"accent_color": accent_color,
+# 	}
+#     imageviewer = imageviewer_factory(**widget_args)
+#     window = wrapFigDWindow(
+# 		imageviewer, title="Image Viewer", 
+# 		icon="system/imageviewer/logo.svg",
+# 		accent_color=accent_color, name="imageviewer",
+# 		titlebar_callbacks={
+# 			"autoSave": imageviewer.toggleAutoSave,
+# 			"viewSourceBtn": imageviewer.viewSource,
+# 		}, widget_factory=imageviewer_factory,
+#         widget_args=widget_args,
+# 	)
+#     window.show()
+#     app.exec()
 if __name__ == "__main__":
     test_imageviewer()
 # class ImageViewerWidget(QMainWindow):
@@ -1999,3 +2005,77 @@ if __name__ == "__main__":
 #     titlebar.resetSliderPalette()
 #     imageviewer.show()
 #     app.exec()
+	# def unfoldPath(self, path_key, path):
+	# 	ctr = 0
+	# 	op = {path_key: {}}
+	# 	path = svgpathtools.parse_path(path)
+	# 	# print("path_key =", path_key)
+	# 	for part in path:
+	# 		record = {}
+	# 		record["end"] = str(part.end)
+	# 		record["start"] = str(part.start)
+	# 		if isinstance(part, svgpathtools.path.Line): 
+	# 			op[path_key][f"line#{ctr}"] = record
+	# 		elif isinstance(part, svgpathtools.path.Arc):
+	# 			record["large arc"] = str(part.large_arc)
+	# 			record["rotation"] = str(part.rotation)
+	# 			record["radius"] = str(part.radius)
+	# 			record["sweep"] = str(part.sweep)
+	# 			op[path_key][f"arc#{ctr}"] = record
+	# 		ctr += 1
+
+	# 	return op
+
+	# def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
+	# 	if node.name == "path":
+	# 		path_d = str(node.attrs["d"])
+	# 		return self.unfoldPath(key, path_d)
+	# 		# svgpathtools.parse_path(path_d)
+	# 	elif node.name == "g":
+	# 		tree = {key: {}}
+	# 		subctr = 0
+	# 		for subnode in node:
+	# 			if str(subnode).strip() == "": continue
+	# 			tree[key][subnode.name+f"#{subctr}"] = self.parseSVGNode(subnode, key=subnode.name)
+	# 			subctr += 1
+	# 		return tree
+	# 	elif node.name == "rect":
+	# 		record = {
+	# 			"id": node.attrs.get("id", "-"),
+	# 			"fill": node.attrs.get("fill", "-"),
+	# 			"width": node.attrs.get("width", "-"),
+	# 			"height": node.attrs.get("height", "-"),
+	# 			"opacity": node.attrs.get("opacity", "-"),
+	# 		}
+	# 		return record
+	# 	elif node.name == "title":
+	# 		record = {
+	# 			"id": node.attrs.get("id", "-"),
+	# 			"text": node.text,
+	# 		}
+	# 		return record
+	# 	else: return {}
+
+	# def buildTreeItems(self, tree):
+	# 	treeItems = []
+	# 	for name, subtree in tree.items():
+	# 		if name.startswith("path"):
+	# 			treeItem = QTreeWidgetItem([name])
+	# 			# treeItem = QTreeWidgetItem(self.tree, [name])
+	# 			# print(tree)
+	# 			for key, record in subtree[name].items():
+	# 				childItem = QTreeWidgetItem([key])
+	# 				treeItem.addChild(childItem)
+	# 				self._tree_records[getAbsolutePath(childItem)] = record
+	# 		elif name.startswith("g"):
+	# 			treeItem = QTreeWidgetItem([name])
+	# 			for subname, subtree in tree[name].items():
+	# 				subTreeItem = self.buildTreeItems(subtree)
+	# 				treeItem.addChild(subTreeItem)
+	# 		else: # rect etc.
+	# 			record = subtree
+	# 			treeItem = QTreeWidgetItem(self.tree, [name])
+	# 			self._tree_records[getAbsolutePath(treeItem)] = record
+	# 		treeItems.append(treeItem)
+
+	# 	return treeItems

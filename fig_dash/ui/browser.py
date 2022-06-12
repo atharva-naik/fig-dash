@@ -206,7 +206,7 @@ contextMenuHtml = '''
 		<menuitem label="Facebook" icon="/images/facebook_icon16x16.gif" onclick="goTo('//facebook.com/sharer/sharer.php?u=' + window.location.href);"></menuitem>
 	</menu>
 </menu>'''
-os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-features=-webengine-proprietary-codecs"
+os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = "--enable-features=-webengine-proprietary-codecs --blink-settings=darkMode=4,darkModeImagePolicy=2"
 os.environ["QTWEBENGINE_DICTIONARIES_PATH"] = FigD.locale("qtwebengine_dictionaries")
 # "--blink-settings=darkMode=4,darkModeImagePolicy=2"
 # HOME_URL = "file:///tmp/fig_dash.rendered.content.html"
@@ -1086,7 +1086,7 @@ class DebugWebView(QWebEngineView):
 
     def setDevToolsZoom(self):
         self.dev_view.setZoomFactor(self.dev_tools_zoom)
-
+        
     def toggleDevTools(self):
         if self.dev_view.isVisible():
             self.devTools.hide()

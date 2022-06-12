@@ -3477,32 +3477,36 @@ def fileviewer_factory(**args):
 
     return fileviewer
 
-def test_fileviewer():
-    import sys
-    FigD("/home/atharva/GUI/fig-dash/resources")
-    app = FigDAppContainer(sys.argv)
-    # get accent color & icon.
+def fileviewer_window_factory(**args):
+    path = args.get("path", os.path.expanduser("~"))
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
     widget_args = {
         "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
         "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
-    # open path.
-    try: 
-        path = os.path.expanduser(sys.argv[1])
-    except IndexError: 
-        path = os.path.expanduser("~")
     fileviewer = fileviewer_factory(path=path, **widget_args)
     window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=600,
                             accent_color=accent_color, tab_title="Home", 
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
                             titlebar_callbacks={
                                 "viewSourceBtn": fileviewer.viewSource,
-                            }, widget_factory=fileviewer_factory, 
-                            widget_args=widget_args)
-
+                            }, widget_factory=fileviewer_factory, widget_args=widget_args,
+                            window_args=args, window_factory=fileviewer_window_factory)
     window = styleWindowStatusBar(window, widget=fileviewer)
+    
+    return window
+
+def test_fileviewer():
+    import sys
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    app = FigDAppContainer(sys.argv)
+    # open path.
+    try: 
+        path = os.path.expanduser(sys.argv[1])
+    except IndexError: 
+        path = os.path.expanduser("~")
+    window = fileviewer_window_factory(path=path)
     window.show()
     app.exec()
     # fileviewer.saveScreenshot("fileviewer.html")
