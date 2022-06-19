@@ -15,11 +15,10 @@ import os, io, re, sys, time, platform
 from fig_dash.assets import FigD
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.theme import FigDAccentColorMap
-# from fig_dash.ui.effects import BackgroundBlurEffect
-from fig_dash.ui import DashRibbonMenu, DashWidgetGroup, FigDAppContainer, FigDNavBar, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad
+from fig_dash.ui import DashRibbonMenu, DashSimplifiedMenu, FigDMainWidget, FigDAppContainer, FigDNavBar, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad, extractFromAccentColor
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontMetricsF, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QRectF, QTimer, QUrl, QThread, QMimeDatabase, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
+from PyQt5.QtCore import Qt, QSize, QObject, QPoint, QRectF, QTimer, QUrl, QThread, QMimeDatabase, QFile, QFileInfo, QFileSystemWatcher, QSortFilterProxyModel, pyqtSignal, QStringListModel
 from PyQt5.QtWidgets import QAction, QWidget, QCompleter, QShortcut, QTreeView, QTreeWidget, QTreeWidgetItem, QSlider, QLineEdit, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QTabWidget, QHBoxLayout, QGraphicsDropShadowEffect, QMenu
 # imageviewer widget.
 FILTER_OPERATION_DETECTED = False
@@ -170,7 +169,10 @@ class ImageViewerMenu(DashRibbonMenu):
 				 parent: Union[None, QWidget]=None):
 		super(ImageViewerMenu, self).__init__(
 			parent=parent, group_names=[
-				"File", "Edit", "View"
+				"File", "Edit", "View", "Zoom", "Flip and rotate", 
+				"Resize and crop", "Filters", "Effects", "Play", 
+				"Convert", "Compress", "Share", "Tags", "Rate", 
+				"Notes", "Search", "More tools",
 			], accent_color=accent_color,
 		)
 		self.addWidgetGroup("File", [
@@ -193,14 +195,147 @@ class ImageViewerMenu(DashRibbonMenu):
                "orient": "vertical",
 			}),
 		])
+		self.addWidgetGroup("Flip and rotate", [
+			([
+                {
+                    "icon": "system/imageviewer/rotate_cc.png",
+                    "text": "Rotate\nClockwise",
+                    "tip": "Rotate image clockwise",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (43,43),
+                },
+                {
+                    "icon": "system/imageviewer/rotate_ac.png",
+                    "text": "Rotate Anti\nClockwise",
+                    "tip": "Rotate image anti-clockwise",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextUnderIcon,
+                    "size": (43,43),
+                }
+			], {
+               "alignment_flag": Qt.AlignCenter, 
+               "orient": "horizontal",
+			})
+		])
+		self.addWidgetGroup("Resize and crop", [
+			([
+                {
+					"text": "free",
+                    "icon": "system/imageviewer/crop-free.svg",
+                    "tip": "Free cropping mode",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+					"text": "din",
+                    "icon": "system/imageviewer/crop-din.svg",
+                    "tip": "Crop din",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+			], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+			}),
+			([
+                {
+					"text": "landscape",
+                    "icon": "system/imageviewer/crop-landscape.svg",
+                    "tip": "Landscape cropping mode",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+					"text": "portrait",
+                    "icon": "system/imageviewer/crop-portrait.svg",
+                    "tip": "Portrait cropping mode",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+			], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+			}),
+			([
+                {
+					"text": "original",
+                    "icon": "system/imageviewer/crop-original.svg",
+                    "tip": "Original crop",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+					"text": "square",
+                    "icon": "system/imageviewer/crop-square.svg",
+                    "tip": "Square cropping mode",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+			], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+			}),
+			([
+                {
+					"text": "3:2",
+                    "icon": "system/imageviewer/crop-3-2.svg",
+                    "tip": "3:2 aspect ratio crop",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+					"text": "5:4",
+                    "icon": "system/imageviewer/crop-portrait.svg",
+                    "tip": "5:4 aspect ratio crop",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+			], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+			}),
+			([
+                {
+					"text": "7:5",
+                    "icon": "system/imageviewer/crop-7-5.svg",
+                    "tip": "7:5 aspect ratio crop",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                },
+                {
+					"text": "16:9",
+                    "icon": "system/imageviewer/crop-16-9.svg",
+                    "tip": "16:9 aspect ratio crop",
+                    "background": accent_color,
+                    "style": Qt.ToolButtonTextBesideIcon,
+                    "size": (30,30),
+                }
+			], {
+               "alignment_flag": Qt.AlignLeft, 
+               "orient": "vertical",
+			})
+		])
+		self.hideGroup("Search")
+		self.hideGroup("More tools")
 
-	def toggle(self):
-		"""toggle the visibility of the ribbon menu."""
-		if self.isVisible():
-			self.hide()
-		else: self.show()
+# simplified menu for ImageViewer
+class ImageViewerSimplifiedMenu(DashSimplifiedMenu):
+	def __init__(self, accent_color: str="green", 
+				 parent: Union[None, QWidget]=None):
+		super(ImageViewerSimplifiedMenu, self).__init__(parent=parent, accent_color=accent_color)
+		self.addWidget()
 
-
+# file tree for image viewer.
 class ImageViewerFileTree(QWidget):
     def __init__(self, root=os.path.expanduser("~"), parent=None):
         super(ImageViewerFileTree, self).__init__(parent)
@@ -769,6 +904,12 @@ class ImageViewerFiltersPanel(QWidget):
 			role="hue-rotate"
 		)
 		self.hueRotateSlider.imageChanged.connect(self.imageChanged.emit)
+		self.vignetteSlider = ImageViewerFilterSlider(
+			"vignette (in %)", icon="system/imageviewer/vignette.svg",
+			minm=0, maxm=100, value=0, icon_size=(20,20),
+			accent_color=accent_color, imageviewer=imageviewer,
+		)
+		self.vignetteSlider.imageChanged.connect(self.imageChanged.emit)
 		self.resetBtn = QToolButton()
 		self.resetBtn.setText("Reset Filters")
 		self.resetBtn.setStyleSheet("""
@@ -811,6 +952,7 @@ class ImageViewerFiltersPanel(QWidget):
 		self.vboxlayout.addWidget(self.saturationSlider, 0, Qt.AlignCenter | Qt.AlignTop)
 		self.vboxlayout.addWidget(self.sepiaSlider, 0, Qt.AlignCenter | Qt.AlignTop)
 		self.vboxlayout.addWidget(self.hueRotateSlider, 0, Qt.AlignCenter | Qt.AlignTop)
+		self.vboxlayout.addWidget(self.vignetteSlider, 0, Qt.AlignCenter | Qt.AlignTop)
 		self.vboxlayout.addWidget(self.resetBtn, 0, Qt.AlignCenter | Qt.AlignTop)
 		# self.vboxlayout.addWidget(
 		# 	self.dropShadowPicker, 0, 
@@ -886,6 +1028,17 @@ class ImageViewerMetaDataPanel(QWidget):
 		self.panel = self.initPanel()
 		# build layout.
 		self.vboxlayout.addWidget(self.panel)
+		drop_shadow = self.createDropShadow(accent_color, "back")
+		self.setGraphicsEffect(drop_shadow)
+
+	def createDropShadow(self, accent_color: str, where: str):
+		drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+		drop_shadow = QGraphicsDropShadowEffect()
+		drop_shadow.setColor(QColor(drop_shadow_color))
+		drop_shadow.setBlurRadius(10)
+		drop_shadow.setOffset(0, 0)
+
+		return drop_shadow
 
 	def toggle(self):
 		if self.isVisible():
@@ -920,6 +1073,40 @@ class ImageViewerMetaDataPanel(QWidget):
 		HEADER_INFO = ""
 		INTENT_INFO = ""
 		PROFILE_INFO = ""
+		MISC_FILE_INFO = f"""
+		<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Misc. File Info</span>
+		<div style="color: #fff;">
+			<b>Owner:</b> {self.info.owner()} <br>
+			<b>Group:</b> {self.info.group()} <br>
+			<b>Read only:</b> {(not(self.info.isWritable()) and self.info.isReadable())} <br>
+			<b>Extension:</b> {self.info.completeSuffix()} <br>
+			<b>Hidden file:</b> {self.info.isHidden()} <br>
+			<b>Symbolic link:</b> {self.info.isSymbolicLink() or self.info.isSymLink()} <br>
+		</div><br>"""
+		# user and group permissions for file.
+		UserPermissions = "["
+		if self.info.permission(QFile.ReadUser):
+			UserPermissions += "R"
+		if self.info.permission(QFile.WriteUser):
+			UserPermissions += "W"
+		# if self.info.permission(QFile.ExecuteUser):
+			# UserPermissions += "X"
+		UserPermissions += "]"
+		GroupPermissions = "["
+		if self.info.permission(QFile.ReadUser):
+			GroupPermissions += "R"
+		if self.info.permission(QFile.WriteUser):
+			GroupPermissions += "W"
+		# if self.info.permission(QFile.ExecuteUser):
+			# GroupPermissions += "X"
+		GroupPermissions += "]"
+		PERMISSIONS_INFO = f"""
+		<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Permissions</span>
+		<div style="color: #fff;">
+			<b>{self.info.owner()}:</b> {UserPermissions} <br>
+			<b>{self.info.group()} (grp):</b> {GroupPermissions} <br>
+			<b>Everyone:</b> {'Unknown'} <br>
+		</div><br>"""
 		try:
 			PILObj = Image.open(path)
 			width = PILObj.size[0]
@@ -941,7 +1128,7 @@ class ImageViewerMetaDataPanel(QWidget):
 				clut = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.clut.items()])
 
 				MISC_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Miscellaneous</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Misc. Metadata</span>
 				<div style="color: #fff;">
 					<b>Clut:</b> {clut} <br>
 					<b>Model:</b> {p.model} <br>
@@ -953,14 +1140,14 @@ class ImageViewerMetaDataPanel(QWidget):
 					<b>Screening Description:</b> {p.screening_description} <br>
 				</div><br>"""
 				ICC_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">ICC</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">ICC</span>
 				<div style="color: #fff;">
 					<b>Version:</b> {p.icc_version} <br>
 					<b>Measurement Condition:</b> {measurement_condition} <br>
 					<b>Viewing Condition:</b> {p.icc_viewing_condition} <br>
 				</div><br>"""
 				PROFILE_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Profile</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Profile</span>
 				<div style="color: #fff;">
 					<!-- <b>Id:</b> {p.profile_id} <br> -->
 					<b>Description:</b> {p.profile_description} <br>
@@ -971,7 +1158,7 @@ class ImageViewerMetaDataPanel(QWidget):
 					<b>Technology:</b> {p.technology} <br>
 				</div><br>"""
 				COLOR_SPACE = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Color Space</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Color Space</span>
 				<div style="color: #fff;">
 					<b>Red Primary:</b> ({", ".join([f"{c:.2f}" for c in p.red_primary[0]])}) ({", ".join([f"{c:.2f}" for c in p.red_primary[1]])}) <br>
 					<b>Blue Primary:</b> ({", ".join([f"{c:.2f}" for c in p.blue_primary[0]])}) ({", ".join([f"{c:.2f}" for c in p.blue_primary[1]])}) <br>
@@ -983,7 +1170,7 @@ class ImageViewerMetaDataPanel(QWidget):
 				if p.intent_supported is None: p.intent_supported = {}
 				supported = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.intent_supported.items()])
 				INTENT_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Intent Information</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Intent Information</span>
 				<div style="color: #fff;">
 					<b>Rendering:</b> {p.rendering_intent} <br>
 					<b>Is supported?:</b> {p.colorimetric_intent} <br>
@@ -992,14 +1179,14 @@ class ImageViewerMetaDataPanel(QWidget):
 					<b>Saturation Rendering Gamut:</b> {p.saturation_rendering_intent_gamut} <br>
 				</div><br>"""
 				MEDIA_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Media Information</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Media Information</span>
 				<div style="color: #fff;">
 					<b>Black Point:</b> ({", ".join([f"{c:.2f}" for c in p.media_black_point[0]])}) ({", ".join([f"{c:.2f}" for c in p.media_black_point[1]])}) <br>
 					<b>White Point:</b> ({", ".join([f"{c:.2f}" for c in p.media_white_point[0]])}) ({", ".join([f"{c:.2f}" for c in p.media_white_point[1]])}) <br>
 					<b>White Point Temperature:</b> {p.media_white_point_temperature:.2f} <br>
 				</div><br>"""
 				HEADER_INFO = f"""
-				<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Header Information</span>
+				<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Header Information</span>
 				<div style="color: #fff;">
 					<b>Manufacturer:</b> {p.header_manufacturer} <br>
 					<b>Model:</b> {p.header_model} <br>
@@ -1023,7 +1210,7 @@ class ImageViewerMetaDataPanel(QWidget):
 		self.panel.setPlainText("")
 		# update file information.
 		self.panel.appendHtml(f"""
-		<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">File Information</span>
+		<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">File Information</span>
 		<div style="color: #fff;">
 			<b>Kind:</b> {mimetype} <br>
 			<b>Size:</b> {h_format_mem(fileSize)} ({fileSize:,} bytes) <br>
@@ -1035,13 +1222,15 @@ class ImageViewerMetaDataPanel(QWidget):
 			<b>Metadata changed:</b> {metadataChangeTime} <br>
 		</div>
 		<br>
-		<span style="text-decoration: underline; font-weight: bold; font-size: 20px; color: {fontColor}">Image Information</span>
+		<span style="font-weight: bold; font-size: 22px; color: {fontColor}; font-family: 'Be Vietnam Pro' ">Image Information</span>
 		<div style="color: #fff;">
 			<b>Dimensions:</b> {width} x {height} <br>
 			<b>Color space:</b> {colorspace} <br>
 			<b>Color profile:</b> {colorprofile} <br>
 			<b>Alpha channel:</b> {hasAlpha} <br>
 		</div> <br>
+		{MISC_FILE_INFO}
+		{PERMISSIONS_INFO}
 		{PROFILE_INFO}
 		{COLOR_SPACE}
 		{MEDIA_INFO}
@@ -1055,9 +1244,10 @@ class ImageViewerMetaDataPanel(QWidget):
 
 # image viewer side panel with various tabs containing: 
 class ImageViewerSidePanel(QTabWidget):
-	def __init__(self, parent: Union[None, QWidget]=None,
-				 imageviewer=None, accent_color: str="yellow"):
+	def __init__(self, parent: Union[None, QWidget]=None, imageviewer=None, 
+				 accent_color: str="yellow", where: str="back"):
 		super(ImageViewerSidePanel, self).__init__(parent=parent)
+		# panels.
 		self.filters_panel = ImageViewerFiltersPanel(
 			accent_color=accent_color, 
 			imageviewer=imageviewer,
@@ -1073,6 +1263,18 @@ class ImageViewerSidePanel(QTabWidget):
 		self.addTab(self.effects_panel, "Effects")
 		self.setStyleSheet("""color: #fff; background: #292929;""")
 		self.setFont(QFont("Be Vietnam Pro", 10))
+		# drop shadow effect.
+		drop_shadow = self.createDropShadow(accent_color, where)
+		self.setGraphicsEffect(drop_shadow)
+
+	def createDropShadow(self, accent_color: str, where: str):
+		drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+		drop_shadow = QGraphicsDropShadowEffect()
+		drop_shadow.setColor(QColor(drop_shadow_color))
+		drop_shadow.setBlurRadius(10)
+		drop_shadow.setOffset(0, 0)
+
+		return drop_shadow
 
 	def loadSVGData(self, svg_data: str=""):
 		self.svgtree.loadSVGData(svg_data)
@@ -1268,7 +1470,7 @@ class ImageViewerWebView(DebugWebView):
         # elif data.mediaType() == 0:
         #     for action in self.menu.actions():
         #         print(action.text())
-class ImageViewerWidget(QWidget):
+class ImageViewerWidget(FigDMainWidget):
     changeTabIcon = pyqtSignal(str)
     changeTabTitle = pyqtSignal(str)
     """
@@ -1298,6 +1500,7 @@ class ImageViewerWidget(QWidget):
         self.path_ptr = None
         self.save_ptr = None
         self.__auto_save = False
+        self._image_search_mode = False
         self._is_js_toolbar_visible = args.get("add_js_toolbar", False)
 		# arguments.
         print(args.keys())
@@ -1330,13 +1533,15 @@ class ImageViewerWidget(QWidget):
 		)
         self.navbar = FigDNavBar(
 			search_prompt="Search for images locally or on the web",
-			navbtns=["back", "forward", "reload"], accent_color=accent_color, 
+			navbtns=["back", "forward", "reload"], 
+			accent_color=accent_color, 
 		)
         self.navbar.connectBrowser(self.browser)
         self.navbar.hide()
         self.ShiftF.activated.connect(self.navbar.toggle)
         self.searchbar = self.navbar.searchbar
         self.searchbar.returnPressed.connect(self.searchImage)
+        self.searchbar.imageSearch.triggered.connect(self.toggleImageSearchMode)
         self.side_panel.filters_panel.imageChanged.connect(self._decide_on_save)
 		
         self.metadata_panel = ImageViewerMetaDataPanel(accent_color=accent_color)
@@ -1361,6 +1566,12 @@ class ImageViewerWidget(QWidget):
         # set icon.
         self._fullscreen = False
 
+    def setImageSearchMode(self, value: bool):
+        self._image_search_mode = value
+
+    def isImageSearchMode(self) -> bool:
+        return self._image_search_mode
+
     def setJSToolBarVisible(self, value: bool):
         self._is_js_toolbar_visible = value
         if value: self.showJSToolBar()
@@ -1369,10 +1580,14 @@ class ImageViewerWidget(QWidget):
     def toggleJSToolBar(self):
         if self.isJSToolBarVisible():
             self.setJSToolBarVisible(False)
-            self.hideJSToolBar()
         else: 
             self.setJSToolBarVisible(True)
-            self.showJSToolBar()
+
+    def toggleImageSearchMode(self):
+        if self.isImageSearchMode():
+            self.setImageSearchMode(False)
+        else: 
+            self.setImageSearchMode(True)
 
     def showJSToolBar(self):
         self.page().runJavaScript("document.getElementsByClassName('viewer-toolbar')[0].style.display=''")
@@ -1401,9 +1616,18 @@ class ImageViewerWidget(QWidget):
 
     def searchImage(self):
         query_or_url = self.searchbar.text()
+		# if the input is a file path.
         if os.path.exists(query_or_url):
-            self.open(query_or_url)
+            if self.isImageSearchMode():
+                with open(query_or_url, "rb") as f:
+                    BASE64 = str(base64.encodebytes(f.read()))
+                url = f"https://www.google.com/search?tbs=sbi:{BASE64}&hl={self.searchbar.lang()}" 
+                print(url)
+                self.openWebPage(url)
+            else:
+                self.open(query_or_url)
             return
+		# if the input is an URL.
         url = QUrl.fromUserInput(query_or_url)
         if url.toString() != "":
             self.searchbar.append(url)
@@ -1420,7 +1644,10 @@ class ImageViewerWidget(QWidget):
         else: filename = self.save_ptr
         print(filename)
         if filename is not None:
-            self.browser.page().runJavaScript(IMAGEVIEWER_BYTES_EXTRACT_JS, self._save_image_callback)
+            self.browser.page().runJavaScript(
+				IMAGEVIEWER_BYTES_EXTRACT_JS, 
+				self._save_image_callback
+			)
 
     def _copy_image_callback(self, base64_str: str):
         if base64_str is None: 
@@ -1505,12 +1732,11 @@ class ImageViewerWidget(QWidget):
         # self.browser.page().runJavaScript("viewer.full();")
     def toggleAutoSave(self, state: int):
         """toggle auto save state of the image viewer"""
-        print(state)
         if state == 2: 
-            print("ImageViewerWidget.setAutoSave(True)")
+            # print("ImageViewerWidget.setAutoSave(True)")
             self.setAutoSave(True)
         elif state == 0: 
-            print("ImageViewerWidget.setAutoSave(False)")
+            # print("ImageViewerWidget.setAutoSave(False)")
             self.setAutoSave(False)
 
     def setAutoSave(self, autoSave: bool):
@@ -1547,13 +1773,26 @@ class ImageViewerWidget(QWidget):
     def isJSToolBarVisible(self):
         return self._is_js_toolbar_visible
 
+    def openWebPage(self, url: Union[QUrl, str]):
+        if isinstance(url, QUrl):
+            url = url.toString()
+        self.searchbar.append(url)
+        self.changeTabTitle.emit(url)
+        self.changeTabIcon.emit(FigD.icon("system/fileviewer/browser.svg"))
+        self.svg_data = None
+        self.path_ptr = None
+		# load SVG data.
+        self.svgtree.tree.clear()
+        self.svgtree.details_pane.setText("click on an element in the SVG tree to view details")
+        self.browser.load(QUrl(url))
+
     def openUrl(self, url: Union[QUrl, str]):
         from fig_dash.ui.js.imageviewer import ViewerJSPluginCSS, ViewerJSPluginJS, ImageViewerHTML
         if isinstance(url, QUrl):
             url = url.toString()
         self.searchbar.append(url)
         self.changeTabTitle.emit(url)
-        self.changeTabIcon.emit(FigD.Icon("system/fileviewer/browser.svg"))
+        self.changeTabIcon.emit(FigD.icon("system/fileviewer/browser.svg"))
         self.svg_data = None
         self.path_ptr = None
         if url.endswith(".svg"):
@@ -1635,7 +1874,7 @@ def launch_imageviewer(app):
     css_grad = create_css_grad(grad_colors)
 	# create ribbon menu for imageviewer.
     menu = ImageViewerMenu(accent_color=accent_color)
-    menu.setFixedHeight(110)
+    menu.setFixedHeight(120)
     menu.hide()
     # create imageviewer widget.
     imageviewer = ImageViewerWidget(
@@ -1674,7 +1913,7 @@ def imageviewer_factory(**args):
     add_js_toolbar = args.get("add_js_toolbar", False)
     s = time.time()
     menu = ImageViewerMenu(accent_color=accent_color)
-    menu.setFixedHeight(110)
+    menu.setFixedHeight(120)
     menu.hide()
     print(f"menu created in: {time.time()-s}")
     # create imageviewer widget.
@@ -1702,14 +1941,17 @@ def imageviewer_factory(**args):
 def imageviewer_window_factory(**args):
     # accent color and css grad color.
     LENNA_PATH = FigD.icon("system/imageviewer/lenna.png")
+    openpath = args.get("openpath", LENNA_PATH)
     accent_color = FigDAccentColorMap["imageviewer"]
     widget_args = {
 		"css_grad": create_css_grad(extract_colors_from_qt_grad(accent_color)),
-		"openpath": args.get("openpath", LENNA_PATH),
+		"openpath": openpath,
 		"accent_color": accent_color,
         "add_js_toolbar": args.get("add_js_toolbar", False),
 	}
     imageviewer = imageviewer_factory(**widget_args)
+    tab_title = Path(openpath).stem
+    tab_icon = openpath
     window = wrapFigDWindow(
 		imageviewer, title="Image Viewer", icon="system/imageviewer/logo.svg",
 		accent_color=accent_color, name="imageviewer", widget_args=widget_args,
@@ -1718,6 +1960,8 @@ def imageviewer_window_factory(**args):
 			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
 		}, window_factory=imageviewer_window_factory,
+		tab_title=tab_title, tab_icon=tab_icon,
+		ctrl_btns_loc="left",
 	)
 
     return window
@@ -1778,304 +2022,3 @@ def test_imageviewer():
 #     app.exec()
 if __name__ == "__main__":
     test_imageviewer()
-# class ImageViewerWidget(QMainWindow):
-#     """
-#     [summary]
-#     Widget for viewing images
-#     - If a filepath is given: image viewer is opened.
-#     - If a folderpath is given: image gallery is opened.
-
-#     # UI Elements
-#     This section describes the UI design of the ImageViewer.
-
-
-#     # Browser (MainView) (as Image Viewer):
-
-#     OR
-
-#     # Browser (MainView) (as Image Gallery):
-#     # Viewer modes
-#     1. 2D flow-layout
-#     2. carousel mode
-#     3. 3D carousel (max 20 images)
-#     4. list mode
-#     5. tree mode
-#     """
-
-#     def __init__(self, **args):
-#         super(ImageViewerWidget, self).__init__()
-#         # connect a mimedatabase.
-#         self.mime_database = QMimeDatabase()
-#         # set central widget.
-#         centralWidget = self.initCentralWidget()
-#         self.setCentralWidget(centralWidget)
-#         # connect slots to signals.
-#         self.browser.urlChanged.connect(self.onUrlChange)
-#         # parameters stuff.
-#         self.parentless = args.get("parentless")
-#         self.zoom_factor = args.get("zoom_factor", 1.3)
-#         # set icon.
-#         self._fullscreen = False
-#         logo = args.get("logo")
-#         logo = FigD.Icon(logo)
-#         self.setWindowIcon(logo)
-
-#     def loadSVGData(self, svg_data: str=""):
-#         self.svgtree.loadSVGData(svg_data)
-
-#     # def toggleFullScreen(self):
-#     #     print("Full Screen")
-#     #     if self._fullscreen:
-#     #         self.showNormal()
-#     #         self._fullscreen = False
-#     #     else: 
-#     #         self.showFullScreen()
-#     #         self._fullscreen = True
-
-#     def initCentralWidget(self):
-#         centralWidget = QWidget()
-#         # init layout.
-#         layout = QVBoxLayout()
-#         margin = 10
-#         layout.setContentsMargins(margin, 0, margin, margin)
-#         layout.setSpacing(0)
-#         # build layout.
-#         self.browser = ImageViewerWebView()
-#         # self.statusbar = self.statusBar()
-#         # self.statusbar.setStyleSheet("""
-#         # QWidget {
-#         #     color: gray;
-#         #     background: #000;
-#         # }""")
-#         self.side_panel = ImageViewerSidePanel()
-#         self.svgtree = self.side_panel.svgtree
-#         self.filetree = self.side_panel.filetree
-#         self.filetree.connectImageViewer(self)
-#         self.side_panel.hide()
-#         # self.filetree.hide()
-#         self.browser.splitter.insertWidget(0, self.side_panel)
-#         layout.addWidget(self.browser.splitter)
-#         # set layout.
-#         centralWidget.setLayout(layout)
-#         centralWidget.setObjectName("ImageViewerCentralWidget")
-#         centralWidget.setStyleSheet("""
-#         QWidget#ImageViewerCentralWidget {
-#             border-radius: 20px;
-#             background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1));
-#         }""")
-
-#         return centralWidget
-
-#     def onUrlChange(self):
-#         self.browser.setZoomFactor(self.zoom_factor)
-#         self.browser.loadFinished.connect(self.onLoadFinished)
-
-#     def onLoadFinished(self):        
-#         self.browser.loadDevTools()
-#         # self.browser.page().runJavaScript("viewer.full();")
-#     def openUrl(self, path: str):
-#         filename_without_ext = str(Path(path).stem)
-#         isdir = os.path.isdir(path)
-#         # populate gallery info if path points to a folder.
-#         gallery_info = []
-#         if isdir:
-#             for iter_file in os.listdir(path):
-#                 iter_file = os.path.join(path, iter_file)
-#                 mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
-#                 if not mimetype.startswith("image"):
-#                     continue
-#                 url = QUrl.fromLocalFile(iter_file).toString()
-#                 gallery_info.append((url, Path(iter_file).stem))
-#         url = QUrl.fromLocalFile(path).toString()
-#         html = ImageViewerHTML.render({
-#             "FILEPATH": path,
-#             "FILEPATH_URL": url,
-#             "FILENAME_WITHOUT_EXT": filename_without_ext,
-#             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-#             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-#             "PATH_IS_FOLDER": isdir,
-#             "GALLERY_INFO": gallery_info,
-#         })
-#         if self.parentless:
-#             self.setWindowTitle(filename_without_ext)
-#         render_url = FigD.createTempUrl(html)
-#         self.browser.load(render_url)
-
-#     def connectMenu(self, menu: ImageViewerMenu):
-#         self.menu = menu
-
-#     def connectTitlebar(self, titlebar: WindowTitleBar):
-#         self.titlebar = titlebar
-#         self.titlebar.findBtn.setParent(None)
-#         self.titlebar.connectWindow(self)
-#         rcb = self.titlebar.ribbonCollapseBtn
-#         try: rcb.clicked.connect(self.menu.toggle)
-#         except AttributeError as e: print(e)
-
-#     def open(self, path: str):
-#         path = os.path.expanduser(path)
-#         filename_without_ext = str(Path(path).stem)
-#         isdir = os.path.isdir(path)
-# 		# load SVG data.
-#         self.svgtree.tree.clear()
-#         self.svgtree.details_pane.setText("click on element on the SVG tree to view details")
-#         if path.endswith(".svg"):
-#             svg_data = open(path).read()
-#             self.loadSVGData(svg_data=svg_data) 
-#         # populate gallery info if path points to a folder.
-#         gallery_info = []
-#         if isdir:
-#             for iter_file in os.listdir(path):
-#                 iter_file = os.path.join(path, iter_file)
-#                 mimetype = self.mime_database.mimeTypeForFile(iter_file).name()
-#                 if not mimetype.startswith("image"):
-#                     continue
-#                 url = QUrl.fromLocalFile(iter_file).toString()
-#                 gallery_info.append((url, Path(iter_file).stem))
-#         url = QUrl.fromLocalFile(path).toString()
-#         html = ImageViewerHTML.render({
-#             "FILEPATH": path,
-#             "FILEPATH_URL": url,
-#             "FILENAME_WITHOUT_EXT": filename_without_ext,
-#             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS,
-#             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
-#             "PATH_IS_FOLDER": isdir,
-#             "GALLERY_INFO": gallery_info,
-#         })
-#         if self.parentless:
-#             self.setWindowTitle(filename_without_ext)
-#         render_url = FigD.createTempUrl(html)
-#         self.browser.load(render_url)
-
-# def test_imageviewer():
-#     import sys
-#     from fig_dash.ui.titlebar import TitleBar
-
-#     FigD("/home/atharva/GUI/fig-dash/resources")
-#     app = QApplication(sys.argv)
-#     # set app stylesheet.
-#     app.setStyleSheet("""
-#     QToolTip {
-#         color: #fff;
-#         border: 0px;
-#         padding-top: -1px;
-#         padding-left: 5px;
-#         padding-right: 5px;
-#         padding-bottom: -1px;
-#         font-size:  17px;
-#         background: #000;
-#         font-family: 'Be Vietnam Pro', sans-serif;
-#     }""")
-
-#     titlebar = WindowTitleBar(background="qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #be9433, stop : 0.091 #c49935, stop : 0.182 #ca9d36, stop : 0.273 #cfa238, stop : 0.364 #d5a639, stop : 0.455 #dbab3b, stop : 0.545 #e1af3d, stop : 0.636 #e7b43e, stop : 0.727 #edb940, stop : 0.818 #f3be42, stop : 0.909 #f9c243, stop : 1.0 #ffc745)")
-#     # titlebar.setStyleSheet("background: transparent; color: #fff;")
-#     menu = ImageViewerMenu()
-#     menu.hide()
-#     imageviewer = ImageViewerWidget(
-#         logo="system/imageviewer/logo.svg",
-#         parentless=True,
-#     )
-#     imageviewer.setAttribute(Qt.WA_TranslucentBackground)
-#     # imageviewer.centralWidget().setAttribute(Qt.WA_TranslucentBackground)
-#     imageviewer.titlebar = titlebar
-#     imageviewer.connectMenu(menu)
-#     imageviewer.connectTitlebar(titlebar)
-#     imageviewer.setStyleSheet("background: transparent; border: 0px;")
-#     QFontDatabase.addApplicationFont(
-#         FigD.font("BeVietnamPro-Regular.ttf")
-#     )
-#     try: openpath = sys.argv[1]
-#     except IndexError: openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
-#     imageviewer.open(openpath)
-#     # imageviewer.open("~/Pictures/Wallpapers/Smock_FolderArchive_18_N.svg")
-# 	# imageviewer.open("~/Pictures/KiaraHololive.jpeg")
-#     # imageviewer.open("~/Pictures/Elena_Posterised.png")
-#     imageviewer.setGeometry(100, 100, 960, 800)
-#     imageviewer.setWindowFlags(
-#         Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
-#     # app.setWindowIcon(FigD.Icon("system/imageviewer/logo.svg"))
-# 	# attach Ctrl+B to sidebar collapse.
-#     CtrlB = QShortcut(QKeySequence("Ctrl+B"), imageviewer)
-#     CtrlB.activated.connect(imageviewer.side_panel.toggle)
-#     FullScreen = QShortcut(QKeySequence.FullScreen, imageviewer)
-#     FullScreen.activated.connect(titlebar.fullscreenBtn.toggle)
-#     # print(FullScreen)
-#     # FullScreen.activated.connect(imageviewer.toggleFullScreen)
-#     titlebar.setWindowIcon(imageviewer.windowIcon())
-#     titlebar.resetSliderPalette()
-#     imageviewer.show()
-#     app.exec()
-	# def unfoldPath(self, path_key, path):
-	# 	ctr = 0
-	# 	op = {path_key: {}}
-	# 	path = svgpathtools.parse_path(path)
-	# 	# print("path_key =", path_key)
-	# 	for part in path:
-	# 		record = {}
-	# 		record["end"] = str(part.end)
-	# 		record["start"] = str(part.start)
-	# 		if isinstance(part, svgpathtools.path.Line): 
-	# 			op[path_key][f"line#{ctr}"] = record
-	# 		elif isinstance(part, svgpathtools.path.Arc):
-	# 			record["large arc"] = str(part.large_arc)
-	# 			record["rotation"] = str(part.rotation)
-	# 			record["radius"] = str(part.radius)
-	# 			record["sweep"] = str(part.sweep)
-	# 			op[path_key][f"arc#{ctr}"] = record
-	# 		ctr += 1
-
-	# 	return op
-
-	# def parseSVGNode(self, node: bs4.element.Tag, key: str=""):
-	# 	if node.name == "path":
-	# 		path_d = str(node.attrs["d"])
-	# 		return self.unfoldPath(key, path_d)
-	# 		# svgpathtools.parse_path(path_d)
-	# 	elif node.name == "g":
-	# 		tree = {key: {}}
-	# 		subctr = 0
-	# 		for subnode in node:
-	# 			if str(subnode).strip() == "": continue
-	# 			tree[key][subnode.name+f"#{subctr}"] = self.parseSVGNode(subnode, key=subnode.name)
-	# 			subctr += 1
-	# 		return tree
-	# 	elif node.name == "rect":
-	# 		record = {
-	# 			"id": node.attrs.get("id", "-"),
-	# 			"fill": node.attrs.get("fill", "-"),
-	# 			"width": node.attrs.get("width", "-"),
-	# 			"height": node.attrs.get("height", "-"),
-	# 			"opacity": node.attrs.get("opacity", "-"),
-	# 		}
-	# 		return record
-	# 	elif node.name == "title":
-	# 		record = {
-	# 			"id": node.attrs.get("id", "-"),
-	# 			"text": node.text,
-	# 		}
-	# 		return record
-	# 	else: return {}
-
-	# def buildTreeItems(self, tree):
-	# 	treeItems = []
-	# 	for name, subtree in tree.items():
-	# 		if name.startswith("path"):
-	# 			treeItem = QTreeWidgetItem([name])
-	# 			# treeItem = QTreeWidgetItem(self.tree, [name])
-	# 			# print(tree)
-	# 			for key, record in subtree[name].items():
-	# 				childItem = QTreeWidgetItem([key])
-	# 				treeItem.addChild(childItem)
-	# 				self._tree_records[getAbsolutePath(childItem)] = record
-	# 		elif name.startswith("g"):
-	# 			treeItem = QTreeWidgetItem([name])
-	# 			for subname, subtree in tree[name].items():
-	# 				subTreeItem = self.buildTreeItems(subtree)
-	# 				treeItem.addChild(subTreeItem)
-	# 		else: # rect etc.
-	# 			record = subtree
-	# 			treeItem = QTreeWidgetItem(self.tree, [name])
-	# 			self._tree_records[getAbsolutePath(treeItem)] = record
-	# 		treeItems.append(treeItem)
-
-	# 	return treeItems

@@ -639,30 +639,41 @@ class CustomWebPage(QWebEnginePage):
         except Exception as e: 
             # it will be noisy for FileViewerWidget.
             pass
-
+    # def createWindow(self, windowType: QWebEnginePage.WebWindowType):
+    #     if windowType == QWebEnginePage.WebBrowserTab:
+    #         if self.dash_window:
+    #             return self.dash_window.tabs.openUrl("https://google.com")
+    #         else: return None
+    #     elif windowType == QWebEnginePage.WebBrowserWindow:
+    #         app = QApplication.instance()
+    #         try:
+    #             window = app.newMainWindow()
+    #             return window.tabs.openTab()
+    #         except Exception as e:
+    #             print(e)
+    #             return None
+    #     else:
+    #         # handle this case appropriately.
+    #         print(windowType)
+    #         return None
     def createWindow(self, windowType: QWebEnginePage.WebWindowType):
+        page: Union[QWebEnginePage, None] = None
+        window = QApplication.instance().activeWindow()
         if windowType == QWebEnginePage.WebBrowserTab:
-            if self.dash_window:
-                return self.dash_window.tabs.openUrl("https://google.com")
-            else: return None
+            print("\x1b[32;1mopening link in new tab\x1b[0m")
+            if hasattr(window, "tabs"):
+                page = window.tabs.openTab()
         elif windowType == QWebEnginePage.WebBrowserWindow:
-            app = QApplication.instance()
-            try:
-                window = app.newMainWindow()
-                return window.tabs.openTab()
-            except Exception as e:
-                print(e)
-                return None
-        else:
-            # handle this case appropriately.
-            print(windowType)
-            return None
-            # popup = PopupWindow(profile())
-            # popup.setAttribute(Qt.WA_DeleteOnClose)
-            # popup.show()
+            print("\x1b[32;1mopening link in new window\x1b[0m")
+            if hasattr(window, "tabs"):
+                figd_window = window.tabs.openWindow()
+                if hasattr(figd_window, "webview"):
+                    page = figd_window.webview.page()
+                elif hasattr(figd_window, "browser"):
+                    page = figd_window.browser.page()
 
-            # return popup.page()
-
+        return page
+            
     def permissionDialog(self, securityOrigin: QUrl, feature: QWebEnginePage.Feature):
         print(f"{securityOrigin.toString()}: opening permission dialog for {feature}")
         """

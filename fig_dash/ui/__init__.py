@@ -13,10 +13,10 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
-from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel
-from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
+from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QMdiSubWindow, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
 
-
+def blank(*args, **kwargs): print(args, kwargs)
 class FigDShortcut(QShortcut):
     def __init__(self, keyseq: QKeySequence, 
                  parent: Union[None, QWidget]=None,
@@ -371,6 +371,7 @@ class DashWidgetGroupBtn(QToolButton):
                 font-size: 14px;
                 border-radius: 2px;
                 background: transparent;
+                border: 1px solid transparent;
             }
             QToolButton:hover {
                 color: #292929;
@@ -417,7 +418,7 @@ class DashWidgetGroupBtn(QToolButton):
         self.mouseEntered.emit()
         super(DashWidgetGroupBtn, self).enterEvent(event)
 
-
+# dash widget group.
 class DashWidgetGroup(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None,
                  name: str="Widget Group", 
@@ -581,7 +582,6 @@ class DashWidgetGroup(QWidget):
 
     def enterEvent(self, event):
         """on entering highlight the group's background and it's name"""
-        # print("\x1b[34;1menterEvent\x1b[0m")
         self.setBackgroundColor((255,255,255,20))
         self.groupLabelName.setStyleSheet("""
         QLabel {
@@ -614,6 +614,85 @@ class DashWidgetGroup(QWidget):
     def initBtn(self, **args):
         return DashWidgetGroupBtn(self, **args)
 
+# simple group button for DashSimpleGroup.
+# dash widget group button.
+class DashSimpleGroupBtn(QToolButton):
+    '''Dash simple group button'''
+    mouseExited = pyqtSignal()
+    mouseEntered = pyqtSignal() 
+    def __init__(self, parent: Union[None, QWidget]=None, **args):
+        super(DashSimpleGroupBtn, self).__init__(parent)
+        # main arguments.
+        tip = args.get("tip", "a tip")
+        size = args.get("size", (23,23))
+        icon = args.get("icon")
+        accent_color = args.get("accent_color", "transparent")
+        # whether button/function is enabled or disabled.
+        self._is_enabled = True
+        self.accent_color = accent_color
+        # all icon paths.
+        fname_wout_ext, ext = os.path.splitext(icon)
+        self.icon_path = FigD.icon(icon)
+        self.hover_icon_path = f"{fname_wout_ext}_active{ext}"
+        self.disabled_icon_path = f"{fname_wout_ext}_disabled{ext}"
+        # reset if hover/disabled icon paths don't exist.
+        if not os.path.exists(self.hover_icon_path):
+            self.hover_icon_path = self.icon_path
+        if not os.path.exists(self.disabled_icon_path):
+            self.disabled_icon_path = self.icon_path
+        # set main icon.
+        self.setIcon(FigD.Icon(self.inactive_icon))
+        # border color and background color.
+        border_color = extractFromAccentColor(accent_color)
+        bg_alpha = setAccentColorAlpha(accent_color, alpha=150)
+        # set stuff.
+        self.setToolTip(tip)
+        self.setStatusTip(tip)
+        self.setIconSize(QSize(*size))
+        self.setStyleSheet(jinja2.Template("""
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            font-size: 14px;
+            border-radius: 2px;
+            background: transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            border: 1px solid {{ border_color }};
+            background: {{ background }};
+            /* qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }""").render(
+                background=bg_alpha,
+                border_color=border_color,
+            )
+        )
+
+    def isEnabled(self):
+        return self._is_enabled
+
+    def setEnabled(self, value: bool):
+        self._is_enabled = value
+        if value:
+            self.setIcon(FigD.Icon(self.icon_path))
+        else:
+            self.setIcon(FigD.Icon(self.disabled_icon_path))
+
+    def leaveEvent(self, event):
+        self.setIcon(FigD.Icon(self.icon_path))
+        self.mouseExited.emit()
+        super(DashWidgetGroupBtn, self).leaveEvent(event)
+
+    def enterEvent(self, event):
+        self.setIcon(FigD.Icon(self.hover_icon_path))
+        self.mouseEntered.emit()
+        super(DashWidgetGroupBtn, self).enterEvent(event)
+
 # dash widget ribbon menu.
 class DashRibbonMenu(QWidget):
     def __init__(self, group_names: List[str]=[], 
@@ -623,11 +702,7 @@ class DashRibbonMenu(QWidget):
         super(DashRibbonMenu, self).__init__(parent)
         self.accent_color = accent_color
         # drop shadow.
-        drop_shadow_color = extractFromAccentColor(accent_color, where=where)
-        drop_shadow = QGraphicsDropShadowEffect()
-        drop_shadow.setColor(QColor(drop_shadow_color))
-        drop_shadow.setBlurRadius(10)
-        drop_shadow.setOffset(0, 0)
+        drop_shadow = self.createDropShadow(accent_color, where)
         self.setGraphicsEffect(drop_shadow)
         self.separators = []
         # create the scoll area.
@@ -646,14 +721,14 @@ class DashRibbonMenu(QWidget):
         self.__group_widget_map = {}
         for name in self.__group_names[:-1]:
             self.__group_widget_map[name] = DashWidgetGroup(
-                parent=parent, name=name, 
+                parent=self, name=name, 
                 accent_color=accent_color
             )
             self.hboxlayout.addWidget(self.__group_widget_map[name])
             self.hboxlayout.addWidget(self.addSeparator())
         name = self.__group_names[-1]
         self.__group_widget_map[name] = DashWidgetGroup(
-            parent=parent, name=name,
+            parent=self, name=name,
             accent_color=accent_color,
         )
         self.hboxlayout.addWidget(self.__group_widget_map[name])
@@ -669,6 +744,15 @@ class DashRibbonMenu(QWidget):
         self.vboxlayout.addWidget(self.__scroll_area)
         # set layout.
         self.setLayout(self.vboxlayout)
+
+    def createDropShadow(self, accent_color: str, where: str):
+        drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+        drop_shadow = QGraphicsDropShadowEffect()
+        drop_shadow.setColor(QColor(drop_shadow_color))
+        drop_shadow.setBlurRadius(10)
+        drop_shadow.setOffset(0, 0)
+
+        return drop_shadow
 
     def __iter__(self):
         for group_name in self.__group_widget_map:
@@ -735,6 +819,12 @@ class DashRibbonMenu(QWidget):
         for widget_group in self.__group_widget_map.values():
             widget_group.show()
 
+    def hideGroup(self, groupName):
+        self.widgetGroupAt(groupName).hide()
+
+    def showGroup(self, groupName):
+        self.widgetGroupAt(groupName).show()
+
     def setFixedHeight(self, height: int):
         for sep in self.separators:
             sep.setMaximumHeight(height-2*10)
@@ -766,6 +856,224 @@ class DashRibbonMenu(QWidget):
                     widget_group.addWidget(btnGroup, 0, Qt.AlignVCenter)
 
         return widget_group
+
+# widget group for simplified dash menu.
+class DashSimpleGroup(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None,
+                 name: str="Group", accent_color: str="gray"):
+        super(DashSimpleGroup, self).__init__(parent=parent)
+        self.accent_color = accent_color
+        # layout of simple group.
+        self.__name = name
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(5)
+        # name of the simple group.
+        self.groupNameBtn = self.initGroupName(name)
+        # build layout.
+        self.hboxlayout.addWidget(self.groupNameBtn)
+        # set layout.
+        self.setLayout(self.hboxlayout)
+
+    def addWidget(self, widget):
+        i = self.hboxlayout.count()
+        self.hboxlayout.insertWidget(i-1, widget)
+
+    def addBtn(self, **args):
+        btn = DashSimpleGroupBtn(**args)
+        self.addWidget(btn)
+
+        return btn
+
+    def groupName(self) -> str:
+        return self.__name
+
+    def setGroupName(self, name: str):
+        self.__name = name
+        self.groupNameBtn.setText(name)
+
+    def initGroupName(self, name) -> QLabel:
+        groupNameBtn = QToolButton(name)
+        groupNameBtn.setText(name)
+        groupNameBtn.setAlignment(Qt.AlignCenter)
+        groupNameBtn.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            border-right: 1px;
+            padding: 6px;
+            color: #6e6e6e; /* #eb5f34; */
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif;
+            background: transparent;
+        }""")
+
+        return groupNameBtn
+         
+    def enterEvent(self, event):
+        self.groupNameLabel.show()
+        super(DashSimpleGroup, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        self.groupNameLabel.hide()
+        super(DashSimpleGroup, self).leaveEvent(event)
+
+    def widgetGroupAt(self, group_name: str=""):
+        return self.__group_widget_map[group_name]
+
+    def addWidgetGroup(self, group_name: str="View", 
+                       widgets: List[Tuple[QWidget, dict]]=[]):
+        widget_group = self.__simple_group_map[group_name]
+        for widget, args in widgets:
+            if isinstance(widget, QWidget):
+                widget_group.addWidget(widget, **args)
+            elif isinstance(widget, dict):
+                btn = widget_group.initBtn(**widget)
+                widget_group.addWidget(btn, **args)
+
+        return widget_group
+
+# simplified ribbon menu.
+class DashSimplifiedMenu(QWidget):
+    def __init__(self, group_names: List[str]=[], 
+                 parent: Union[None, QWidget]=None,
+                 accent_color: str="gray", where: str="back",
+                 contents_margins=(5, 0, 5, 0)):
+        super(DashRibbonMenu, self).__init__(parent)
+        self.accent_color = accent_color
+        # drop shadow.
+        drop_shadow = self.createDropShadow(accent_color, where)
+        self.separators = []
+        # create the scoll area.
+        self.initScrollArea()
+        # create Ribbon Menu main layout.
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(1)
+        # group names and group widget map/
+        self.__group_names = group_names
+        self.__simple_group_map = {}
+        for name in self.__group_names[:-1]:
+            self.__simple_group_map[name] = DashSimpleGroup(
+                parent=self, name=name, 
+                accent_color=accent_color
+            )
+            self.hboxlayout.addWidget(self.__sample_group_map[name])
+            self.hboxlayout.addWidget(self.addSeparator())
+        name = self.__group_names[-1]
+        self.__simple_group_map[name] = DashSimpleGroup(
+            parent=self, name=name,
+            accent_color=accent_color,
+        )
+        self.hboxlayout.addWidget(self.__sample_group_map[name])
+        self.hboxlayout.addStretch(1)
+        # create main widget and set it's layout.
+        self.main_widget = QWidget()
+        self.main_widget.setLayout(self.hboxlayout)
+        self.__scroll_area.setWidget(self.main_widget)
+        # init and build vboxlayout.
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(*contents_margins)
+        self.vboxlayout.setSpacing(0)
+        self.vboxlayout.addWidget(self.__scroll_area)
+        # set stuff.
+        self.setLayout(self.vboxlayout)
+        self.setGraphicsEffect(drop_shadow)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+
+    def __iter__(self):
+        for group_name in self.__simple_group_map:
+            yield group_name
+
+    def contextMenuEvent(self, event):
+        self.contextMenu = QMenu()
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, self.accent_color, 
+            padding=2, font_size=17,
+        )
+        self.contextMenu.addAction(f"Minimize ribbon", self.hide)
+        self.contextMenu.addAction(f"Show all groups     ", self.showAllGroups)
+        self.contextMenu.addAction("Hide all groups   ", self.hideAllGroups)
+        def chain(*funcs): 
+            for func in funcs: func()
+        i = 0
+        group_items = [(k,v) for k,v in self.__simple_group_map.items()]
+        for group_name, simple_group in group_items[:-1]:
+            sep = self.separators[i]
+            if simple_group.isVisible():
+                self.contextMenu.addAction(
+                    FigD.Icon("widget/checkmark.svg"), f"{group_name}", 
+                    partial(chain, simple_group.hide, sep.hide)
+                )
+            else:
+                self.contextMenu.addAction(
+                    f"{group_name}", partial(chain, 
+                    simple_group.show, sep.show)
+                )
+            i += 1
+        group_name, simple_group = group_items[-1]
+        if simple_group.isVisible():
+            self.contextMenu.addAction(
+                FigD.Icon("widget/checkmark.svg"), 
+                f"{group_name}", simple_group.hide
+            )
+        else:
+            self.contextMenu.addAction(
+                f"{group_name}", 
+                simple_group.show
+            )
+        self.contextMenu.popup(event.globalPos())
+
+    def hideAllGroups(self):
+        for simple_group in self.__simple_group_map.values():
+            simple_group.hide()
+
+    def showAllGroups(self):
+        for simple_group in self.__simple_group_map.values():
+            simple_group.show()
+
+    def setFixedHeight(self, height: int):
+        for sep in self.separators:
+            sep.setMaximumHeight(height-2*10)
+        super(DashRibbonMenu, self).setFixedHeight(height)
+
+    def hideGroup(self, groupName):
+        self.widgetGroupAt(groupName).hide()
+
+    def showGroup(self, groupName):
+        self.widgetGroupAt(groupName).show()
+
+    def toggle(self):
+        if self.isVisible():
+            self.hide()
+        else: self.show()
+
+    def addSeparator(self, height: int=110):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #292929;''')
+        sep.setLineWidth(0.5)
+        sep.setMaximumHeight(110)
+        self.separators.append(sep)
+
+        return sep
+
+    def initScrollArea(self):
+        self.__scroll_area = QScrollArea()
+        self.__scroll_area.setWidgetResizable(True)
+        self.__scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.__scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.__scroll_area.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+
+    def createDropShadow(self, accent_color: str, where: str="back"):
+        drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+        drop_shadow = QGraphicsDropShadowEffect()
+        drop_shadow.setColor(QColor(drop_shadow_color))
+        drop_shadow.setBlurRadius(10)
+        drop_shadow.setOffset(0, 0)
+
+        return drop_shadow
+
 # settings slider.
 class FigDSlider(QWidget):
     changed = pyqtSignal(float)
@@ -825,6 +1133,8 @@ class FigDSlider(QWidget):
             font-weight: bold;
             background: #292929;
             border-radius: 2px;
+            selection-color: #292929;
+            selection-background-color: """+self.accent_color+""";
         }""")
         self.readout.setFixedWidth(50)
         self.readout.setText(str(value))
@@ -854,6 +1164,21 @@ class FigDSlider(QWidget):
         self.readout.textChanged.connect(self.updateFromReadout)
         self.convertedValue = self.convertValue(value)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        self.setSliderColor(self.accent_color)
+
+    def setSliderColor(self, accent_color: str):
+        grooveColor = accent_color
+        if "qlineargradient" in accent_color or "qradialgradient" in accent_color or "qconicalgradient" in accent_color:
+            grooveColor = accent_color.split(":")[-1].strip()
+            grooveColor = grooveColor.split()[-1].split(")")[0]
+            grooveColor = grooveColor.strip()    
+        # reset palette.
+        palette = self.slider.palette()
+        palette.setColor(QPalette.Window, QColor(grooveColor))
+        palette.setColor(QPalette.Button, QColor(grooveColor))
+        palette.setColor(QPalette.Highlight, QColor(grooveColor))
+        print(palette.highlight())
+        self.slider.setPalette(palette)
 
     def increase(self):
         value = self.slider.value()+1
@@ -886,6 +1211,16 @@ class FigDSlider(QWidget):
             background: """+accent_color+""";
             /* border: 1px solid """+borderColor+"""; */
         }"""
+        self.readout.setStyleSheet("""
+        QLineEdit {
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            background: #292929;
+            border-radius: 2px;
+            selection-color: #292929;
+            selection-background-color: """+self.accent_color+""";
+        }""")
         if hasattr(self, "plusBtn"):
             self.plusBtn.setStyleSheet(stylesheet)
             self.plusBtn.setMaximumWidth(25)
@@ -894,6 +1229,7 @@ class FigDSlider(QWidget):
             self.minusBtn.setStyleSheet(stylesheet)
             self.minusBtn.setMaximumWidth(25)
             self.minusBtn.setMaximumHeight(25)
+        self.setSliderColor(self.accent_color)
 
     def initSliderBoxBtn(self, text: str="", icon=None, tip: str="a tip",
                          accent_color: str="gray", where: str="back"):
@@ -908,6 +1244,7 @@ class FigDSlider(QWidget):
         # set style sheet.
         btn.setStyleSheet("""
         QToolButton {
+            padding: 2px;
             font-size: 20px;
             border-radius: 2px;
             background: transparent;
@@ -966,22 +1303,130 @@ class FigDOpacitySlider(FigDSlider):
     def connectWindow(self, window: QMainWindow):
         self.window_ptr = window
 
+# 
+class FigDMenuButton(QWidget):
+    """
+    A widget to simulate the buttons of a QMenu by combining a toolbutton
+    and a label. Sub menus are to be supported as well using instances of 
+    QMenu. The label is used to display shortcuts.
+    """
+    def __init__(self, text: str, icon: str, tip: str="", 
+                 accent_color: str="gray", icon_size: Tuple[int, int]=(25,25),
+                 shortcut: Union[str, None]=None, parent: Union[None, QWidget]=None):
+        super(FigDMenuButton, self).__init__(parent=parent)
+        self.accent_color = accent_color
+        self.__icon_size = QSize(*icon_size)
+        self._submenu_shown = False
+        # main horizontal layout.
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(5)
+        # QToolButton part of the context menu button.
+        self._btn = QToolButton()
+        self._btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        if icon == "": 
+            self._btn.setIcon(FigD.Icon(icon))
+        self._btn.setIconSize(self.__icon_size)
+        self._btn.setText(text)
+        if tip != "": 
+            self._btn.setToolTip(tip)
+            self._btn.setStatusTip(tip)
+        # shortcut label.
+        self.label = QLabel()
+        self.label.setText(shortcut)
+        # build button layout.
+        self.hboxlayout.addWidget(self._btn)
+        self.hboxlayout.addStretch(1)
+        self.hboxlayout.addWidget(self.label)
+        # wrapper.
+        self.wrapper = QWidget()
+        self.wrapper.setStyleSheet("background: transparent;")
+        self.wrapper.setLayout(self.hboxlayout)
+        self.wrapper.setObjectName("FigDMenuButton")
+        # wrapper layout.
+        layout = QVBoxLayout()
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.wrapper)
+        # set layout.
+        self.setLayout(layout)
+
+    def setAccentColor(self, accent_color: str):
+        self.accent_color = accent_color
+        # style the sub menu if it exists.
+        if hasattr(self, "contextMenu"):
+            self.contextMenu = styleContextMenu(
+                self.contextMenu, 
+                self.accent_color
+            )
+        self.label.setStyleSheet("""
+        QLabel {
+            padding: 0px;
+            color: #6e6e6e;
+            background: transparent;
+            font-size: 18px;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self._btn.setStyleSheet("""
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            padding: 3px;
+            background: transparent;
+
+            font-size: 18px;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self.wrapper.setStyleSheet("""
+        QWidget#FigDMenuButton {
+            color: #fff;
+            padding: 3px;
+            padding-left: 0px;
+            border-radius: 5px;
+            background: transparent;
+            
+            font-size: 18px;
+
+            font-family: "Be Vietnam Pro";
+        }
+        QWidget#FigDMenuButton:hover {
+            color: #292929;
+            background-color: """+self.accent_color+""";
+        }""")
+
+    def setContextMenu(self, menu: QMenu):
+        self.contextMenu = menu
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+
+    def enterEvent(self, event):
+        if hasattr(self, "contextMenu"):
+            p = self.mapToGlobal(QPoint(0, 0))
+            if not self._submenu_shown:
+                self.contextMenu.popup(p)
+            self._submenu_shown = True
+        super(FigDMenuButton, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        if hasattr(self, "contextMenu"):
+            self._submenu_shown = False
+        super(FigDMenuButton, self).leaveEvent(event)
+
 # settings menu for a FigDWindow type.
 class FigDWindowSettingsMenu(QMainWindow):
     clicked = pyqtSignal(int) 
-    def __init__(self, supports_bookmarks: bool=False, 
-                 parent: Union[None, QWidget]=None):
+    def __init__(self, parent: Union[None, QWidget]=None, 
+                 supports_bookmarks: bool=False,  
+                 supports_find: bool=False,
+                 accent_color: str="gray"):
         super(FigDWindowSettingsMenu, self).__init__(parent)
+        self.accent_color = accent_color
         self.separators = []
         self.toggles = []
         self.sliders = []
         self.btns = []
         self.__icon_size = QSize(25, 25)
         # container scroll area.
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.scroll.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+        # self.scroll = self.initScrollArea()
         # menu object.
         self.menu = QWidget()
         self.menu.setObjectName("FigDWindowSettingsMenu")
@@ -994,29 +1439,54 @@ class FigDWindowSettingsMenu(QMainWindow):
         self.setWindowFlags(Qt.Popup) 
         self.addButton("New tab", shortcut="Ctrl+T")
         self.addButton("New window", shortcut="Ctrl+N")
-        self.addButton("New Incognito window", shortcut="Ctrl+Shift+N")
+        self.addButton("New Private window", shortcut="Ctrl+Shift+N")
         self.addSeparator()
-        self.addButton("History")
+        self.addButton("History", icon="textedit/history.svg")
         self.addButton("Downloads", shortcut="Ctrl+J")
         if supports_bookmarks:
             self.addButton("Bookmarks")
         self.addSeparator()
         self.opacitySlider = self.addSlider("Opacity", class_=FigDOpacitySlider, 
-                                       value=100, plus=True, minus=True)
+                                            value=100, plus=True, minus=True)
+        self.addSeparator()
+        self.addButton("Cast...")
+        if supports_find:
+            self.addButton("Find in page")
+        self.addButton("More tools")
         self.addSeparator()
         self.addButton("Light/dark theme")
         self.addButton("Use system theme")
         self.addSeparator()
-        self.addButton("Mute notifications", shortcut="Alt+Shift+M")
-        self.addButton("Manage notifications")
+        # self.addButton("Mute notifications", shortcut="Alt+Shift+M")
+        # self.addButton("Manage notifications")
+        self.notifsMenu = QMenu()
+        self.notifsMenu.addAction("Mute", blank, QKeySequence("Alt+Shift+M"))
+        self.notifsMenu.addAction("Manage", blank)
+        self.addSubMenu(
+            "Notifications", 
+            menu=self.notifsMenu
+        )
         self.addSeparator()
         self.addButton("Manage permissions")
         self.addButton("More settings ...")
+        self.addButton("Help")
+        self.addSeparator()
+        self.addButton("Exit")
         self.vboxlayout.addStretch(1)
         self.menu.setLayout(self.vboxlayout)
         # set menu to scroll area.
-        self.scroll.setWidget(self.menu)
-        self.setCentralWidget(self.scroll)
+        # self.scroll.setWidget(self.menu)
+        self.setCentralWidget(self.menu)
+
+    def initScrollArea(self) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
+        scroll.setAttribute(Qt.WA_TranslucentBackground)
+
+        return scroll
 
     def connectWindow(self, window: QMainWindow):
         self.__window_ptr = window
@@ -1045,37 +1515,52 @@ class FigDWindowSettingsMenu(QMainWindow):
 
     def addButton(self, text: str, icon: str="", tip="", 
                   shortcut: Union[str, None]=None):
-        btn = QWidget()
-        layout = QHBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
-        btn.setLayout(layout)
-        # QToolButton part of the context menu button.
-        _btn = QToolButton()
-        _btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        if icon == "": _btn.setIcon(FigD.Icon(icon))
-        _btn.setIconSize(self.__icon_size)
-        _btn.setText(text)
-        if tip != "": 
-            _btn.setToolTip(tip)
-            _btn.setStatusTip(tip)
-        _btn.clicked.connect(partial( 
+        # btn = QWidget()
+        # layout = QHBoxLayout()
+        # layout.setContentsMargins(0, 0, 0, 0)
+        # layout.setSpacing(5)
+        # btn.setLayout(layout)
+        # # QToolButton part of the context menu button.
+        # _btn = QToolButton()
+        # _btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        # if icon == "": _btn.setIcon(FigD.Icon(icon))
+        # _btn.setIconSize(self.__icon_size)
+        # _btn.setText(text)
+        # if tip != "": 
+        #     _btn.setToolTip(tip)
+        #     _btn.setStatusTip(tip)
+        # _btn.clicked.connect(partial( 
+        #     self.signalBtnClick, 
+        #     len(self.btns),
+        # ))
+        # btn._btn = btn
+        # # shortcut label.
+        # label = QLabel()
+        # label.setText(shortcut)
+        # # build button layout.
+        # layout.addWidget(_btn)
+        # layout.addStretch(1)
+        # layout.addWidget(label)
+        # btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        btn = FigDMenuButton(text=text, icon=icon, 
+                             tip=tip, shortcut=shortcut, 
+                             accent_color=self.accent_color)
+        btn._btn.clicked.connect(partial( 
             self.signalBtnClick, 
             len(self.btns),
         ))
-        btn._btn = btn
-        # shortcut label.
-        label = QLabel()
-        label.setText(shortcut)
-        # build button layout.
-        layout.addWidget(_btn)
-        layout.addStretch(1)
-        layout.addWidget(label)
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.vboxlayout.addWidget(btn)
         self.btns.append(btn)
 
         return btn
+
+    def addSubMenu(self, *args, menu: Union[QMenu, None]=None, 
+                   **kwargs) -> Union[QToolButton, QMenu]:
+        btn = self.addButton(*args, **kwargs)
+        btn.setContextMenu(menu)
+
+        return btn, menu
 
     def addWidget(self, *args, **kwargs):
         self.vboxlayout.addWidget(*args, **kwargs)
@@ -1101,31 +1586,7 @@ class FigDWindowSettingsMenu(QMainWindow):
             font-family: "Be Vietnam Pro";
         }""")
         for btn in self.btns:
-            btn.setStyleSheet("""
-            QWidget {
-                padding: 3px;
-                padding-left: 0px;
-                border-radius: 5px;
-                background: transparent;
-                font-size: 18px;
-                font-family: "Be Vietnam Pro";
-            }
-            QWidget:hover {
-                color: #292929;
-                background: """+self.accent_color+""";
-            }
-            QToolButton:hover {
-                color: #292929;
-            }
-            QLabel {
-                color: #6e6e6e;
-                background: transparent;
-                font-size: 18px;
-                font-family: "Be Vietnam Pro";
-            }
-            QLabel:hover {
-                color: #292929;
-            }""")
+            btn.setAccentColor(accent_color)
         for slider in self.sliders:
             slider.setAccentColor(
                 accent_color, 
@@ -1237,7 +1698,12 @@ class FigDAppContainer(QApplication):
 
         return super(FigDAppContainer, self).notify(obj, event)
 
+# FigD style tab corner widget class.
+class FigDTabCornerWidget(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(FigDTabCornerWidget, self).__init__(parent=parent)
 
+# FigD style tabwidget class.
 class FigDTabWidget(QTabWidget):
     def __init__(self, widget_factory=None, window_factory=None, 
                  parent: Union[None, QWidget]=None, tab_icon: str="",
@@ -1256,7 +1722,7 @@ class FigDTabWidget(QTabWidget):
         drop_shadow_color = extractFromAccentColor(accent_color, where=where)
         drop_shadow = QGraphicsDropShadowEffect()
         drop_shadow.setColor(QColor(drop_shadow_color))
-        drop_shadow.setBlurRadius(10)
+        drop_shadow.setBlurRadius(50)
         drop_shadow.setOffset(0, 0)
         # set style sheet.
         self.setStyleSheet("""
@@ -1291,23 +1757,23 @@ class FigDTabWidget(QTabWidget):
             margin-left: 0px;
             margin-right: 0px;
 
-            padding-top: 3px;
+            padding-top: 4px;
             padding-left: 9px;
             padding-right: 5px;
-            padding-bottom: 3px;
+            padding-bottom: 4px;
 
             font-size: 17px;
             font-family: 'Be Vietnam Pro', sans-serif;
             max-width: 300px;
-            background: #000;
+            background: rgba(0, 0, 0, 0.8);
             border-top-left-radius: 5px;
             border-top-right-radius: 5px;
         }
         QTabBar::tab:hover {
             color: #fff;
-            background: #323232;
             border-top-left-radius: 10px;
             border-top-right-radius: 10px;
+            background: rgba(50, 50, 50, 0.8);
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
         }
         QTabBar::tab:selected {
@@ -1318,13 +1784,14 @@ class FigDTabWidget(QTabWidget):
             
             border-top-left-radius: 5px;
             border-top-right-radius: 5px;
+            background: rgba(50, 50, 50, 0.8);
             
             /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
             
-            padding-top: 3px;
+            padding-top: 4px;
             padding-left: 9px;
             padding-right: 5px;
-            padding-bottom: 3px;
+            padding-bottom: 4px;
             
             margin-left: 0px;
             margin-right: 0px;
@@ -1380,7 +1847,8 @@ class FigDTabWidget(QTabWidget):
         self.setTabText(i, title)
 
     def changeCurrentTabIcon(self, icon: str):
-        i = self.currentIndex() # print(icon)
+        i = self.currentIndex() 
+        print("\x1b[31;1mui::__init__::FigDTabWidget.changeCurrentTabIcon:\x1b[0m", icon)
         self.setTabIcon(i, QIcon(icon))
 
     def openTab(self):
@@ -1395,6 +1863,14 @@ class FigDTabWidget(QTabWidget):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
         i = self.addTab(widget, self.tab_icon, self.tab_title)
         self.setCurrentIndex(i)
+        # return web page. (required by createWindow, to create new tab).
+        page = None
+        if hasattr(widget, "webview"):
+            page = widget.webview.page()
+        if hasattr(widget, "browser"):
+            page = widget.browser.page()
+
+        return page
 
     def openWindow(self):
         if self.window_factory is None: return
@@ -1420,24 +1896,33 @@ class FigDSearchBar(QLineEdit):
 		super(FigDSearchBar, self).__init__(parent)
 		self.accent_color = accent_color
         # create actions.
-		voiceSearch = self.addAction(
+		self.voiceSearch = self.addAction(
 			FigD.Icon("lineedit/mic.svg"),
 			QLineEdit.TrailingPosition
 		)
-		bookmark = self.addAction(
+		self.imageSearch = self.addAction(
+            FigD.Icon("lineedit/search_image.svg"), 
+            QLineEdit.TrailingPosition
+        )
+		self.translate = self.addAction(
+            FigD.Icon("lineedit/trans.svg"), 
+            QLineEdit.TrailingPosition
+        )
+		self.bookmark = self.addAction(
 			FigD.Icon("lineedit/bookmark.svg"),
 			QLineEdit.TrailingPosition	
 		)
-		toggleCase = self.addAction(
+		self.toggleCase = self.addAction(
             FigD.Icon("lineedit/case.svg"), 
             QLineEdit.TrailingPosition
         )
-		searchAction = self.addAction(
+		self.searchAction = self.addAction(
             FigD.Icon("lineedit/image_search.svg"), 
             QLineEdit.LeadingPosition
 		)
+		self._search_lang = "en"
 		# respond to triggering of actions.
-		toggleCase.triggered.connect(self.toggleCaseSensitivity)
+		self.toggleCase.triggered.connect(self.toggleCaseSensitivity)
 		self.setStyleSheet("""
         QLineEdit {
             color: #fff;
@@ -1469,6 +1954,9 @@ class FigDSearchBar(QLineEdit):
 		# set completer.
 		self.setCompleter(self.qcompleter)
 		self.setMinimumWidth(600)
+
+	def lang(self):
+		return self._search_lang
 
 	def contextMenuEvent(self, event):
 		self.contextMenu = self.createStandardContextMenu()
@@ -1716,7 +2204,158 @@ class FigDNavBar(QWidget):
         btn = FigDNavBtn(**args)
         return btn
 
-# FigD window object.
+# FigD widget object.
+class FigDMainWidget(QWidget):
+    """
+    FigDMainWidget is a regular QWidget with an API for additional tasks:
+    1) ribbon menu management: toggling, simplification etc.
+    2) 
+    """
+    # show regular ribbon menu.
+    def showMenu(self):
+        if hasattr(self, "menu"):
+            self.menu.show()
+    # hide regular ribbon menu.
+    def hideMenu(self):
+        if hasattr(self, "menu"):
+            self.menu.hide()  
+    # show simplified ribbon menu.
+    def showSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.show()
+    # hide simplified ribbon menu.
+    def hideSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.hide()  
+    # toggle regular ribbon menu.
+    def toggleMenu(self):
+        if hasattr(self, "menu"):
+            if self.menu.isVisible():
+                self.menu.hide()
+            else: self.menu.show()
+    # toggle simplified ribbon menu.
+    def toggleSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            if self.simplifiedMenu.isVisible():
+                self.simplifiedMenu.hide()
+            else: self.simplifiedMenu.show()
+    # simplify ribbon menu.
+    def simplifyRibbon(self):
+        self.ribbon_state = "simplified"
+        self.hideMenu()
+        self.showSimplifiedMenu()
+    # revert to regular ribbon menu.
+    def revertRibbon(self):
+        self.ribbon_state = ""
+        self.showMenu()
+        self.hideSimplifiedMenu()
+    # check if ribbon is visible.    
+    def isRibbonVisible(self):
+        is_visible = False
+        if hasattr(self, "menu") and self.menu.isVisible():
+            is_visible = True
+        if hasattr(self, "simplifiedMenu") and self.simplifiedMenu.isVisible():
+            is_visible = True
+
+        return is_visible
+    # show ribbon (menu or simplifiedMenu, whichever is active).
+    def showRibbon(self):
+        if not hasattr(self, "ribbon_state"):
+            self.ribbon_state = ""
+        if self.ribbon_state == "":
+            self.showMenu()
+            self.hideSimplifiedMenu()
+        else:
+            self.hideMenu()
+            self.showSimplifiedMenu()
+    # hide ribbon (menu or simplifiedMenu, whichever is active).
+    def hideRibbon(self):
+        if hasattr(self, "menu"):
+            self.menu.hide()
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.hide()
+    # toggle current state of ribbon.
+    def toggleRibbon(self):
+        if self.isRibbonVisible():
+            self.hideRibbon()
+        else: self.showRibbon()
+
+# FigD main window object.
+class FigDMainWindow(QMainWindow):
+    """
+    FigDMainWindow is a regular QMainWindow with an API for additional tasks:
+    1) ribbon menu management: toggling, simplification etc.
+    """
+    # show regular ribbon menu.
+    def showMenu(self):
+        if hasattr(self, "menu"):
+            self.menu.show()
+    # hide regular ribbon menu.
+    def hideMenu(self):
+        if hasattr(self, "menu"):
+            self.menu.hide()  
+    # show simplified ribbon menu.
+    def showSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.show()
+    # hide simplified ribbon menu.
+    def hideSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.hide()  
+    # toggle regular ribbon menu.
+    def toggleMenu(self):
+        if hasattr(self, "menu"):
+            if self.menu.isVisible():
+                self.menu.hide()
+            else: self.menu.show()
+    # toggle simplified ribbon menu.
+    def toggleSimplifiedMenu(self):
+        if hasattr(self, "simplifiedMenu"):
+            if self.simplifiedMenu.isVisible():
+                self.simplifiedMenu.hide()
+            else: self.simplifiedMenu.show()
+    # simplify ribbon menu.
+    def simplifyRibbon(self):
+        self.ribbon_state = "simplified"
+        self.hideMenu()
+        self.showSimplifiedMenu()
+    # revert to regular ribbon menu.
+    def revertRibbon(self):
+        self.ribbon_state = ""
+        self.showMenu()
+        self.hideSimplifiedMenu()
+    # check if ribbon is visible.    
+    def isRibbonVisible(self):
+        is_visible = False
+        if hasattr(self, "menu") and self.menu.isVisible():
+            is_visible = True
+        if hasattr(self, "simplifiedMenu") and self.simplifiedMenu.isVisible():
+            is_visible = True
+
+        return is_visible
+    # show ribbon (menu or simplifiedMenu, whichever is active).
+    def showRibbon(self):
+        if not hasattr(self, "ribbon_state"):
+            self.ribbon_state = ""
+        if self.ribbon_state == "":
+            self.showMenu()
+            self.hideSimplifiedMenu()
+        else:
+            self.hideMenu()
+            self.showSimplifiedMenu()
+    # hide ribbon (menu or simplifiedMenu, whichever is active).
+    def hideRibbon(self):
+        if hasattr(self, "menu"):
+            self.menu.hide()
+        if hasattr(self, "simplifiedMenu"):
+            self.simplifiedMenu.hide()
+    # toggle current state of ribbon.
+    def toggleRibbon(self):
+        if self.isRibbonVisible():
+            self.hideRibbon()
+        else: self.showRibbon()
+
+# FigD application window object.
 class FigDWindow(QMainWindow):
     def __init__(self, widget, **args):
         # self.layout.insertWidget(0, titlebar)
@@ -1861,17 +2500,7 @@ class FigDWindow(QMainWindow):
         window.setCentralWidget(shortcuts_widget)
         # self.printShortcuts()
         return window
-    # def focusInEvent(self, event):
-    #     if self.titlebar: self.titlebar.activate()
-    #     super(FigDWindow, self).focusInEvent(event)
-    # def focusOutEvent(self, event):
-    #     if self.titlebar: self.titlebar.deactivate()
-    #     super(FigDWindow, self).focusOutEvent(event)
-        # self.setStyleSheet("""
-        # QMainWindow {
-        #     border-radius: 20px;
-        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-        # }""")
+
     def showShortcutList(self):
         self.shortcuts_pane.show()
     
@@ -1902,6 +2531,66 @@ def create_css_grad(colors: List[str], angle: int=90) -> str:
 
     return css_grad
 
+FIGD_CENTRAL_WIDGET_STYLE = r"""
+QWidget#FigDUI {
+    border-radius: 20px;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 1), stop : 0.143 rgba(22, 22, 22, 1), stop : 0.286 rgba(27, 27, 27, 1), stop : 0.429 rgba(32, 32, 32, 1), stop : 0.571 rgba(37, 37, 37, 1), stop : 0.714 rgba(41, 41, 41, 1), stop : 0.857 rgba(46, 46, 46, 1), stop : 1.0 rgba(51, 51, 51, 1));
+}
+QScrollBar:vertical {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0);
+}
+QScrollBar:horizontal {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0);
+}
+/* QScrollBar:vertical:hover {
+    background-color: rgba(255, 253, 184, 0.3);
+} */
+QScrollBar::handle:vertical {
+    min-height: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    /* background-color: transparent; */
+    background-color: rgba(255, 255, 255, 0.2);
+}
+QScrollBar::handle:horizontal {
+    min-width: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    /* background-color: transparent; */
+    background-color: rgba(255, 255, 255, 0.2);
+}
+QScrollBar::handle:vertical:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::handle:horizontal:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::add-line:horizontal {
+    width: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal {
+    width: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-line:vertical {
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    height: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}"""
 def wrapFigDWindow(widget: QWidget, **args):
     QFontDatabase.addApplicationFont(
         FigD.font("BeVietnamPro-Regular.ttf")
@@ -1919,10 +2608,9 @@ def wrapFigDWindow(widget: QWidget, **args):
     titlebar_callbacks = args.get("titlebar_callbacks", {})
     # create the titlebar.
     titlebar = WindowTitleBar(
-        background=accent_color, 
-        callbacks=titlebar_callbacks,
-        title_widget=args.get("title_widget"),
-        where=_where,
+        background=accent_color, callbacks=titlebar_callbacks,
+        title_widget=args.get("title_widget"), where=_where, 
+        ctrl_btns_loc=args.get("ctrl_btns_loc", "left"),
     )
     settingsMenu = FigDWindowSettingsMenu()
     titlebar.settingsBtn.setContextMenu(settingsMenu)
@@ -1930,85 +2618,22 @@ def wrapFigDWindow(widget: QWidget, **args):
     tab_title = args.get("tab_title", "New tab")
     if animated: titlebar.setAnimatedTitle(title)
     else: titlebar.setTitle(title)
-    # menu many not exist.
-    try:
-        titlebar.ribbonCollapseBtn.clicked.connect(widget.menu.toggle)
-        # menu hide action.
-        hide_action = titlebar.ribbonCollapseBtn.hidemenu
-        # connect hide action to menu.hide
-        hide_action.triggered.connect(widget.menu.hide)
-    except Exception as e: print(e)
-    # simplifyMenu function may not exist.
-    try:
-        # simplification action.
-        simplify_action = titlebar.ribbonCollapseBtn.simplify
-        # connect simplify action to the simplified menu toggle if it exists.
-        simplify_action.triggered.connect(widget.simplifyMenu)
-    except Exception as e: print(e)
+    # connect functionalities of ribbon collapse button and associated menu with widget's ribbon management API
+    rcb = titlebar.ribbonCollapseBtn
+    for api_func, slot in {
+            "toggleRibbon": rcb.clicked, 
+            "showRibbon": rcb.showRibbon.triggered, 
+            "hideRibbon": rcb.hideRibbon.triggered,
+            "simplifyRibbon": rcb.simplifyRibbon.triggered,
+        }.items():
+        if hasattr(widget, api_func): slot.connect(getattr(widget, api_func))
+        else: 
+            print(f"widget/window of type `{type(widget)}` doesnt't have `{api_func}` in its API")
     # if show_titlebar is false then hide titlebar.
     if not show_titlebar: titlebar.hide()
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")
-    centralWidget.setStyleSheet("""
-    QWidget#FigDUI {
-        border-radius: 20px;
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 1), stop : 0.143 rgba(22, 22, 22, 1), stop : 0.286 rgba(27, 27, 27, 1), stop : 0.429 rgba(32, 32, 32, 1), stop : 0.571 rgba(37, 37, 37, 1), stop : 0.714 rgba(41, 41, 41, 1), stop : 0.857 rgba(46, 46, 46, 1), stop : 1.0 rgba(51, 51, 51, 1));
-    }
-    QScrollBar:vertical {
-        border: 0px solid #999999;
-        width: 12px;
-        margin: 0px 0px 0px 0px;
-        background-color: rgba(255, 255, 255, 0);
-    }
-    QScrollBar:horizontal {
-        border: 0px solid #999999;
-        width: 12px;
-        margin: 0px 0px 0px 0px;
-        background-color: rgba(255, 255, 255, 0);
-    }
-    /* QScrollBar:vertical:hover {
-        background-color: rgba(255, 253, 184, 0.3);
-    } */
-    QScrollBar::handle:vertical {
-        min-height: 0px;
-        border: 0px solid red;
-        border-radius: 0px;
-        /* background-color: transparent; */
-        background-color: rgba(255, 255, 255, 0.2);
-    }
-    QScrollBar::handle:horizontal {
-        min-width: 0px;
-        border: 0px solid red;
-        border-radius: 0px;
-        /* background-color: transparent; */
-        background-color: rgba(255, 255, 255, 0.2);
-    }
-    QScrollBar::handle:vertical:hover {
-        background-color: rgba(255, 255, 255, 0.5);
-    }
-    QScrollBar::handle:horizontal:hover {
-        background-color: rgba(255, 255, 255, 0.5);
-    }
-    QScrollBar::add-line:horizontal {
-        width: 0px;
-        subcontrol-position: bottom;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::sub-line:horizontal {
-        width: 0 px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::add-line:vertical {
-        height: 0px;
-        subcontrol-position: bottom;
-        subcontrol-origin: margin;
-    }
-    QScrollBar::sub-line:vertical {
-        height: 0 px;
-        subcontrol-position: top;
-        subcontrol-origin: margin;
-    }""")
+    centralWidget.setStyleSheet(FIGD_CENTRAL_WIDGET_STYLE)
     layout = QVBoxLayout()
     layout.setSpacing(0)
     layout.setContentsMargins(0, 0, 0, 0)
@@ -2021,8 +2646,11 @@ def wrapFigDWindow(widget: QWidget, **args):
             window_args=args.get("window_args", {}),
             widget_factory=args.get("widget_factory"),
             window_factory=args.get("window_factory"),
+            accent_color=accent_color, where=_where,
         )
         tabwidget.connectTitleBar(titlebar)
+        titlebar.showTabBar.connect(tabwidget.tabBar().show)
+        titlebar.hideTabBar.connect(tabwidget.tabBar().hide)
         # print(f"tab_icon: {tab_icon}")
         if hasattr(widget, "changeTabTitle"):
             widget.changeTabTitle.connect(tabwidget.changeCurrentTabTitle)
@@ -2043,7 +2671,11 @@ def wrapFigDWindow(widget: QWidget, **args):
     window.appName = title
     window.setWindowOpacity(1)
     window.connectTitleBar(titlebar)
+    window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
+                                    "Rename the current window")
+    window.AltShiftR.activated.connect(titlebar.triggerRenameWindow)
     settingsMenu.connectWindow(window)
+    if add_tabs: window.tabs = tabwidget
     # changeZoom function may not exist.
     try:
         zoomSlider = titlebar.zoomSlider
@@ -2061,10 +2693,10 @@ def wrapFigDWindow(widget: QWidget, **args):
         )
         if add_tabs:
             window.CtrlShiftM.activated.connect(
-                partial(tabwidget.onCurrentWidget, "menu.toggle")
+                partial(tabwidget.onCurrentWidget, "toggleRibbon")
             )
         else:
-            window.CtrlShiftM.activated.connect(widget.menu.toggle)
+            window.CtrlShiftM.activated.connect(widget.toggleRibbon)
     except Exception as e: print(e)
     # connect full screen action.
     try:
@@ -2097,6 +2729,147 @@ def wrapFigDWindow(widget: QWidget, **args):
     }""")
     # try: app.appendTitleBar(titlebar)
     # except Exception as e: print(e)
+    # reposition window
+    window.setGeometry(100, 100, width, height)
+    screen_rect = app.desktop().screenGeometry()
+    x = (screen_rect.width()-width) // 2
+    y = (screen_rect.height()-height) // 2
+    widget.window_ptr = window
+    window.move(x, y)
+
+    return window
+
+def wrapFigDMdiSubWindow(widget: QWidget, **args):
+    QFontDatabase.addApplicationFont(
+        FigD.font("BeVietnamPro-Regular.ttf")
+    )
+    # arguments.
+    icon = args.get("icon")
+    title = args.get("title", "")
+    width = args.get("width", 960)
+    height = args.get("height", 800)
+    _where = args.get("where", "front")
+    add_tabs = args.get("add_tabs", True)
+    animated = args.get("animated", False)
+    show_titlebar = args.get("titlebar", True)
+    accent_color = args.get("accent_color", "red")
+    titlebar_callbacks = args.get("titlebar_callbacks", {})
+    # create the titlebar.
+    titlebar = WindowTitleBar(
+        background=accent_color, callbacks=titlebar_callbacks,
+        title_widget=args.get("title_widget"), where=_where, 
+        ctrl_btns_loc=args.get("ctrl_btns_loc", "left"),
+    )
+    settingsMenu = FigDWindowSettingsMenu()
+    titlebar.settingsBtn.setContextMenu(settingsMenu)
+    tab_icon = args.get("tab_icon", "icon.svg")
+    tab_title = args.get("tab_title", "New tab")
+    if animated: titlebar.setAnimatedTitle(title)
+    else: titlebar.setTitle(title)
+    # connect functionalities of ribbon collapse button and associated menu with widget's ribbon management API
+    rcb = titlebar.ribbonCollapseBtn
+    for api_func, slot in {
+            "toggleRibbon": rcb.clicked, 
+            "showRibbon": rcb.showRibbon.triggered, 
+            "hideRibbon": rcb.hideRibbon.triggered,
+            "simplifyRibbon": rcb.simplifyRibbon.triggered,
+        }.items():
+        if hasattr(widget, api_func): slot.connect(getattr(widget, api_func))
+        else: 
+            print(f"widget/window of type `{type(widget)}` doesnt't have `{api_func}` in its API")
+    # if show_titlebar is false then hide titlebar.
+    if not show_titlebar: titlebar.hide()
+    centralWidget = QWidget()
+    centralWidget.setObjectName("FigDUI")
+    centralWidget.setStyleSheet(FIGD_CENTRAL_WIDGET_STYLE)
+    layout = QVBoxLayout()
+    layout.setSpacing(0)
+    layout.setContentsMargins(0, 0, 0, 0)
+    # build layout.
+    layout.addWidget(titlebar)
+    if add_tabs:
+        tabwidget = FigDTabWidget(
+            tab_title=tab_title, tab_icon=tab_icon,
+            widget_args=args.get("widget_args", {}),
+            window_args=args.get("window_args", {}),
+            widget_factory=args.get("widget_factory"),
+            window_factory=args.get("window_factory"),
+            accent_color=accent_color, where=_where,
+        )
+        tabwidget.connectTitleBar(titlebar)
+        # print(f"tab_icon: {tab_icon}")
+        if hasattr(widget, "changeTabTitle"):
+            widget.changeTabTitle.connect(tabwidget.changeCurrentTabTitle)
+        if hasattr(widget, "changeTabIcon"):
+            widget.changeTabTitle.connect(tabwidget.changeCurrentTabIcon)
+        if hasattr(widget, "zoomChanged") and hasattr(tabwidget, "titlebar"):
+            widget.zoomChanged.connect(titlebar.zoomSlider.setZoomValue)
+        tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
+        layout.addWidget(tabwidget)
+    else:
+        layout.addWidget(widget)
+    try:
+        layout.addWidget(widget.statusbar)
+    except Exception as e: print(e)
+    centralWidget.setLayout(layout)
+
+    window = FigDMdiSubWindow(widget=centralWidget, **args)
+    window.appName = title
+    window.setWindowOpacity(1)
+    window.connectTitleBar(titlebar)
+    settingsMenu.connectWindow(window)
+    if add_tabs: window.tabs = tabwidget
+    # changeZoom function may not exist.
+    try:
+        zoomSlider = titlebar.zoomSlider
+        # react to change in zoom acc. to the slider/label.
+        if add_tabs:
+            zoomSlider.zoomChanged.connect(tabwidget.changeZoom)
+        else:
+            zoomSlider.zoomChanged.connect(widget.changeZoom)
+    except Exception as e: print(e)
+    # menu many not exist.
+    try:
+        window.CtrlShiftM = FigDShortcut(
+            QKeySequence("Ctrl+Shift+M"), window,
+            "Toggle ribbon menu"
+        )
+        if add_tabs:
+            window.CtrlShiftM.activated.connect(
+                partial(tabwidget.onCurrentWidget, "toggleRibbon")
+            )
+        else:
+            window.CtrlShiftM.activated.connect(widget.toggleRibbon)
+    except Exception as e: print(e)
+    # connect full screen action.
+    try:
+        # full screen action.
+        fullscreen_action = titlebar.maximizeBtn.fullscreen
+        # connect full screen action to show full screen
+        fullscreen_action.triggered.connect(window.showFullScreen)
+    except Exception as e: print(e)
+    # connect exit full screen action.
+    try:
+        # exit full screen action.
+        exit_fullscreen_action = titlebar.maximizeBtn.exit_fullscreen
+        # connect exit full screen action to show normal.
+        exit_fullscreen_action.triggered.connect(window.showNormal)
+    except Exception as e: print(e)
+    # style application tooltips
+    app = QApplication.instance()
+    if icon: app.createTrayIcon(tray_icon=icon)
+    app.setStyleSheet("""
+    QToolTip {
+        color: #fff;
+        border: 0px;
+        padding-top: -1px;
+        padding-left: 5px;
+        padding-right: 5px;
+        padding-bottom: -1px;
+        font-size:  17px;
+        background: #000;
+        font-family: 'Be Vietnam Pro', sans-serif;
+    }""")
     # reposition window
     window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()

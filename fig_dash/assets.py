@@ -123,11 +123,11 @@ class AssetManager:
         
         return QUrl.fromLocalFile(tempPath)
 
-    def createTempPath(self, content: str) -> str:
+    def createTempPath(self, content: str, ext: str="html") -> str:
         os.makedirs(self.temp_foldir, exist_ok=True)
         tempPath = os.path.join(
             self.temp_foldir,
-            f"{self.temp_file_ctr}.html"
+            f"{self.temp_file_ctr}.{ext}"
         )
         self.temp_file_ctr += 1
         with open(tempPath, "w") as f:

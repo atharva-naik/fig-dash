@@ -16,11 +16,9 @@ from fig_dash.assets import FigD
 from fig_dash.utils import h_format_mem
 from fig_dash.ui.browser import DebugWebView
 from fig_dash.config import PDFJS_VIEWER_PATH
-from fig_dash.api.js.system import SystemHandler
-from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, FigDAppContainer, FigDShortcut, DashRibbonMenu
 from fig_dash.api.system.file.applications import MimeTypeDefaults, DesktopFile
+from fig_dash.ui import styleWindowStatusBar, wrapFigDWindow, styleContextMenu, FigDMainWindow, FigDAppContainer, FigDShortcut, DashRibbonMenu
 # PyQt5 imports
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineSettings
@@ -2134,8 +2132,10 @@ class FileViewerFolderBtn(QToolButton):
         tip = f"got to {path}"
         self.setToolTip(tip)
         self.setStatusTip(tip)
-        if name == "/":
+        self.harddrive_icon = False
+        if name in ["/", "~", "~/"]:
             self.setIcon(FigD.Icon("system/fileviewer/harddrive.png"))
+            self.harddrive_icon = True
         else: 
             self.setText(name)
             self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
@@ -2156,10 +2156,12 @@ class FileViewerFolderBtn(QToolButton):
         self.setStyleSheet(self.folderBtnStyle)
 
     def enterEvent(self, event):
-        self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
+        if not self.harddrive_icon:
+            self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
         super().enterEvent(event)
 
     def leaveEvent(self, event):
+        if self.harddrive_icon: return
         if not self.is_selected:
             self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
         super().leaveEvent(event)
@@ -2725,13 +2727,15 @@ class FileViewerKeyPressSearch(QLineEdit):
         self.textChanged.connect(self.widget.searchByFileName)
 
 
-class FileViewerWidget(QMainWindow):
+class FileViewerWidget(FigDMainWindow):
     # changeTabIcon = pyqtSignal(str)
     zoomChanged = pyqtSignal(float)
     changeTabTitle = pyqtSignal(str)
     selectionChanged = pyqtSignal(list)
     def __init__(self, parent: Union[None, QWidget]=None, 
                  zoom_factor: float=1.35, **args):
+        from fig_dash.api.js.system import SystemHandler
+
         super(FileViewerWidget, self).__init__(parent)
         self.thumbnail_thread_pool = []
         self.thumbnail_workers = []
@@ -2757,7 +2761,6 @@ class FileViewerWidget(QMainWindow):
         self.mime_database = QMimeDatabase()
         self.showItemContextMenu = False
         self.loaded_file_items = []
-        self.browsing_history = []
         self.selected_item = None
         self.hidden_visible = False
         self.file_watcher.directoryChanged.connect(self.reOpen)
@@ -2969,12 +2972,14 @@ class FileViewerWidget(QMainWindow):
         """opens selected file in terminal."""
         pass
 
-    def callXdgOpen(self, path: str):
+    def callXdgOpen(self, path: str) -> str:
         '''call xdg-open for the appropriate mimetype.'''
         mimetype = self.mime_database.mimeTypeForFile(path).name()
         FigD.debug(f"{path}: calling xdg-open for {mimetype} files")
         url = QUrl.fromLocalFile(path).toString()
         os.system(f'xdg-open "{url}"')
+
+        return mimetype
 
     def listFiles(self, path: str, **args):
         listed_and_full_paths_files = []
@@ -3132,6 +3137,7 @@ class FileViewerWidget(QMainWindow):
     #     # print(f"thumbnail for {path} @ {thumb_path}")
     def open(self, folder: str="~"):
         from fig_dash.utils import collapseuser
+        from fig_dash.ui.js.webchannel import QWebChannelJS
         from fig_dash.ui.js.fileviewer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
         '''open a file/folder location.'''
         try: # print(self.dash_window)
@@ -3146,7 +3152,7 @@ class FileViewerWidget(QMainWindow):
         self.file_watcher.addPath(folder)
         # call xdg-open if a file is clicked instead of a folder.
         if os.path.isfile(folder): 
-            self.callXdgOpen(folder)
+            mimetype = self.callXdgOpen(folder)
             return
         # might be a device or something.
         if not os.path.isdir(folder): return
@@ -3158,8 +3164,7 @@ class FileViewerWidget(QMainWindow):
             self.errorDialog(str(e))
             return
         self.folder = Path(folder)
-        self.folderbar.setPath(folder)  
-        self.browsing_history.append(folder)
+        self.folderbar.setPath(folder)
         listed, full_paths, hidden_flag_list = self.listFiles(folder)
         # populate content for searching.
         self.listed_filenames = listed

@@ -348,10 +348,17 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         }
         divElement.addEventListener("dblclick", function() {
             var file_item_id = this.id;
-            new QWebChannel(qt.webChannelTransport, function(channel) {
-                var eventHandler = channel.objects.eventHandler;
-                eventHandler.sendOpenRequest(file_item_id);
-            });
+            try {
+                new QWebChannel(qt.webChannelTransport, function(channel) {
+                    var eventHandler = channel.objects.eventHandler;
+                    eventHandler.sendOpenRequest(file_item_id);
+                });
+            }
+            catch (err) {
+                console.log(err);
+                console.log(file_item_id);
+                window.location.href = `/api/system/fileviewer?path=${file_item_id}`;
+            }
         })
         divElement.addEventListener('contextmenu', function(event) {
             // event.preventDefault(); // disable regular contextmenu.
@@ -616,7 +623,7 @@ FileViewerHtml = jinja2.Template(r'''
         <meta name="apple-mobile-web-app-status-bar-style" content="#57D5E3"/>
 
 
-        <title>Selection JS</title>
+        <title>{{ FOLDER }}</title>
 
         <!-- CSS / JS -->
         <style>{{ FILEVIEWER_CSS }}</style>

@@ -11,7 +11,7 @@ from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette, QPainter
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel, pyqtSignal
-from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea
+from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea, QInputDialog
 # title_bar_style = '''
 # QToolBar {
 #     margin: 0px; 
@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLab
 #     /* background: url('''+f"'{FigD.icon('''titlebar/texture.png''')}'"+''');  */
 #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
 # }
-battery = jinja2.Template('''
+battery = jinja2.Template(r'''
 <svg xmlns="http://www.w3.org/2000/svg">
     <defs>
         <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -45,6 +45,20 @@ battery = jinja2.Template('''
       <rect x="26" y="5" stroke="#fff" stroke-width="1" width="3" height="6" fill="gray"></rect>
     </g>
 </svg>''')
+AUTO_SAVE_ICON_TEMPLATE = jinja2.Template(r"""<svg xmlns="http://www.w3.org/2000/svg" height="18" viewBox="0 0 18 18" width="18">
+<defs>
+    <style>
+    .a {
+        fill: {{ BACKGROUND_COLOR }};
+    }
+    </style>
+</defs>
+<title>S DocumentRefresh 18 N</title>
+<rect id="Canvas" fill="#ff13dc" opacity="0" width="18" height="18" /><path class="a" d="M9.19763,12.26283A4.44131,4.44131,0,0,1,16.948,10.71741l.62524-.62524a.24433.24433,0,0,1,.1748-.07373.25035.25035,0,0,1,.252.24875v2.50143a.25.25,0,0,1-.25.25l-2.4995-.00016A.25088.25088,0,0,1,15,12.76721v-.00054a.24436.24436,0,0,1,.07373-.175l.86988-.86987a3.02827,3.02827,0,0,0-5.29847.71808.48835.48835,0,0,1-.46081.30981H9.55908a.37949.37949,0,0,1-.36145-.48686Z" />
+<path class="a" d="M17.80237,14.77441A4.4413,4.4413,0,0,1,10.052,16.31982l-.62524.62524a.24429.24429,0,0,1-.1748.07373A.25036.25036,0,0,1,9,16.77V14.26863a.25.25,0,0,1,.25-.25l2.4995.00016A.25087.25087,0,0,1,12,14.27v.00052a.24434.24434,0,0,1-.07373.175l-.86988.86988a3.02828,3.02828,0,0,0,5.29847-.71808.48836.48836,0,0,1,.46081-.30982h.62525a.3795.3795,0,0,1,.36145.48687Z" />
+<path class="a" d="M7,13.5A6.5,6.5,0,0,1,13.5,7c.16883,0,.33447.01264.5.02527V5H9.5A.5.5,0,0,1,9,4.5V0H2.5A.5.5,0,0,0,2,.5v15a.5.5,0,0,0,.5.5H7.49981A6.4779,6.4779,0,0,1,7,13.5Z" />
+<path class="a" d="M10,0h.043a.5.5,0,0,1,.353.146L13.854,3.6A.5.5,0,0,1,14,3.957V4H10Z" />
+</svg>""") 
 title_bar_default_bg = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #c24e2b, stop : 0.143 #c7502c, stop : 0.286 #cc522d, stop : 0.429 #d0542e, stop : 0.571 #d55630, stop : 0.714 #da5831, stop : 0.857 #df5a32, stop : 1.0 #e45c33)"""
 title_bar_style = jinja2.Template('''
 QToolBar {
@@ -405,7 +419,7 @@ class TitleBarClickMenuBtn(QToolButton):
             self.contextMenu.popup(QPoint(p.x(), p.y()))
         else: 
             FigD.debug("self.contextMenu.clickedEvent")
-            self.contextMenu.move(p.x(), p.y())
+            self.contextMenu.move(p.x()-300, p.y())
             self.contextMenu.show()
 
 # title bar shortcut button.
@@ -538,8 +552,9 @@ class TitleBarRibbonCollapseBtn(QToolButton):
             FigD.Icon("titlebar/widgets_bar.svg"), 
             "Show simplified\nribbon"
         )
-        self.hidemenu = self.menu.actions()[0]
-        self.simplify = self.menu.actions()[1]
+        self.showRibbon = self.menu.actions()[1]
+        self.hideRibbon = self.menu.actions()[1]
+        self.simplifyRibbon = self.menu.actions()[2]
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
@@ -735,16 +750,26 @@ class ZoomSlider(QSlider):
         if hasattr(self, "tabWidget") and hasattr(self.tabWidget, "setTabZoom"):
             self.tabWidget.setTabZoom(zoom)
         # print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoomFromLabel:\x1b[0m 'not connected to tabWidget'")
+# Rename/Input dialog for FigDWindow:
+class TitleBarInputDialog(QInputDialog):
+    def __init__(self, *args, **kwargs):
+        super(TitleBarInputDialog, self).__init__(*args, **kwargs)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setStyleSheet("""
+        background: #292929;""")
+
 # Titlebar for FigDWindow
 class WindowTitleBar(QToolBar):
+    showTabBar = pyqtSignal()
+    hideTabBar = pyqtSignal()
     def __init__(self, parent: Union[QWidget, None]=None, 
                  background: str="#292929", title_widget=None, 
-                 callbacks: dict={}, where: str="back"):
+                 callbacks: dict={}, where: str="back", 
+                 ctrl_btns_loc: str="left"):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
-        # print(f"\x1b[33;1mwhere:\x1b[0m {where}")
         self.callbacks = callbacks
         self.background = background
         # set icon size and movability.
@@ -855,7 +880,7 @@ class WindowTitleBar(QToolBar):
         self.autoSaveIcon.setText(" Autosave")
         self.autoSaveIcon.setToolTip("Auto save changes to currently opened file")
         self.autoSaveIcon.setStatusTip("Auto save changes to currently opened file")
-        self.autoSaveIcon.setIcon(FigD.Icon("widget/weather/save.svg"))
+        self.autoSaveIcon.setIcon(FigD.Icon("titlebar/autosave.svg"))
         self.autoSaveIcon.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.autoSaveIcon.setStyleSheet("""
         QToolButton {
@@ -884,38 +909,85 @@ class WindowTitleBar(QToolBar):
             self.title.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
             # print("\x1b[34;1mtitle_widget:\x1b[0m", title_widget)
         self.addWidget(self.initBlank(10))
-        self.addWidget(self.closeBtn)
-        self.addWidget(self.initBlank(3))
-        self.addWidget(self.minimizeBtn)
-        self.addWidget(self.initBlank(3))
-        self.addWidget(self.maximizeBtn)
+        # control button/window icon
+        if ctrl_btns_loc == "left":
+            self.addWidget(self.closeBtn)
+            self.addWidget(self.initBlank(3))
+            self.addWidget(self.minimizeBtn)
+            self.addWidget(self.initBlank(3))
+            self.addWidget(self.maximizeBtn)
+        else:
+            self.addWidget(self.windowIcon)
+        # autosave controls.
         self.addWidget(self.autoSaveBlank)
         self.addWidget(self.autoSaveIcon)
         self.addWidget(self.autoSaveToggle)
+        # webview/browser related functions.
         self.addWidget(self.viewSourceBtn)
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.devToolsBtn)
         self.addWidget(self.findBtn)
         self.addWidget(self.printBtn)
+        # zoom functions.
         self.addWidget(self.zoomOutBtn)
         self.addWidget(self.zoomLabel)
         self.addWidget(zoomSliderWrapper)
         self.addWidget(self.zoomInBtn)
+        # accent color customization & shortcuts.
         self.addWidget(self.initBlank(10))
         self.addWidget(self.accentColorBtn)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.shortcutsBtn)
         self.addWidget(self.initBlank(10))
+        # title of application and settings
         self.addWidget(self.title)
         self.addWidget(self.initBlank(10))
         self.addWidget(self.settingsBtn)
         self.addWidget(self.initBlank(10))
+        # ribbon controls, fullscreen.
         self.addWidget(self.ribbonCollapseBtn)
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
-        self.addWidget(self.windowIcon)
+        # control button/window icon
+        if ctrl_btns_loc == "left":
+            self.addWidget(self.windowIcon)
+        else:
+            self.addWidget(self.closeBtn)
+            self.addWidget(self.initBlank(3))
+            self.addWidget(self.minimizeBtn)
+            self.addWidget(self.initBlank(3))
+            self.addWidget(self.maximizeBtn)
         self.addWidget(self.initBlank(10))
+        # set maximum height.
         self.setMaximumHeight(30)
+
+    def initContextMenu(self) -> QMenu:
+        contextMenu = QMenu()
+        contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename window", 
+                              self.triggerRenameWindow, QKeySequence("Alt+Shift+R"))
+        contextMenu.addAction(FigD.Icon("widget/show.svg"), "Show tab bar", self.showTabBar.emit)
+        contextMenu.addAction(FigD.Icon("widget/hide.svg"), "Hide tab bar", self.hideTabBar.emit)
+
+        return contextMenu
+
+    def contextMenuEvent(self, event):
+        self.contextMenu = self.initContextMenu()
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, 
+            self.background,
+        )
+        self.contextMenu.popup(event.globalPos())
+
+    def triggerRenameWindow(self):
+        """initiate rename dialog to rename current FigDWindow"""
+        currentTitle = self.title.text()
+        newWindowTitle, done = TitleBarInputDialog.getText(
+            self, f"Rename '{currentTitle}' window", 
+            f"Rename window from {currentTitle} to", 
+            QLineEdit.Normal, "Enter new window title"
+        )
+        if done:
+            self.title.setText(newWindowTitle)
 
     def initZoomLabel(self, background: str, where: str):
         zoomLabel = QLineEdit()
@@ -955,10 +1027,12 @@ class WindowTitleBar(QToolBar):
 
     def toggleAutoSaveIcon(self, state: int):
         """toggle the auto save icon color disabled: white, enabled: accent_color"""
-        if state == 2:
-            # print("self.autoSaveIcon", self.background)
-            iconTemplate = jinja2.Template(r"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" class="svg_3aeb045a" focusable="false"><path d="M1792 128q27 0 50 10t40 27 28 41 10 50v1664H357l-229-230V256q0-27 10-50t27-40 41-28 50-10h1536zM512 896h1024V256H512v640zm768 512H640v384h128v-256h128v256h384v-384zm512-1152h-128v768H384V256H256v1381l154 155h102v-512h896v512h384V256z" fill="{{ BACKGROUND_COLOR }}"></path></svg>""") 
-            iconPath = FigD.createTempPath(iconTemplate.render(BACKGROUND_COLOR=self.sliderHandleColor))
+        if state == 2: 
+            iconPath = FigD.createTempPath(
+                AUTO_SAVE_ICON_TEMPLATE.render(
+                    BACKGROUND_COLOR=self.sliderHandleColor
+                ), ext="svg"
+            )
             self.autoSaveIcon.setIcon(QIcon(iconPath))
             self.autoSaveIcon.setStyleSheet("""
             QToolButton {
@@ -970,7 +1044,7 @@ class WindowTitleBar(QToolBar):
             }""")
             self.callbacks["autoSave"](state)
         elif state == 0:
-            self.autoSaveIcon.setIcon(FigD.Icon("widget/weather/save.svg"))
+            self.autoSaveIcon.setIcon(FigD.Icon("titlebar/autosave.svg"))
             self.autoSaveIcon.setStyleSheet("""
             QToolButton {
                 color: #fff;

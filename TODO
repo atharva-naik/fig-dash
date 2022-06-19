@@ -2,18 +2,19 @@
 2. Create metadata panel for fileviewer and imageviewer
 3. Finish weather widget
 4. Folder preview for file viewer
-5. Container for applications
-6. Gallery view for imageviewer
-7. List and treeview for fileviewer
-8. Re-design fileviewer ribbon with DashRibbonMenu class
-9. Create desktop class
-10. Wallpaper and screen saver management
-11. Updated tab widget for FigD style apps
-12. Calendar with events, notifs and reminders
-13. Clock with multiple timezone support
-14. Image viewer viewing modes: Native, Text, Hex, Icon\
-15. Image viewer search bar.
-16. Finish gradient creator
-17. HTML rendering.
-18. HTML, CSS, JS tri split and rendering at bottom
-19. 
+5. File preview for file viewer (has image, html but not pdf yet)
+6. Container for applications
+7. Gallery view for imageviewer
+8. List and treeview for fileviewer
+9. Re-design fileviewer ribbon with DashRibbonMenu class
+10. Create desktop class
+11. Wallpaper and screen saver management
+12. Updated tab widget for FigD style apps
+13. Calendar with events, notifs and reminders
+14. Clock with multiple timezone support
+15. Image viewer viewing modes: Native, Text, Hex, Icon\
+16. Image viewer search bar.
+17. Finish gradient creator
+18. HTML rendering.
+19. HTML, CSS, JS tri split and rendering at bottom
+20. JSON viewer.

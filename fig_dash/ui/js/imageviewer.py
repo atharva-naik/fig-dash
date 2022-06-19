@@ -2091,7 +2091,7 @@ ViewerJSPluginJS = jinja2.Template(r"""
       var onViewed = function onViewed() {
         var imageData = _this2.imageData;
         var render = Array.isArray(options.title) ? options.title[1] : options.title;
-        title.innerHTML = escapeHTMLEntities(isFunction(render) ? render.call(_this2, image, imageData) : "".concat(alt, " (").concat(imageData.naturalWidth, "xD7 ").concat(imageData.naturalHeight, ")"));
+        title.innerHTML = escapeHTMLEntities(isFunction(render) ? render.call(_this2, image, imageData) : "".concat(alt, " (").concat(imageData.naturalWidth, "x").concat(imageData.naturalHeight, ")"));
       };
 
       var onLoad;
@@ -3622,6 +3622,23 @@ ImageViewerHTML = jinja2.Template(r"""
 			height: 100%;
 			margin: 0;
 		}
+    .vignette {
+      -webkit-box-align: center;
+      -webkit-box-pack: center;
+      -webkit-transition: 0.25s opacity;
+      background: -webkit-radial-gradient(rgba(127, 127, 127, 0.5),
+                                          rgba(127, 127, 127, 0.5) 35%,
+                                          rgba(0, 0, 0, 0.7));
+      bottom: 0;
+      display: -webkit-box;
+      left: 0;
+      padding: 20px;
+      padding-bottom: 130px;
+      position: fixed;
+      right: 0;
+      top: 0;
+      z-index: 10;
+    }
 		#box {
 			width:250px;
 			height:250px;
