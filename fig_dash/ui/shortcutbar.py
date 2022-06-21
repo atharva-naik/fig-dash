@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::shortcutbar")
 # from PyQt5.QtGui import QIcon, QFontMetrics
-print("fig_dash::ui::shortcutbar")
 import os
 import jinja2
 from pprint import pprint

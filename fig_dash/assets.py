@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 '''Asset management for FigD'''
-print("fig_dash::ui::assets")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::assets")
+
 import os
-import shutil
 import jinja2
 import logging
-import coloredlogs
-from pathlib import Path
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QIcon, QFont
 
@@ -22,10 +21,11 @@ class AssetManager:
         self.ResourceUrl = QUrl.fromLocalFile(self.ResourcePath)
         self.dir = resource_dir
         self.reset(resource_dir)
-        # initialize logger and allow coloredlogs.
+        # initialize logger and allow colored logs.
         self.logger = logging.getLogger(__name__)
+        import coloredlogs
         coloredlogs.install(level="debug", logger=self.logger)
-
+        
     def info(self, *args, **kwargs):
         self.logger.info(*args, **kwargs)
 

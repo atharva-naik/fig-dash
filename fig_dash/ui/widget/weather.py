@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::widget::weather")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::widget::weather")
+
 import os
 import sys
 import json

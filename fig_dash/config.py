@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::config")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::config")
+
 import os
 import getpass
 import platform

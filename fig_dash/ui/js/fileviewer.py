@@ -357,7 +357,7 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
             catch (err) {
                 console.log(err);
                 console.log(file_item_id);
-                window.location.href = `/api/system/fileviewer?path=${file_item_id}`;
+                window.location.href = `/ui/system/fileviewer?path=${file_item_id}`;
             }
         })
         divElement.addEventListener('contextmenu', function(event) {

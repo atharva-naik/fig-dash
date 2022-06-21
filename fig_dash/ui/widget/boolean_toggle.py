@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::widget::boolean_toggle")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::widget::boolean_toggle")
 # qtwidgets import.
 import sys
 from typing import *

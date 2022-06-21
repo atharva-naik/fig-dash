@@ -1,12 +1,14 @@
-print("fig_dash::utils")
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::utils")
+
 import os
-from PIL import Image
-from PyQt5.Qt import PYQT_VERSION_STR
+from typing import *
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt, QEventLoop, QTimer, QT_VERSION_STR
-from typing import Union, Tuple, List
+from PyQt5.QtCore import QEventLoop, QTimer
 
-
+# utility functions.
 def collapseuser(path: str):
     return path.replace(os.path.expanduser("~"), "~")
 
@@ -152,7 +154,7 @@ def extractSliderColor(gradient: str, where="back") -> str:
 
     return sliderColor
 
-def exif_color_space(img: Image):
+def exif_color_space(img):
     exif = img._getexif() or {}
     a = exif.get(0xA001)
     b = exif.get(0x0001)

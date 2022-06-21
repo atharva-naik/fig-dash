@@ -1,3 +1,6 @@
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::api::auth")
+
 import os
 import sys
 import pickle

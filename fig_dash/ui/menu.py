@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::menu")
+
 import os
 import jinja2
 from typing import Union

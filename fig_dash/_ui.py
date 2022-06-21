@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::_ui")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::_ui")
+
 import jinja2
 import getpass
 from typing import *
@@ -12,8 +14,7 @@ from PyQt5.QtCore import Qt, QEvent, QT_VERSION_STR, QSize
 from PyQt5.QtWidgets import QApplication, QSplitter, QMainWindow, QWidget, QTabBar, QVBoxLayout, QHBoxLayout, QToolButton, QSizePolicy, QSpacerItem, QShortcut, QTabWidget
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import PageInfo
-from fig_dash.ui.titlebar import TitleBar
+
 # from fig_dash.ui.widget.floatmenu import FloatMenu
 
 # from PyQt5.QtCore import QThread, QUrl, QDir, QSize, Qt, QEvent, pyqtSlot, pyqtSignal, QObject, QRect, QPoint
@@ -159,6 +160,7 @@ class DashWindow(QMainWindow):
             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
         }""")
         self.statusBar().setMaximumHeight(30)
+        from fig_dash.ui.titlebar import TitleBar
         self.titlebar = TitleBar(self)
         self.centralWidget = self.initCentralWidget(**kwargs)
         self.tabs.connectWindow(self)
@@ -171,8 +173,7 @@ class DashWindow(QMainWindow):
         maximize_by_default = kwargs.get("maximize_by_default", True)
         if maximize_by_default:
             self.showMaximized()
-        # add title bar.
-        # self.titlebar = TitleBar(self)
+            
         self.titlebar.connectTabWidget(self.tabs)
         # add shortcuts sidebar.
         self.shortcutbar = ShortcutBar(self)
@@ -379,6 +380,7 @@ class DashWindow(QMainWindow):
         self.sysutilsbar = SysUtilsBar(self.tabs)
         self.sysutilsbar.hide()
         # page info.
+        from fig_dash.ui.browser import PageInfo
         self.page_info = PageInfo(self.tabs)
         self.page_info.hide()
         # ideas widget.

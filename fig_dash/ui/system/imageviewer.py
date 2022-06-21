@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::system::imageviewer")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::system::imageviewer")
+
 import base64
 import argparse
 import PIL, bs4

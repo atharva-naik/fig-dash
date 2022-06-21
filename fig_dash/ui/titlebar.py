@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::titlebar")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::titlebar")
 # titlebar for the main window
 import sys
 import jinja2
@@ -154,7 +155,8 @@ def extractSliderColor(bg, where="back"):
 
     return sliderColor
 
-def styleContextMenu(menu, accent_color: str="yellow"):
+def styleContextMenu(menu, accent_color: str="yellow", padding: int=5, 
+                     font_size: int=18, icon_size: int=24):
     menu.setAttribute(Qt.WA_TranslucentBackground)
     menu.setObjectName("FigDMenu")
     menu.setStyleSheet(jinja2.Template("""
@@ -162,7 +164,13 @@ def styleContextMenu(menu, accent_color: str="yellow"):
         background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
     	color: #fff;
     	padding: 10px;
+        icon-size: {{ ICON_SIZE }}px; 
     	border-radius: 15px;
+        font-size: {{ FONT_SIZE }}px;
+        font-family: "Be Vietnam Pro";
+    }
+    QMenu#FigDMenu::item {
+        padding: {{ PADDING }}px;
     }
     QMenu#FigDMenu::item:selected {
     	color: #292929; 
@@ -171,7 +179,10 @@ def styleContextMenu(menu, accent_color: str="yellow"):
     }
     QMenu#FigDMenu:separator {
     	background: #292929;
-    }""").render(ACCENT_COLOR=accent_color))
+    }""").render(
+        ACCENT_COLOR=accent_color, FONT_SIZE=font_size, 
+        PADDING=padding, ICON_SIZE=icon_size,
+    ))
     palette = menu.palette()
     palette.setColor(QPalette.Base, QColor(48,48,48))
     palette.setColor(QPalette.Text, QColor(125,125,125))
@@ -500,13 +511,15 @@ class TitleBarMaximizeBtn(QToolButton):
         if callback is not None:
             self.clicked.connect(callback)
         self.menu = QMenu()
-        self.menu.addAction("Split View Vertical")
-        self.menu.addAction("Split View Horizontal")
-        self.menu.addAction(FigD.Icon("titlebar/fullscreen.svg"), "Show Full Screen")
-        self.menu.addAction(FigD.Icon("titlebar/exit_fullscreen.svg"), "Exit Full Screen")
+        def blank(): pass
+        self.menu.addAction("Add to split screen        ", blank,
+                            QKeySequence("Ctrl+Alt+S"))
+        self.menu.addSeparator()
+        self.menu.addAction(FigD.Icon("titlebar/fullscreen.svg"), "Show fullscreen")
+        self.menu.addAction(FigD.Icon("titlebar/exit_fullscreen.svg"), "Exit fullscreen")
         accent_color = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #005822, stop : 0.091 #006226, stop : 0.182 #006b2a, stop : 0.273 #00752e, stop : 0.364 #008032, stop : 0.455 #008a36, stop : 0.545 #00943a, stop : 0.636 #009f3e, stop : 0.727 #00a942, stop : 0.818 #00b446, stop : 0.909 #00bf4a, stop : 1.0 #00ca4e)"""
-        self.fullscreen = self.menu.actions()[2]
-        self.exit_fullscreen = self.menu.actions()[3]
+        self.fullscreen = self.menu.actions()[-2]
+        self.exit_fullscreen = self.menu.actions()[-1]
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
@@ -806,7 +819,10 @@ class WindowTitleBar(QToolBar):
         )
         if "saveSourceBtn" not in callbacks:
             self.saveSourceBtn.hide()
-        self.zoomInBtn = self.initTitleBtn("titlebar/zoom_in.svg", tip="zoom in", style="r")
+        self.zoomInBtn = self.initTitleBtn(
+            "titlebar/zoom_in.svg", 
+            tip="zoom in", style="r"
+        )
         self.findBtn = self.initTitleBtn("titlebar/find_in_page.svg", tip="find in page", style="c")
         if "findBtn" not in callbacks: 
             self.findBtn.hide()
@@ -821,6 +837,8 @@ class WindowTitleBar(QToolBar):
             "titlebar/zoom_out.svg", tip="zoom out", 
             style="l" if "viewSourceBtn" not in callbacks else "c"
         )
+        self.zoomInBtn.clicked.connect(self.increaseZoom)
+        self.zoomOutBtn.clicked.connect(self.decreaseZoom)
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
             efs_icon="titlebar/exit_fullscreen.svg", 
@@ -961,10 +979,29 @@ class WindowTitleBar(QToolBar):
         # set maximum height.
         self.setMaximumHeight(30)
 
+    def increaseZoom(self):
+        try: 
+            value = int(self.zoomSlider.label.text())
+            value = min(value+10, 250)
+            self.zoomSlider.label.setText(str(value))
+            self.zoomSlider.setTabZoomFromLabel()
+        except Exception as e:
+            FigD.error(f"ui::titlebar::WindowTitleBar.increaseZoom: {e}")
+
+    def decreaseZoom(self):
+        try: 
+            value = int(self.zoomSlider.label.text())
+            value = max(value-10, 25)
+            self.zoomSlider.label.setText(str(value))
+            self.zoomSlider.setTabZoomFromLabel()
+        except Exception as e:
+            FigD.error(f"ui::titlebar::WindowTitleBar.decreaseZoom: {e}")
+
     def initContextMenu(self) -> QMenu:
         contextMenu = QMenu()
-        contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename window", 
+        contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename window   ", 
                               self.triggerRenameWindow, QKeySequence("Alt+Shift+R"))
+        contextMenu.addSeparator()
         contextMenu.addAction(FigD.Icon("widget/show.svg"), "Show tab bar", self.showTabBar.emit)
         contextMenu.addAction(FigD.Icon("widget/hide.svg"), "Hide tab bar", self.hideTabBar.emit)
 
@@ -973,8 +1010,8 @@ class WindowTitleBar(QToolBar):
     def contextMenuEvent(self, event):
         self.contextMenu = self.initContextMenu()
         self.contextMenu = styleContextMenu(
-            self.contextMenu, 
-            self.background,
+            self.contextMenu, self.background,
+            padding=5, font_size=18,
         )
         self.contextMenu.popup(event.globalPos())
 

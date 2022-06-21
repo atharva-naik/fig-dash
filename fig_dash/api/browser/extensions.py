@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::api::browser")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::config")
+
 import os
 import sys
 import json

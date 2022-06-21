@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::ui::tab")
-import time
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::ui::tab")
+
 import jinja2
 import getpass
-from typing import Union
+from typing import *
 # Qt imports.
 from PyQt5.QtGui import QIcon, QColor, QKeySequence, QMouseEvent, QPalette, QPainterPath, QRegion
 from PyQt5.QtCore import pyqtSignal, QFileInfo, Qt, QPoint, QMimeDatabase, QUrl, QSize, QBuffer, QIODevice, QEvent, QObject, QRectF
