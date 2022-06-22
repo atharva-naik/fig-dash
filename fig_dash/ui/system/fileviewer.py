@@ -2093,21 +2093,20 @@ class FileViewerFolderBtn(QToolButton):
         self.folderBtnStyle = """
         QToolButton {
             color: #fff;
-            border: 0px;
             font-size: 17px;
             text-align: center;
+            border-radius: 2px;
             background: transparent;
+            border: 1px solid transparent;
             font-family: "Be Vietnam Pro";
         }
         QToolButton:hover {
             color: #292929;
             border: 1px solid #0a4c70;
-            border-radius: 2px;
             background: rgba(105, 191, 238, 150);
         }
         QToolTip {
             color: #fff;
-            border: 0px;
             background: #000;
         }"""
         self.folderBtnSelStyle = """
@@ -2141,19 +2140,23 @@ class FileViewerFolderBtn(QToolButton):
             self.setText(name)
             self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
             self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.name = name
         if self.widget:
             self.clicked.connect(partial(self.widget.open, path))
         self.setStyleSheet(stylesheet)
         self.is_selected = False
+        self.setIconSize(QSize(22,22))
 
     def select(self):
         self.is_selected = True
-        self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
+        if not self.name in ["/", "~", "~/"]:
+            self.setIcon(FigD.Icon("system/fileviewer/folder_btn_sel.svg"))
         self.setStyleSheet(self.folderBtnSelStyle)
 
     def deselect(self):
         self.is_selected = False
-        self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
+        if not self.name in ["/", "~", "~/"]:
+            self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
         self.setStyleSheet(self.folderBtnStyle)
 
     def enterEvent(self, event):
@@ -2190,13 +2193,53 @@ class FileViewerFolderBtn(QToolButton):
 class FileViewerFolderNavBtn(QToolButton):
     def __init__(self, icon: str="", tip: str="", 
                  parent: Union[None, QWidget]=None,
-                 stylesheet: str=""):
+                 stylesheet: str="", accent_color: str=""):
         super(FileViewerFolderNavBtn, self).__init__(parent)
+        self.accent_color = accent_color
         self.setToolTip(tip)
         self.setStatusTip(tip)
+        self.role = Path(icon).stem
         icon = os.path.join("system/fileviewer", icon)
         self.setIcon(FigD.Icon(icon))
         self.setStyleSheet(stylesheet)
+        self.setIconSize(QSize(22,22))
+        self.isenabled = True
+
+    def enterEvent(self, event):
+        # print(f"{self.role}: {self.isenabled}")
+        if not self.isenabled: return
+        icon = os.path.join(
+            "system/fileviewer", 
+            self.role+"_hover.svg"
+        )
+        self.setIcon(FigD.Icon(icon))
+        super(FileViewerFolderNavBtn, self).enterEvent(event)
+
+    def leaveEvent(self, event):
+        if not self.isenabled: return
+        icon = os.path.join(
+            "system/fileviewer", 
+            self.role+".svg"
+        )
+        self.setIcon(FigD.Icon(icon))
+        super(FileViewerFolderNavBtn, self).leaveEvent(event)
+
+    def contextMenuEvent(self, event):
+        if not hasattr(self, "widget"): return
+        history = self.widget.webview.history()
+        self.contextMenu = QMenu()
+        # show max 20 items.
+        if self.role == "prev":
+            items = history.backItems(20)[::-1]
+        elif self.role == "next":
+            items = history.forwardItems(20)
+        for i, item in enumerate(items):
+            self.contextMenu.addAction(item.title(), partial(history.goToItem, item))
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, 
+            self.accent_color,
+        )
+        self.contextMenu.popup(event.globalPos())
 
 # folder bar buttons.
 class FileViewerFolderBar(QScrollArea):
@@ -2205,7 +2248,7 @@ class FileViewerFolderBar(QScrollArea):
         super(FileViewerFolderBar, self).__init__(parent)
         self.accent_color = accent_color
         self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.layout.setContentsMargins(10, 0, 10, 0)
         self.layout.setSpacing(5)
         # wrapper widget.
         self.wrapper = QWidget()
@@ -2224,13 +2267,14 @@ class FileViewerFolderBar(QScrollArea):
             border: 0px;
             font-size: 17px;
             text-align: center;
+            border-radius: 2px;
             background: transparent;
+            border: 1px solid transparent;
             font-family: "Be Vietnam Pro";
         }
         QToolButton:hover {
             color: #292929;
             border: 1px solid #0a4c70;
-            border-radius: 2px;
             background: rgba(105, 191, 238, 150);
         }
         QToolTip {
@@ -2254,51 +2298,6 @@ class FileViewerFolderBar(QScrollArea):
             border: 0px;
             background: #000;
         }"""
-        # self.folderBtnStyle = '''
-        # QToolButton {
-        #     color: #fff;
-        #     border: 0px;
-        #     font-size: 17px;
-        #     font-weight: bold;
-        #     font-family: 'Be Vietnam Pro', sans-serif;
-        #     padding-top: 2px;
-        #     padding-bottom: 2px;
-        #     border-radius: 3px;
-        #     background: #484848;
-        #     margin-left: 1px;
-        #     margin-right: 1px;
-        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
-        # }
-        # QToolButton:hover {
-        #     color: #292929;
-        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
-        # }
-        # QToolTip {
-        #     color: #fff;
-        #     border: 0px;
-        #     background: #000;
-        # }'''
-        # self.folderBtnSelStyle = '''
-        # QToolButton {
-        #     border: 0px;
-        #     color: #292929;
-        #     font-size: 17px;
-        #     font-weight: bold;
-        #     font-family: 'Be Vietnam Pro', sans-serif;
-        #     padding-top: 2px;
-        #     padding-bottom: 2px;
-        #     border-radius: 3px;
-        #     margin-left: 1px;
-        #     margin-right: 1px;
-        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
-        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
-        # }
-        # QToolTip {
-        #     color: #fff;
-        #     border: 0px;
-        #     background: #000;
-        # }'''
         self.backBtn = self.initFolderNavBtn(
             icon="prev.svg",
             tip="go back (tied to webview.back)",
@@ -2324,6 +2323,21 @@ class FileViewerFolderBar(QScrollArea):
         self.setWidgetResizable(True)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         # self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+    def refresh(self):
+        if not hasattr(self, "widget"): return
+        history = self.widget.webview.history()
+        if history.canGoBack():
+            self.backBtn.isenabled = True
+            self.backBtn.setIcon(FigD.Icon("system/fileviewer/prev.svg"))
+        else:
+            self.backBtn.isenabled = False
+            self.backBtn.setIcon(FigD.Icon("system/fileviewer/prev_disabled.svg"))
+        if history.canGoForward():
+            self.forwardBtn.isenabled = True
+            self.forwardBtn.setIcon(FigD.Icon("system/fileviewer/next.svg"))
+        else:
+            self.forwardBtn.isenabled = False
+            self.forwardBtn.setIcon(FigD.Icon("system/fileviewer/next_disabled.svg"))
 
     def toggle(self):
         print("toggling folderbar visibility")
@@ -2399,17 +2413,28 @@ class FileViewerFolderBar(QScrollArea):
         self.backBtn.clicked.connect(widget.webview.back)
         self.reloadBtn.clicked.connect(widget.webview.reload)
         self.forwardBtn.clicked.connect(widget.webview.forward)
+        # connect widget to backBtn & forwardBtn
+        self.backBtn.widget = widget
+        self.forwardBtn.widget = widget
 
-    def initFolderNavBtn(self, icon: str, tip: str="some tip"):
+    def initFolderNavBtn(self, icon: str, tip: str="tip"):
         btn = FileViewerFolderNavBtn(
             parent=self, tip=tip, icon=icon, 
             stylesheet=self.folderBtnStyle,
+            accent_color=self.accent_color,
         )
         btn.setFixedHeight(24)
 
         return btn 
 
     def initFolderBtn(self, name, full_path):
+        btn = FileViewerFolderBtn(
+            name=name, path=str(full_path), widget=self.widget, 
+            stylesheet=self.folderBtnStyle, accent_color=self.accent_color,
+        )
+        btn.setFixedHeight(24)
+
+        return btn 
         # btn = QToolButton(self)
         # tip = f"got to {full_path}"
         # btn.setToolTip(tip)
@@ -2423,15 +2448,6 @@ class FileViewerFolderBar(QScrollArea):
         #         lambda: self.widget.open(full_path)
         #     )
         # btn.setStyleSheet(self.folderBtnStyle)
-        btn = FileViewerFolderBtn(
-            name=name, path=str(full_path), widget=self.widget, 
-            stylesheet=self.folderBtnStyle, accent_color=self.accent_color,
-        )
-        btn.setFixedHeight(24)
-
-        return btn 
-
-
 class FileViewerShortcutBtn(QToolButton):
     '''File viewer shortcut button.'''
     def __init__(self, parent: Union[None, QWidget]=None, 
@@ -3397,6 +3413,7 @@ class FileViewerWidget(FigDMainWindow):
         self.selected_item = None
         self.webview.setZoomFactor(self.zoom_factor)
         self.webview.loadFinished.connect(self.webview.loadDevTools)
+        self.folderbar.refresh()
 
     def copyUrlToClipboard(self):
         if self.clipboard and self.selected_item:
@@ -3742,3 +3759,49 @@ if __name__ == '__main__':
 #     clipboard_ui.show()
     
 #     app.exec()
+
+        # self.folderBtnStyle = '''
+        # QToolButton {
+        #     color: #fff;
+        #     border: 0px;
+        #     font-size: 17px;
+        #     font-weight: bold;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     padding-top: 2px;
+        #     padding-bottom: 2px;
+        #     border-radius: 3px;
+        #     background: #484848;
+        #     margin-left: 1px;
+        #     margin-right: 1px;
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 1, y2 : 1, stop : 0.3 rgba(48, 48, 48, 1), stop : 0.6 rgba(29, 29, 29, 1)); */
+        # }
+        # QToolButton:hover {
+        #     color: #292929;
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+        # }
+        # QToolTip {
+        #     color: #fff;
+        #     border: 0px;
+        #     background: #000;
+        # }'''
+        # self.folderBtnSelStyle = '''
+        # QToolButton {
+        #     border: 0px;
+        #     color: #292929;
+        #     font-size: 17px;
+        #     font-weight: bold;
+        #     font-family: 'Be Vietnam Pro', sans-serif;
+        #     padding-top: 2px;
+        #     padding-bottom: 2px;
+        #     border-radius: 3px;
+        #     margin-left: 1px;
+        #     margin-right: 1px;
+        #     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #a11f53, stop : 0.3 #bf3636, stop: 0.9 #eb5f34); */
+        #     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 #147eb8, stop : 0.3 #69bfee, stop: 0.9 #338fc0);
+        # }
+        # QToolTip {
+        #     color: #fff;
+        #     border: 0px;
+        #     background: #000;
+        # }'''

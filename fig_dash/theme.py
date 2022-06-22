@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::theme")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::theme")
+
 from fig_dash.assets import FigD
 
 FigDAccentColorMap = {

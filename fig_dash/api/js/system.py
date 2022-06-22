@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-print("fig_dash::api::js:system")
+from fig_dash import FigDLoad
+FigDLoad("fig_dash::api::js:system")
+
 import os
 from PyQt5.QtWebChannel import QWebChannel
 from PyQt5.QtCore import Qt, QSize, QUrl, pyqtSlot, pyqtSignal, QObject

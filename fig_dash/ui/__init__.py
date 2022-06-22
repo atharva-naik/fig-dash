@@ -14,7 +14,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
-from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint
+from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QPropertyAnimation, QEasingCurve
 from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
 
 def blank(*args, **kwargs): print(args, kwargs)
@@ -25,16 +25,52 @@ class FigDShortcut(QShortcut):
         super(FigDShortcut, self).__init__(keyseq, parent)
         self.description = description
 
+# property animation based show/hide.
+def smooth_transition(target: QWidget):
+    def animated_show(self):
+        import copy
+        # geometry = self.rect().translated(
+        #     self.mapToGlobal(QPoint(0, 0))
+        # )
+        geometry = self.geometry()
+        target_geometry = copy.deepcopy(geometry)
+        target_geometry.setHeight(self.prehide_height)
+        print(f"show: {geometry} -> {target_geometry}")
+        # showing property animation.
+        self.show_animation = QPropertyAnimation(self, b"geometry")
+        # set duration, easing curve, start and end value.
+        self.show_animation.setStartValue(geometry)
+        self.show_animation.setEndValue(target_geometry)
+        self.show_animation.setEasingCurve(QEasingCurve.OutExpo)
+        # start animation.
+        self.show_animation.start()
+        self.setVisible(True)
 
-class DashWidgetGroupBtnStyler:
-    def __init__(self):
-        self.templates = {}
+    def animated_hide(self):
+        import copy
+        geometry = self.geometry()
+        target_geometry = copy.deepcopy(geometry)
+        target_geometry.setHeight(0)
+        print(f"hide: {geometry} -> {target_geometry}")
+        # hiding property animation.
+        self.hide_animation = QPropertyAnimation(self, b"geometry")
+        # set duration, start and end value.
+        self.hide_animation.setStartValue(geometry)
+        self.hide_animation.setEndValue(target_geometry)
+        self.hide_animation.setEasingCurve(QEasingCurve.OutExpo)
+        # start animation.
+        self.hide_animation.start()
+        self.setVisible(False)
 
-    def __call__(self, style, **options):
-        return self.templates[style]
-
-class DashWidgetGroupStyler:
-    pass
+    def unanimated_hide(self):
+        self.prehide_height = self.height()
+        self.hide()
+        
+    setattr(target, "animated_show", animated_show)
+    setattr(target, "animated_hide", animated_hide)
+    setattr(target, "unanimated_hide", unanimated_hide)
+    # print(f"target class: {target}")
+    return target
 
 DASH_WIDGET_SCROLL_AREA = jinja2.Template("""
 QWidget {
@@ -1467,7 +1503,7 @@ class FigDAppSettingsMenu(QMenu):
         )
         self.addAction(FigD.Icon("help.svg"), "Help")
         self.addSeparator()
-        self.addAction("Exit")
+        self.addAction("Exit", QApplication.instance().quit)
 
     def connectWindow(self, window: QMainWindow):
         self.__window_ptr = window
@@ -1749,6 +1785,7 @@ class FigDAppContainer(QApplication):
 class FigDTabCornerWidget(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(FigDTabCornerWidget, self).__init__(parent=parent)
+        self.plusBtn = QToolButton()
 
 # FigD style tabwidget class.
 class FigDTabWidget(QTabWidget):
@@ -1846,6 +1883,7 @@ class FigDTabWidget(QTabWidget):
             font-size: 17px;
             font-weight: bold;
         }""")
+        self.corner_widget = FigDTabCornerWidget()
         # set stuff.
         self.setMovable(True)
         self.setTabsClosable(True)
@@ -1853,6 +1891,7 @@ class FigDTabWidget(QTabWidget):
         self.setTabBarAutoHide(True)
         self.setElideMode(Qt.ElideRight)
         self.setObjectName("FigDTabWidget")
+        self.setCornerWidget(self.corner_widget)
         self.tabBar().setGraphicsEffect(drop_shadow)
         # connect slots to signals.
         self.currentChanged.connect(self.onTabChange)

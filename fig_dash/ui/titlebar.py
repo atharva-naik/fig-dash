@@ -787,7 +787,7 @@ class WindowTitleBar(QToolBar):
         self.background = background
         # set icon size and movability.
         self.setMovable(False)
-        self.setIconSize(QSize(20,20))
+        self.setIconSize(QSize(22,22))
         # close window
         self.closeBtn = TitleBarCloseBtn(
             callback=self.callback if parent is None else parent.hide
