@@ -523,14 +523,23 @@ class TitleBarMaximizeBtn(QToolButton):
         self.menu = styleContextMenu(self.menu, accent_color)
 
     def enterEvent(self, event):
+        ismaximized = False
+        if hasattr(self, "window"):
+            ismaximized = self.window.isMaximized()
         if not self.isDisabled:
-            self.setIcon(FigD.Icon("titlebar/maximize_large_hover.svg"))
+            if ismaximized:
+                self.setIcon(FigD.Icon("titlebar/maximize_large_hover1.svg"))
+            else:
+                self.setIcon(FigD.Icon("titlebar/maximize_large_hover.svg"))
         super(TitleBarMaximizeBtn, self).enterEvent(event)
 
     def leaveEvent(self, event):
         if not self.isDisabled:
             self.setIcon(FigD.Icon("titlebar/maximize_large.svg"))
         super(TitleBarMaximizeBtn, self).leaveEvent(event)
+
+    def connectWindow(self, window: QMainWindow):
+        self.window = window
 
     def contextMenuEvent(self, event):
         self.menu.popup(event.globalPos())
@@ -724,7 +733,7 @@ class ZoomSlider(QSlider):
         super(ZoomSlider, self).__init__(Qt.Horizontal)
         self.setMaximum(250)
         self.setMinimum(25)
-        self.setValue(125)
+        self.setValue(135)
         # self.valueChanged.connect(self.setTabZoom)
         self.sliderReleased.connect(self.setTabZoom)
         # self.setStyleSheet("color: #292929;")
@@ -750,9 +759,9 @@ class ZoomSlider(QSlider):
         try:
             zoom = int(zoom)
         except ValueError as e:
-            print(f"{e} reseting slider, label value to 125")
-            zoom = 125
-            self.label.setText("125")
+            print(f"{e} reseting slider, label value to 135")
+            zoom = 135
+            self.label.setText("135")
         if zoom < 25:
             zoom = 25
             self.label.setText("25")
@@ -787,7 +796,7 @@ class WindowTitleBar(QToolBar):
         self.background = background
         # set icon size and movability.
         self.setMovable(False)
-        self.setIconSize(QSize(22,22))
+        self.setIconSize(QSize(20,20))
         # close window
         self.closeBtn = TitleBarCloseBtn(
             callback=self.callback if parent is None else parent.hide
@@ -1028,7 +1037,7 @@ class WindowTitleBar(QToolBar):
 
     def initZoomLabel(self, background: str, where: str):
         zoomLabel = QLineEdit()
-        zoomLabel.setText("125")
+        zoomLabel.setText("135")
         zoomLabel.setFixedHeight(27)
         zoomLabel.setStyleSheet(jinja2.Template("""
         QLineEdit {
@@ -1156,6 +1165,7 @@ class WindowTitleBar(QToolBar):
         self.window = window
         self.closeBtn.clicked.connect(window.close)
         self.minimizeBtn.clicked.connect(window.showMinimized)
+        self.maximizeBtn.connectWindow(window)
         for action in self.closeBtn.menu.actions():
             if action.text() == "Hide":
                 action.triggered.connect(window.hide)
@@ -1350,7 +1360,7 @@ class TitleBar(QToolBar):
         # )
         self.zoomSlider = ZoomSlider()
         self.zoomLabel = QLineEdit()
-        self.zoomLabel.setText("125")
+        self.zoomLabel.setText("135")
         self.zoomLabel.setStyleSheet("""
         QLineEdit {
             color: #fff; /* #39a4e7; */

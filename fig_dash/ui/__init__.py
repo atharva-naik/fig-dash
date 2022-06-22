@@ -15,7 +15,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QPropertyAnimation, QEasingCurve
-from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
 
 def blank(*args, **kwargs): print(args, kwargs)
 class FigDShortcut(QShortcut):
@@ -1159,7 +1159,7 @@ class FigDSlider(QWidget):
             self.slider = QSlider(Qt.Horizontal)
         elif orient == "vertical":
             self.slider = QSlider(Qt.Vertical)
-        self.slider.setFixedWidth(130)
+        self.slider.setFixedWidth(100)
         self.slider.setValue(value)
         self.slider.setMinimum(minm)
         self.slider.setMaximum(maxm)
@@ -1182,7 +1182,7 @@ class FigDSlider(QWidget):
         self.hboxlayout.addWidget(self.readout)
         if minus:
             self.minusBtn = self.initSliderBoxBtn(
-                text="-", tip="decrease slider value",
+                text=" -", tip="decrease slider value",
                 accent_color=accent_color, where=where,
             )
             self.minusBtn.clicked.connect(self.decrease)
@@ -1190,7 +1190,7 @@ class FigDSlider(QWidget):
         self.hboxlayout.addWidget(self.slider)
         if plus:
             self.plusBtn = self.initSliderBoxBtn(
-                text="+", tip="increase slider value",
+                text=" +", tip="increase slider value",
                 accent_color=accent_color, where=where,
             )
             self.plusBtn.clicked.connect(self.increase)
@@ -1283,7 +1283,6 @@ class FigDSlider(QWidget):
         # set style sheet.
         btn.setStyleSheet("""
         QToolButton {
-            padding: 2px;
             font-size: 20px;
             border-radius: 2px;
             background: transparent;
@@ -1783,9 +1782,134 @@ class FigDAppContainer(QApplication):
 
 # FigD style tab corner widget class.
 class FigDTabCornerWidget(QWidget):
-    def __init__(self, parent: Union[None, QWidget]=None):
+    def __init__(self, accent_color: str="gray", 
+                 parent: Union[None, QWidget]=None):
         super(FigDTabCornerWidget, self).__init__(parent=parent)
-        self.plusBtn = QToolButton()
+        self.setGraphicsEffect(self.createDropShadow(accent_color))
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        # tab related buttons.
+        self.plusBtn = self.initCornerBtn("tabbar/new_tab.svg")
+        self.vSplitBtn = self.initCornerBtn("tabbar/new_tab.svg")
+        self.hSplitBtn = self.initCornerBtn("tabbar/new_tab.svg")
+        # spacer widget.
+        self.spacer = QWidget()
+        self.spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # build layout.
+        self.hboxlayout.addWidget(self.plusBtn)
+        self.hboxlayout.addWidget(self.spacer)
+        self.hboxlayout.addWidget(self.vSplitBtn)
+        self.hboxlayout.addWidget(self.hSplitBtn)
+        # set layout.
+        self.setLayout(self.hboxlayout)
+        # set size policy.
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+
+    def createDropShadow(self, accent_color: str="gray", 
+                         where: str="back") -> QGraphicsDropShadowEffect:
+        """create drop shadow from the accent color.
+        Returns:
+            QGraphicsDropShadowEffect: _description_
+        """
+        drop_shadow_color = extractFromAccentColor(accent_color, where)
+        drop_shadow = QGraphicsDropShadowEffect()
+        drop_shadow.setColor(QColor(drop_shadow_color))
+        drop_shadow.setBlurRadius(50)
+        drop_shadow.setOffset(0, 0)
+
+        return drop_shadow
+
+    def initCornerBtn(self, icon: str) -> QToolButton:
+        btn = QToolButton()
+        btn.setIcon(FigD.Icon(icon))
+        btn.setStyleSheet("""
+        QToolButton {
+            border: 0px;
+            background: transparent;
+        }""")
+        btn.setIconSize(QSize(20,20))
+
+        return btn
+
+# FigD style tab bar.
+class FigDTabBar(QTabBar):
+    def __init__(self, accent_color: str="gray", 
+                 tabwidget: QTabWidget=None,
+                 parent: Union[None, QWidget]=None):
+        super(FigDTabBar, self).__init__(parent)
+        self.accent_color = accent_color
+        self.tabwidget = tabwidget
+
+    def initContextMenu(self) -> QMenu:
+        contextMenu = QMenu()
+        contextMenu.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab to the right")
+        contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
+        contextMenu.addAction("Add tab to group")
+        contextMenu.addAction(FigD.Icon("tabbar/move.svg"), "Move tab to new window")
+        contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename tab")
+        contextMenu.addSeparator()
+        contextMenu.addAction(FigD.Icon("tabbar/reload.svg"), "Reload") 
+        contextMenu.addAction(FigD.Icon("tabbar/duplicate.png"), "Duplicate") 
+        contextMenu.addAction(FigD.Icon("tabbar/pin.svg"), "Pin")
+        contextMenu.addAction(FigD.Icon("tabbar/mute.svg"), "Mute site")
+        contextMenu.addSeparator()
+        contextMenu.addAction(FigD.Icon("tabbar/devices.svg"), "Send to device")
+
+        return contextMenu
+
+    def getClickedTabIndex(self, pos) -> int:
+        """compute tab number of clicked tab.
+        Returns:
+            int: index of the clicked tab.
+        """
+        count = self.count()
+        clickedItem: int = -1
+        for i in range(count):
+            if self.tabRect(i).contains(pos):
+                clickedItem = i
+                break
+
+        return clickedItem
+
+    def contextMenuEvent(self, event):
+        pos = event.pos()
+        # compute the tab number.
+        i = self.getClickedTabIndex(pos)
+        # Fig style context menu
+        self.contextMenu = self.initContextMenu()
+        if self.tabwidget:
+            self.contextMenu.addSeparator()
+            self.contextMenu.addAction(
+                FigD.Icon("tabbar/close-tab.png"), "Close", 
+                partial(self.tabwidget.removeTab, i), 
+                QKeySequence.Close
+            )
+            self.contextMenu.addAction(
+                "Close other tabs", 
+                partial(self.tabwidget.removeComplement, i)
+            )
+            self.contextMenu.addAction(
+                "Close tabs to the left",
+                partial(self.tabwidget.removeLeft, i),
+            )
+            self.contextMenu.addAction(
+                "Close tabs to the right",
+                partial(self.tabwidget.removeRight, i),
+            )
+        self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+        # launch context menu.
+        self.contextMenu.popup(event.globalPos())
+        # if action == renameTab:
+        #     # print(event.x(), event.y())
+        #     try: self.tabs.renameDialog(clickedItem)
+        #     except Exception as e: 
+        #         print("\x1b[31;1mtab.contextMenuEvent\x1b[0m", e)
+        # elif action == moveTab:
+        #     app = QApplication.instance()
+        #     currentWidget = self.tabs.currentWidget()
+        #     url = currentWidget.browser.url()
+        #     window = app.newMainWindow(url=url)
+        #     window.show()
 
 # FigD style tabwidget class.
 class FigDTabWidget(QTabWidget):
@@ -1883,8 +2007,15 @@ class FigDTabWidget(QTabWidget):
             font-size: 17px;
             font-weight: bold;
         }""")
-        self.corner_widget = FigDTabCornerWidget()
+        self.corner_widget = FigDTabCornerWidget(
+            accent_color=accent_color,
+        )
+        self.tab_bar = FigDTabBar(
+            accent_color=accent_color,
+            tabwidget=self,
+        )
         # set stuff.
+        self.setTabBar(self.tab_bar)
         self.setMovable(True)
         self.setTabsClosable(True)
         self.setDocumentMode(False)
@@ -1957,6 +2088,33 @@ class FigDTabWidget(QTabWidget):
             page = widget.browser.page()
 
         return page
+
+    def removeLeft(self, i: int):
+        """
+        remove all tabs to the left of the ith one, excluding the ith one.
+        Assuming indexing starts at 0.
+        """
+        for ind in range(i):
+            self.removeTab(0)
+
+    def removeRight(self, i: int):
+        """
+        remove all tabs to the right of the ith one, excluding the ith one.
+        Assuming indexing starts at 0.
+        """
+        for ind in range(i+1, len(self)):
+            self.removeTab(i+1)
+
+    def removeComplement(self, i: int):
+        """remove all tabs except the ith one, i.e:
+        1) Remove all tabs to the left of the ith one.
+        2) Remove all tabs to the right of the 0th one.
+        """
+        # remove all the tabs to the left of the ith one.
+        self.removeLeft(i)
+        # after removing all the tabs to the left, the ith one becomes the 0th tab
+        # now remove all the tabs to the right of the 0th (originally the ith) one
+        self.removeRight(0)
 
     def openWindow(self):
         if self.window_factory is None: return
