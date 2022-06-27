@@ -1,9 +1,21 @@
 # footer pane contains shells, processes display, logs etc.
+from typing import *
+# Qt5 imports.
+from PyQt5.QtGui import QColor, QPalette, QIcon, QKeySequence
+from PyQt5.QtCore import QUrl, QSize, QEvent, pyqtSignal, QPoint
+from PyQt5.QtWidgets import QWidget, QSizePolicy, QTabWidget
 
-
-# # Qt5 imports.
-# from PyQt5 import QtGui, QtCore, QtWidgets
-
+# terminal pane
+class DashTerminalPane(QTabWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(DashTerminalPane, self).__init__(parent=parent)
+# **footer pane:**
+# togglable panes: terminal, log window 
+# always visible: zoom slider, full screen button
+# layout changer (optional) (for apps that support multiple layouts)
+class DashFooterPane(QWidget):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(DashFooterPane, self).__init__(parent=parent)
 
 # class WindowHighlightEffect(QtWidgets.QGraphicsEffect):
 #     def __init__(self, offset=1.5, parent=None):

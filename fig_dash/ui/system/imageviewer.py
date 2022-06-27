@@ -44,29 +44,19 @@ IMAGEVIEWER_BACKDROP_REGEX_MAP = {
 	"hue-rotate": "hue-rotate\(.*?deg\)",
 }
 IMAGEVIEWER_IMG_EXTRACT_JS = r"""
-function extractImageBytes(img, filter) {
+function extractImageBytes(img) {
 	var canvas = document.createElement('canvas');
 	var context = canvas.getContext('2d');
 	canvas.height = img.naturalHeight;
 	canvas.width = img.naturalWidth;
-	if (typeof context.filter != "undefined") {
-		context.filter = filter;
-	}
+	context.filter = img.style.filter
 	context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-	var base64String = canvas.toDataURL();
 	
-	return base64String;
+	return canvas.toDataURL();
 }"""
 IMAGEVIEWER_BYTES_EXTRACT_JS = IMAGEVIEWER_IMG_EXTRACT_JS+r"""
 var imgElement = document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0]
-try {
-	var imgFilter = document.getElementById("filterPane").style.backdropFilter;
-}
-catch(err) {
-	console.log(err);
-	var imgFilter = undefined;
-}
-var imgBytes = extractImageBytes(imgElement, imgFilter);
+var imgBytes = extractImageBytes(imgElement);
 console.log(imgBytes);
 imgBytes"""
 # hue-rotate, drop-shadow.
@@ -776,18 +766,22 @@ class ImageViewerFilterSlider(QWidget):
 		palette.setColor(QPalette.Highlight, QColor(sliderHandleColor))
 		self.slider.setPalette(palette)
 
-	def _js_effect_applicator(self, backdropFilter: str):
+	def _js_effect_applicator(self, filterValue: str):
 		"""apply backdrop-filter effect using js."""
-		if self.imageviewer is None: return
-		regex = IMAGEVIEWER_BACKDROP_REGEX_MAP[self.role]
+		if filterValue == "":
+			filterValue = "blur(0px) brightness(100%) contrast(100%) drop-shadow(0px 0px 0px black) hue-rotate(0deg) invert(0%) grayscale(0%) opacity(100%) sepia(0%) saturate(100%)"
+		# the new updated value of filter property targeted by 'role'
 		if self.role == "blur":
 			newValue = f"blur({self.slider.value()}px)"
 		elif self.role in ["opacity", "brightness", "contrast", "grayscale", "invert", "saturate", "sepia"]:
 			newValue = f"{self.role}({self.slider.value()}%)"
 		elif self.role == "hue-rotate":
 			newValue = f"hue-rotate({self.slider.value()}deg)"
-		backdropFilter = re.sub(regex, newValue, backdropFilter)
-		jscode = f'filterPane.style.backdropFilter = "{backdropFilter}";'
+		
+		regex = IMAGEVIEWER_BACKDROP_REGEX_MAP[self.role]
+		filterValue = re.sub(regex, newValue, filterValue)
+		
+		jscode = f'document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0].style.filter = "{filterValue}";'
 		self.webview.page().runJavaScript(jscode)
 
 	def setFilterEffect(self, value: float):
@@ -811,21 +805,13 @@ class ImageViewerFilterSlider(QWidget):
 			print(scopeStr, e)
 
 	def updateEffect(self, value):
-		global FILTER_OPERATION_DETECTED
 		self.readout.setText(str(value))
-		# print(self.apply_effect)
 		if not self.apply_effect: 
 			self.apply_effect = True
-			return
-
-		if not FILTER_OPERATION_DETECTED:
-			FILTER_OPERATION_DETECTED = True
-			if self.webview is None: return
-			self.webview.page().runJavaScript(filterPaneJS)
-		
+			return	
 		if self.webview is not None:
 			self.webview.page().runJavaScript(
-				'filterPane.style.backdropFilter', 
+				'document.getElementsByClassName("viewer-canvas")[0].getElementsByTagName("img")[0].style.filter', 
 				self._js_effect_applicator
 			)
 		else:
@@ -1016,6 +1002,7 @@ class ImageViewerPlainTextEdit(QPlainTextEdit):
 		self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
 		self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
 		self.contextMenu.popup(event.globalPos())
+
 # image viewer metadata panel.
 class ImageViewerMetaDataPanel(QWidget):
 	def __init__(self, accent_color: str="gray", 

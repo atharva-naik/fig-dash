@@ -11,15 +11,28 @@ class FigDImportGuard:
 
     def __call__(self, scope: str):
         import time
+        # from PyQt5.QtWidgets import QApplication
         load_timestamp = time.time()
-        # update import statement counter.
-        self.import_ctr += 1
-        # update load time accounting variables.
-        self.load_timestamps.append(load_timestamp)
+        self.import_ctr += 1 # update import statement counter.
+        self.load_timestamps.append(load_timestamp) # update load time accounting variables.
         if len(self.load_timestamps) == 1:
             load_time = load_timestamp-self.start_time
         else:
             load_time = load_timestamp-self.load_timestamps[-2]
+        # app = QApplication.instance()
+        # if app:
+        #     if not hasattr(self, "splash"):
+        #         print("\x1b[33;1mcreating splash screen\x1b[0m")
+        #         # create splash screen.
+        #         from PyQt5.QtGui import QPixmap
+        #         from PyQt5.QtWidgets import QSplashScreen
+        #         self.splash_pixmap = QPixmap(
+        #             "/home/atharva/GUI/FigUI/FigUI/assets/icons/email/bg_texture2.png"
+        #         )
+        #         self.splash = QSplashScreen()
+        #         self.splash.show() 
+        #     self.splash.showMessage(f"loaded {scope}")
+        #     app.processEvents()
         total_time = load_timestamp-self.start_time
         self.load_times.append(load_time)         
         if len(self.load_timestamps) != 1:                                        
@@ -32,8 +45,6 @@ FigDLoad("fig_dash::__init__")
 # from PyQt5.QtGui import QPixmap, QIcon, QFontDatabase, QKeySequence, QGuiApplication
 # from PyQt5.QtCore import QSize, Qt, QT_VERSION_STR, QEvent
 # from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QMainWindow, QGraphicsBlurEffect
-
-# fig-dash imports.
 from fig_dash.config import *
 from fig_dash.assets import FigD
 

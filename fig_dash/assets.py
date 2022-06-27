@@ -7,10 +7,8 @@ FigDLoad("fig_dash::ui::assets")
 import os
 import jinja2
 import logging
-from PyQt5.QtCore import QUrl
-from PyQt5.QtGui import QIcon, QFont
 
-
+# asset management related class.
 class AssetManager:
     '''A class to bundle path completion resources for fig'''
     def __init__(self, resource_dir: str="~/GUI/fig-dash/resources"):
@@ -18,6 +16,7 @@ class AssetManager:
         resource_dir = os.path.expanduser(resource_dir)
         # print(f"reading resources from: {resource_dir}")
         self.ResourcePath = resource_dir
+        from PyQt5.QtCore import QUrl
         self.ResourceUrl = QUrl.fromLocalFile(self.ResourcePath)
         self.dir = resource_dir
         self.reset(resource_dir)
@@ -36,6 +35,8 @@ class AssetManager:
         self.logger.error(*args, **kwargs)
 
     def reset(self, resource_dir: str):
+        from PyQt5.QtCore import QUrl
+
         self.icon_dir = os.path.join(resource_dir, "icons")
         self.font_dir = os.path.join(resource_dir, "fonts")
         self.style_dir = os.path.join(resource_dir, "style")
@@ -96,6 +97,8 @@ class AssetManager:
 
     def static(self, path: str, **params) -> str:
         '''give relative path and get absolute static path.'''
+        from PyQt5.QtCore import QUrl
+
         template_path = os.path.join(self.static_dir, path)
         with open(template_path) as f:
             template = jinja2.Template(f.read())
@@ -105,13 +108,17 @@ class AssetManager:
 
         return QUrl.fromLocalFile("/tmp/fig_dash.rendered.content.html")
 
-    def staticUrl(self, path: str) -> QUrl:
+    def staticUrl(self, path: str):
         '''local url given static path'''
+        from PyQt5.QtCore import QUrl
+
         filePath = os.path.join(self.static_dir, path)
 
         return QUrl.fromLocalFile(filePath).toString()
 
-    def createTempUrl(self, content: str) -> QUrl:
+    def createTempUrl(self, content: str):
+        from PyQt5.QtCore import QUrl
+
         os.makedirs(self.temp_foldir, exist_ok=True)
         tempPath = os.path.join(
             self.temp_foldir,
@@ -141,15 +148,17 @@ class AssetManager:
             print(f"deleting temp_foldir: {self.temp_foldir}")
         # try: shutil.rmtree(self.temp_dir)
         # except FileNotFoundError: pass
-    def Icon(self, name:str) -> QIcon :
+    def Icon(self, name:str):
         '''return QIcon'''
+        from PyQt5.QtGui import QIcon
         icon_path = self.icon(name)
         icon = QIcon(icon_path)
 
         return icon
 
-    def Font(self, name: str) -> QFont :
+    def Font(self, name: str):
         '''return QFont'''
+        from PyQt5.QtGui import QFont
         font_path = self.icon(name)
         font = QFont(font_path)
 

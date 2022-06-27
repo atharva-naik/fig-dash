@@ -12,26 +12,16 @@ from typing import *
 from ansi2html import Ansi2HTMLConverter
 # fig dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wrapFigDWindow, styleTextEditMenuIcons
-from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
 # PyQt5 imports.
-from PyQt5.QtGui import QIcon, QColor, QWindow, QTextFormat, QKeySequence#, QFont, QImage, QPixmap, QKeySequence#, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
-from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QDir, QTimer, QProcess, QStringListModel, pyqtSlot, pyqtSignal
+from PyQt5.QtGui import QColor, QWindow, QTextFormat, QKeySequence#, QIcon, QFont, QImage, QPixmap, QKeySequence#, QFontDatabase, QPalette, QPainterPath, QRegion, QTransform
+from PyQt5.QtCore import Qt, QSize, QPoint, QRectF, QTimer, QUrl, QTimer, QProcess, QStringListModel, pyqtSignal
 from PyQt5.QtWidgets import QAction, QWidget, QShortcut, QLineEdit, QMainWindow, QApplication, QSplitter, QLabel, QToolBar, QFileDialog, QToolButton, QSizePolicy, QVBoxLayout, QFileSystemModel, QTextEdit, QPlainTextEdit, QHBoxLayout, QMenu, QCompleter
-from fig_dash.utils import collapseuser
 
-# ribbon menu for DashTerminalMenu.
-class DashTerminalMenu(DashWidgetGroup):
-    def __init__(self, parent: Union[QWidget, None]=None):
-        super(DashTerminalMenu, self).__init__(parent)
-
-
+# web based terminal.
 class DashWebTerminal(QWidget):
     pass
 
-def contract_path(path):
-    return path.replace(os.path.expanduser("~"), "~")
-
+# take input for the terminal.
 class TerminalCommandInput(QLineEdit):
     def __init__(self, path: str="", accent_color: str="gray", 
                  parent: Union[None, QWidget]=None):
@@ -75,6 +65,7 @@ class TerminalCommandInput(QLineEdit):
         QApplication.clipboard().setText(cmd)
 
     def updateCompleter(self, path):
+        from fig_dash.utils import collapseuser
         # initialize with the current list of completion paths.
         completion_paths = self.completion_paths
         self.qcompleter = QCompleter()
@@ -82,7 +73,7 @@ class TerminalCommandInput(QLineEdit):
         for file in os.listdir(path):
             # absolute and contracted paths.
             abs_path = os.path.join(path, file)
-            contracted_path = contract_path(abs_path)
+            contracted_path = collapseuser(abs_path)
             # append the completion paths for current folder.
             completion_paths.append(f"cd {file}")
             completion_paths.append(f"ls {file}")
@@ -102,13 +93,14 @@ class TerminalCommandInput(QLineEdit):
         self.setCompleter(self.qcompleter)
 
     def resetCompleter(self, path):
+        from fig_dash.utils import collapseuser
         completion_paths = []
         self.qcompleter = QCompleter()
         # add commands.
         for file in os.listdir(path):
             # absolute and contracted paths.
             abs_path = os.path.join(path, file)
-            contracted_path = contract_path(abs_path)
+            contracted_path = collapseuser(abs_path)
             # append the completion paths for current folder.
             completion_paths.append(f"cd {file}")
             completion_paths.append(f"ls {file}")
@@ -146,6 +138,8 @@ class TerminalCommandInput(QLineEdit):
         super(TerminalCommandInput, self).keyPressEvent(event)
 
     def contextMenuEvent(self, event): 
+        from fig_dash.ui import styleContextMenu, styleTextEditMenuIcons
+
         self.menu = self.createStandardContextMenu()
         self.menu = styleContextMenu(self.menu, self.accent_color)
         self.menu = styleTextEditMenuIcons(self.menu)
@@ -154,7 +148,7 @@ class TerminalCommandInput(QLineEdit):
     def reset(self, path):
         pass
 
-
+# terminal path label.
 class TerminalPathLabel(QTextEdit):
     def __init__(self, accent_color: str="gray", 
                  parent: Union[QWidget, None]=None):
@@ -173,18 +167,17 @@ class TerminalPathLabel(QTextEdit):
         self.setReadOnly(True)
         self.setFixedHeight(25)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        # self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        
     def contextMenuEvent(self, event):
+        from fig_dash.ui import styleContextMenu
         self.contextMenu = self.createStandardContextMenu()
         self.contextMenu.addAction(
             FigD.Icon("system/fileviewer/copy_filepath.png"),
-            "Copy path to clipboard",
-            self.copyPathToClipboard,
+            "Copy path to clipboard", self.copyPathToClipboard,
         )
         self.contextMenu.addAction(
             FigD.Icon("system/fileviewer/copy_as_url.svg"),
-            "Copy path as url",
-            self.copyPathAsUrl,
+            "Copy path as url", self.copyPathAsUrl,
         )
         self.contextMenu = styleContextMenu(
             self.contextMenu, 
@@ -204,7 +197,9 @@ class TerminalPathLabel(QTextEdit):
         self.setText(path)
 
     def setText(self, text: str):
-        text = contract_path(text)
+        from fig_dash.utils import collapseuser
+
+        text = collapseuser(text)
         text = f"<span style='color: #ff0032; font-weight: bold;'>&nbsp; └─── </span><span style='color: #ddff80; font-weight: bold;'>{getpass.getuser()}@{socket.gethostname()}</span>:<span style='color: #44fc94; font-weight: bold'>{text}</span>"
         super(TerminalPathLabel, self).setHtml(text)
 
@@ -238,12 +233,14 @@ class TerminalCommandOutput(QPlainTextEdit):
         self.setPlainText("")
 
     def contextMenuEvent(self, event): 
+        from fig_dash.ui import styleContextMenu, styleTextEditMenuIcons
+
         self.contextMenu = self.createStandardContextMenu()
         self.menu = styleContextMenu(self.contextMenu, self.accent_color)
         self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
         self.contextMenu.popup(event.globalPos())
 
-
+# redirect shell commands to external process are read output.
 class RedirectShellContainer(QWidget):
     pathChanged = pyqtSignal(str)
     def __init__(self, path: str="~", accent_color: str="gray", 
@@ -291,47 +288,51 @@ class RedirectShellContainer(QWidget):
         self.input.appendCommand(cmd)
         if cmd == "clear":
             self.output.clearOutput()
+
         elif cmd.startswith("cd"):
             path = cmd.split("cd")[-1].strip()
-            if path == "..":
+            if path == "..": 
                 path = str(pathlib.Path(self.path).parent)
             elif path.startswith("/"): pass
-            else:
-                path = os.path.join(self.path, path)
+            else:  path = os.path.join(self.path, path)
             if not os.path.isdir(path):
                 ansi = f"bash: cd: {path}: Not a directory"
                 html = self.output_formatter.convert(ansi)
                 self.output.appendCmdOutput(html)                
-            elif os.path.exists(path): # print(path)
+            
+            elif os.path.exists(path):
+                from fig_dash.utils import collapseuser
+                # change directory.
                 os.chdir(path)
                 self.path = path
                 self.pathLabel.setPath(self.path)
                 self.pathChanged.emit(collapseuser(path))
+            
             else:
                 ansi = f"\x1b[31;1mbash: {path}\x1b[0m" 
                 html = self.output_formatter.convert(ansi)
                 self.output.appendCmdOutput(html)
+        # respond to command.
         elif cmd == "exit":
             # TODO: change this to tab close.
             QApplication.instance().quit()
         else:
-            # stdouterr = os.popen(cmd).read()
             p = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             stdout, stderr = p.communicate()
             stdout = stdout.decode("utf-8")
             stderr = stderr.decode("utf-8")
-            # print("out:", stdout, "error:", stderr)
-            if stderr == "":
-                ansi = "".join(stdout)
-            else:
-                ansi = "\x1b[31;1m"+"".join(stderr)+"\x1b[0m"
+            
+            if stderr == "": ansi = "".join(stdout)
+            else: ansi = "\x1b[31;1m"+"".join(stderr)+"\x1b[0m"
             html = self.output_formatter.convert(ansi)
             self.output.appendCmdOutput(html)
+        # clear input area after command is entered.
         self.input.setText("")
 
     def changeZoom(self, zoomValue: float):
         print(zoomValue)
-        # print(cmd)
+        
+# containzer for gnome shell.
 class GnomeShellContainer(QWidget):
     '''You can display images with lsix.'''
     def __init__(self, term: str="xterm", accent_color: str="gray", 
@@ -458,13 +459,8 @@ class DashGnomeTerminal(QSplitter):
         # self.CtrlB = QShortcut(QKeySequence("Ctrl+B"), self)
         # self.CtrlB.activated.connect(self.logWindow.toggle)
         # self.setMinimumHeight(700)
-class TerminalMenu(QWidget):
-    def toggle(self):
-        if self.isVisible():
-            self.hide()
-        else: self.show()
 
-
+# terminal widget.
 class DashTerminalWidget(QWidget):
     changeTabTitle = pyqtSignal(str)
     """
@@ -474,7 +470,6 @@ class DashTerminalWidget(QWidget):
     def __init__(self, term: str="xterm", accent_color: str="gray",
                  parent: Union[None, QWidget]=None):
         super(DashTerminalWidget, self).__init__(parent)
-        self.menu = TerminalMenu()
         # Gnome based terminal (QWindow wrapper around a gnome terminal instance)
         self._gnome_terminal = DashGnomeTerminal(term=term, accent_color=accent_color)
         self.gnome_terminal = wrapInQWidget(self._gnome_terminal)
@@ -484,7 +479,6 @@ class DashTerminalWidget(QWidget):
         self.vboxlayout.setSpacing(0)
         self.logWindow = self._gnome_terminal.logWindow
         # build layout.
-        self.vboxlayout.addWidget(self.menu)
         self.vboxlayout.addWidget(self.gnome_terminal)
         # set layout.
         self.setLayout(self.vboxlayout)
@@ -499,6 +493,8 @@ class DashTerminalWidget(QWidget):
         self.changeTabTitle.emit(path)
 
 def launch_terminal(app):
+    from fig_dash.ui import wrapFigDWindow
+    from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
     icon = FigDSystemAppIconMap["terminal"]
     accent_color = FigDAccentColorMap["terminal"]
     terminal = DashTerminalWidget(accent_color=accent_color)
@@ -511,6 +507,8 @@ def terminal_factory(**args):
     return DashTerminalWidget(**args)  
 
 def test_terminal():
+    from fig_dash.ui import wrapFigDWindow, FigDAppContainer
+    from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
     app = FigDAppContainer(sys.argv)
     icon = FigDSystemAppIconMap["terminal"]
     accent_color = FigDAccentColorMap["terminal"]

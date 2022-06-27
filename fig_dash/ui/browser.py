@@ -22,8 +22,8 @@ from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QS
 from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
-from fig_dash.utils import QFetchIcon, collapseuser
-from fig_dash.api.browser.extensions import ExtensionManager
+from fig_dash.utils import collapseuser
+# from fig_dash.api.browser.extensions import ExtensionManager
 from fig_dash.ui import DashWidgetGroup, styleContextMenu, styleTextEditMenuIcons
 
 ON_POSIX = 'posix' in sys.builtin_module_names
@@ -1825,6 +1825,8 @@ document.head.appendChild(newSelectStyle);
 
     def iconSetCallback(self, html: str):
         from bs4 import BeautifulSoup
+        from fig_dash.utils import QFetchIcon
+
         soup = BeautifulSoup(html, features="html.parser")
         icon_links = soup.findAll("link", **{"rel": "icon"})
         icon_path, is_svg = None, False

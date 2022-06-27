@@ -288,8 +288,7 @@ class TabSearchBar(QLineEdit):
         try: 
             i = self.tab_list.index(text)
             self.tabs.setCurrentIndex(i)
-        except ValueError as e:
-            print(e) 
+        except ValueError as e: print(e) 
         
     def focusInEvent(self, event):
         super(TabSearchBar, self).focusInEvent(event)
@@ -308,7 +307,6 @@ class TabSearchBar(QLineEdit):
         for i in range(self.tabs.count()):
             text = self.tabs.tabText(i)
             tab_list.append(text.strip()+f" ({i})")
-        # print(tab_list)
         self.tab_list = tab_list
         self.model.setStringList(tab_list)
         self.completer.setModel(self.model)
@@ -457,7 +455,6 @@ class TitleBarShortcutsBtn(QToolButton):
 
     def contextMenuEvent(self, event):
         pos = event.globalPos()
-        print(pos)
         x, y = pos.x(), pos.y()
         window =  self.titlebar.window
         window.shortcuts_pane = window.createShortcutsPane()
@@ -753,7 +750,7 @@ class ZoomSlider(QSlider):
         self.zoomChanged.emit(float(zoom))
         if hasattr(self, "tabWidget") and hasattr(self.tabWidget, "setTabZoom"):
             self.tabWidget.setTabZoom(zoom)
-        # print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoom:\x1b[0m 'not connected to tabWidget'")
+
     def setTabZoomFromLabel(self):
         zoom = self.label.text()
         try:
@@ -771,7 +768,7 @@ class ZoomSlider(QSlider):
         self.zoomChanged.emit(float(zoom))
         if hasattr(self, "tabWidget") and hasattr(self.tabWidget, "setTabZoom"):
             self.tabWidget.setTabZoom(zoom)
-        # print(f"\x1b[31;1mui.titlebar.ZoomSlider.setTabZoomFromLabel:\x1b[0m 'not connected to tabWidget'")
+
 # Rename/Input dialog for FigDWindow:
 class TitleBarInputDialog(QInputDialog):
     def __init__(self, *args, **kwargs):
@@ -889,8 +886,7 @@ class WindowTitleBar(QToolBar):
         palette.setColor(QPalette.Button, QColor(sliderHandleColor))
         palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
         
-        self.zoomSlider.setPalette(palette)
-        # self.zoomSlider.setAutoFillBackground(True)
+        self.zoomSlider.setPalette(palette)# self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
         # auto save toggle button.
         self.autoSaveToggle = AnimatedToggle(
@@ -1179,7 +1175,6 @@ class WindowTitleBar(QToolBar):
         # except Exception as e:
         #     snippet = "self.shortcutsBtn.clicked.connect(self.window.showShortcutList)"
         #     print(f"ui::titlebar::WindowTitleBar.connectWindow: {snippet}", e)
-
         # self.findBtn.clicked.connect(self.tabs.triggerFind)
         # self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
         # self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
@@ -1227,9 +1222,7 @@ class WindowTitleBar(QToolBar):
         elif style == "c": btn.setStyleSheet(
             title_btn_style_c.render(BACKGROUND=BACKGROUND)
         )
-        else:
-            # print("using default style") 
-            btn.setStyleSheet(window_title_btn_style)
+        else: btn.setStyleSheet(window_title_btn_style)
 
         return btn
 
@@ -1248,10 +1241,9 @@ class WindowTitleBar(QToolBar):
             delta = QPoint(event.globalPos() - parent.oldPos)
             parent.move(parent.x() + delta.x(), parent.y() + delta.y())
             parent.oldPos = event.globalPos()
-        except Exception as e:
-            pass
-            # print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
+        except: pass            
 
+# legacy titlebar design.
 class TitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None, background: str="#292929"):
         super(TitleBar, self).__init__("Titlebar", parent)
@@ -1447,7 +1439,6 @@ class TitleBar(QToolBar):
         self.hideInfo()
 
     def hideInfo(self):
-        # print("\x1b[33;1mhiding info\x1b[0m")
         self.wifi.hide()
         self.wifi.netName.hide()
         self.volume.hide()
@@ -1474,7 +1465,6 @@ class TitleBar(QToolBar):
         else: self.showInfo()
 
     def showInfo(self):
-        # print("\x1b[33;1mshowing info\x1b[0m")
         self.wifi.show()
         self.wifi.netName.show()
         self.volume.show()
@@ -1574,10 +1564,9 @@ class TitleBar(QToolBar):
             delta = QPoint(event.globalPos() - parent.oldPos)
             parent.move(parent.x() + delta.x(), parent.y() + delta.y())
             parent.oldPos = event.globalPos()
-        except Exception as e:
-            print("\x1b[31;1mtitlebar.mouseMoveEvent\x1b[0m", e)
+        except: pass
 
-
+# test titlebar.
 def titlebar_test():
     app = QApplication(sys.argv)
     window = QMainWindow()

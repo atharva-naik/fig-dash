@@ -12,6 +12,7 @@ from PyQt5.QtCore import QEventLoop, QTimer
 def collapseuser(path: str):
     return path.replace(os.path.expanduser("~"), "~")
 
+# sleep for `time` secs. 
 def pyqtSleep(time: int=1000):
     '''
     A pyqt5 friendly version of time.sleep.
@@ -21,7 +22,14 @@ def pyqtSleep(time: int=1000):
     QTimer.singleShot(time, loop.quit)
     loop.exec_()
 
-def h_format_mem(size):
+# human readable memory format
+def h_format_mem(size: int):
+    """convert bytes to human readable format.
+    Args:
+        size (int): memory size in bytes as integer.
+    Returns:
+        str: human readable memory size as string with suffix.
+    """
     if size < 1024:
         return f"{size} bytes"
     elif size < 1024*1024:
@@ -39,18 +47,32 @@ def truncStr(string):
     else:
         return string
 
-def notify(msg=None, icon=None, title="Fig Dashboard", critical=False):
-    import getpass
-    import platform
-    if msg is None: 
-        msg = f"Hello {getpass.getuser()}!"
+def notify(msg: Union[str, None]=None, icon: Union[str, None]=None, 
+           title: Union[str, None]=None, critical: Union[bool, None]=False):
+    """Send notification for different platforms. currently only supported for Linux.
+    This function is just a wrapper for platform specific APIs.
+    #### Linux: 
+    notify-send command is used to send notifications.
+    #### Windows: 
+    Not supported yet.
+    #### Darwin: 
+    Not supported yet.
+    
+    #### Args:
+        msg (Union[str, None], optional): Message to be shown. Defaults to None.
+        icon (Union[str, None], optional): Icon for application. Defaults to None.
+        title (Union[str, None], optional): Title/Name of the app. Defaults to None.
+        critical (Union[bool, None], optional): Show critical notification. Defaults to False.
+    """
+    import getpass, platform
+    if title is None: title = "Fig Dashboard"
+    if msg is None: msg = f"Hello {getpass.getuser()}!"
     # /home/atharva/GUI/fig-dash/resources/icons/logo.svg
     if platform.system() == "Linux":
-        # use notify send for Linux.
-        code = f'''notify-send "Fig Dashboard" "{msg}"'''
+        code = f'''notify-send "{title}" "{msg}"'''
         if icon: code += f" -i {icon}" 
         if critical: code += f" -u critical"
-        print("\x1b[34;1mcode:\x1b[0m", code)
+        # print("\x1b[34;1mcode:\x1b[0m", code)
         os.system(code)
 
 def secs_to_hms(secs):
@@ -61,8 +83,6 @@ def secs_to_hms(secs):
 
 def QFetchIcon(url: str, is_svg=True) -> QIcon:
     import requests
-    import tempfile
-
     content = requests.get(url)
     if is_svg: 
         path = "/tmp/lol1_2hjalx_ffl2c.svg"
@@ -73,7 +93,7 @@ def QFetchIcon(url: str, is_svg=True) -> QIcon:
         with open(path, "wb") as f:
             f.write(content.content)
     icon = QIcon(path)
-    # os.remove(path)
+    
     return icon
 
 def sampleRGB() -> Tuple[int,int,int]:

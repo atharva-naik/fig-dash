@@ -50,8 +50,7 @@ body {
     background-size: cover;
     background-attachment: fixed;
 }
-
-*::-webkit-scrollbar {
+/* *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
@@ -59,7 +58,7 @@ body {
     background: rgba(29, 29, 29, 0.4);
 }    
 *::-webkit-scrollbar-track {
-    /* background-color: rgba(235, 235, 235, 0.8); */
+    background-color: rgba(235, 235, 235, 0.8);
     background: linear-gradient(0deg, rgba(235,95,52,0.8) 0%, rgba(235,204,52,1) 94%);
 }
 *::-webkit-scrollbar-thumb {
@@ -71,7 +70,21 @@ body {
 }
 *::-webkit-scrollbar-corner {
     background-color: transparent;
-    /* background: rgba(235, 235, 235, 0.1); */
+    background: rgba(235, 235, 235, 0.1);
+} */
+
+*::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+*::-webkit-scrollbar-track {
+    background-color: #292929;
+}
+*::-webkit-scrollbar-thumb {
+    background: {{ CSS_GRAD }};
+}
+*::-webkit-scrollbar-corner {
+    background: rgba(235, 235, 235, 0.5);
 }
 
 header {
@@ -196,14 +209,14 @@ main .boxes div {
     cursor: pointer;
 }
 
-main .boxes.green div.selected {
+main .boxes.green div.selected img{
+    filter: blur(1px);
+}
+main .boxes.green div.selected span{
     color: #292929;
-    background: linear-gradient(45deg, rgba(20,126,184,0.6) 40%, rgba(105,191,238,0.6) 94%);
-    background-color: rgba(255,0,0,0.45);
-    /* background: linear-gradient(45deg, rgba(235,95,52,0.6) 40%, rgba(235,204,52,0.6) 94%);
-    background-color: rgba(255, 0, 0, 0.45); */
-    /* background: hsl(100, 80%, 65%);
-       border: 2px solid rgba(235, 95, 52, 0.075); */
+    border-radius: 2px;
+    border: 1px solid #0a4c70;
+    background: rgba(105, 191, 238, 150);
 }
 
 .slider {
@@ -297,6 +310,7 @@ var fileViewerItems = {{ FILEVIEWER_ITEMS }};
 var fileViewerIcons = {{ FILEVIEWER_ICONS }};
 var fileViewerPaths = {{ FILEVIEWER_PATHS }};
 var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
+var fileViewerMimeTypes = {{ FILEVIEWER_MIMETYPES }};
 {{ FILEVIEWER_JS }}
 
 // drag and drop callbacks.
@@ -335,7 +349,7 @@ var fileHiddenFlags = {{ HIDDEN_FLAG_LIST }};
         })
         
         divElement.innerHTML = `
-    <img id="thumbnail_${fileViewerPaths[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
+    <img id="thumbnail_${fileViewerPaths[i]}" data-mimetype="${fileViewerMimeTypes[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
     <br>
     <span class="item_name" style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
         divElement.onclick = function() {
