@@ -210,13 +210,12 @@ main .boxes div {
 }
 
 main .boxes.green div.selected img{
-    filter: blur(1px);
+    filter: sepia(100%) saturate(300%) brightness(70%) hue-rotate(180deg) blur(1px);
 }
 main .boxes.green div.selected span{
     color: #292929;
-    border-radius: 2px;
-    border: 1px solid #0a4c70;
-    background: rgba(105, 191, 238, 150);
+    border-radius: 4px;
+    background-color: rgba(82, 157, 199, 150);
 }
 
 .slider {
@@ -349,9 +348,18 @@ var fileViewerMimeTypes = {{ FILEVIEWER_MIMETYPES }};
         })
         
         divElement.innerHTML = `
-    <img id="thumbnail_${fileViewerPaths[i]}" data-mimetype="${fileViewerMimeTypes[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
+    <img id="thumbnail_${fileViewerPaths[i]}" data-abspath="${fileViewerPaths[i]}" data-mimetype="${fileViewerMimeTypes[i]}" class="icon" src="${fileViewerIcons[i]}" width="40px;"/>
     <br>
-    <span class="item_name" style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
+    <span class="item_name" data-abspath="${fileViewerPaths[i]}" style="overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; text-align: center; font-size: 13px;">${fileViewerItems[i]}</span>`
+        var itemIconImg = divElement.getElementsByTagName("img")[0];
+        var itemNameSpan = divElement.getElementsByTagName("span")[0];
+        itemNameSpan.addEventListener("dblclick", function() {
+            var renamePath = this.getAttribute("data-abspath");
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                var eventHandler = channel.objects.eventHandler;
+                eventHandler.renameDoubleClickedLabel(renamePath);
+            });
+        })
         divElement.onclick = function() {
             // console.error(this.id);
             var file_item_id = this.id;
@@ -360,8 +368,8 @@ var fileViewerMimeTypes = {{ FILEVIEWER_MIMETYPES }};
                 eventHandler.sendClickedItem(file_item_id);
             });
         }
-        divElement.addEventListener("dblclick", function() {
-            var file_item_id = this.id;
+        itemIconImg.addEventListener("dblclick", function() {
+            var file_item_id = this.getAttribute("data-abspath");
             try {
                 new QWebChannel(qt.webChannelTransport, function(channel) {
                     var eventHandler = channel.objects.eventHandler;

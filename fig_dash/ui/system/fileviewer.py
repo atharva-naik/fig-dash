@@ -47,6 +47,10 @@ class EventHandler(QObject):
         self.fileviewer = fileviewer
 
     @pyqtSlot(str)
+    def renameDoubleClickedLabel(self, path: str):
+        self.fileviewer.renameDialog(path)
+
+    @pyqtSlot(str)
     def sendClickedItem(self, path: str):
         self.fileviewer.updateSelection(path)
 
@@ -3352,6 +3356,7 @@ class FileViewerWidget(FigDMainWindow):
     def renameDialog(self, path: Union[str, None]=None):
         '''rename file item, by creating an editable field.'''
         if path is None: path = self.selected_item
+        print(f"renaming item at {path}")
         if self.selected_item:
             self.webview.initiateRenameForId(self.selected_item)
 
@@ -3627,6 +3632,23 @@ class FileViewerWidget(FigDMainWindow):
     def updateSelection(self, item):
         '''update widget state when currently selected item is changed'''
         self.selected_item = item
+        code = jinja2.Template(r"""
+try {
+    var selItemSpan = selItemElement.getElementsByClassName('item_name')[0];
+    selItemSpan.style.overflow = "hidden";
+    selItemSpan.style.webkitLineClamp = 3;
+}
+catch(err) {
+    console.log(err);
+    var selItemElement = document.getElementById('{{ ID }}');
+}
+// change selected item element
+selItemElement = document.getElementById('{{ ID }}');
+var selItemSpan = selItemElement.getElementsByClassName('item_name')[0];
+// show the fullname of the selected item's label (span).
+selItemSpan.style.overflow = "";
+selItemSpan.style.webkitLineClamp = 10;""").render(ID=item)
+        self.webview.page().runJavaScript(code)
         self.selectionChanged.emit([self.selected_item])
         _, file_ext = os.path.splitext(item)
         if file_ext == "":

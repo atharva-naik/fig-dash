@@ -552,10 +552,7 @@ class TitleBarRibbonCollapseBtn(QToolButton):
             "titlebar/widgets_bar.svg"
         ))
         self.setIconSize(QSize(*size))
-        self.setStyleSheet(
-            title_btn_style_l.render(
-                BACKGROUND=accent_color
-        ))
+        self.setStyleSheet(window_title_btn_style)
         if callback is not None:
             self.clicked.connect(callback)
         self.menu = QMenu()
@@ -599,19 +596,18 @@ class FullScreenBtn(QToolButton):
         self.setIconSize(QSize(22,22))
         self.clicked.connect(self.toggle)
         self.titlebar = None
-        style = kwargs.get("style", "c")
-        BACKGROUND = kwargs.get("background", "#292929")
-        if style == "l": self.setStyleSheet(
-            title_btn_style_l.render(BACKGROUND=BACKGROUND)
-        )
-        elif style == "r": self.setStyleSheet(
-            title_btn_style_r.render(BACKGROUND=BACKGROUND)
-        )
-        elif style == "c": self.setStyleSheet(
-            title_btn_style_c.render(BACKGROUND=BACKGROUND)
-        )
-        else: self.setStyleSheet(title_btn_style)
-
+        self.setStyleSheet(title_btn_style)
+        # style = kwargs.get("style", "c")
+        # BACKGROUND = kwargs.get("background", "#292929")
+        # if style == "l": self.setStyleSheet(
+        #     title_btn_style_l.render(BACKGROUND=BACKGROUND)
+        # )
+        # elif style == "r": self.setStyleSheet(
+        #     title_btn_style_r.render(BACKGROUND=BACKGROUND)
+        # )
+        # elif style == "c": self.setStyleSheet(
+        #     title_btn_style_c.render(BACKGROUND=BACKGROUND)
+        # ) else: 
     def connectTitleBar(self, titlebar):
         self.titlebar = titlebar
 
@@ -965,10 +961,11 @@ class WindowTitleBar(QToolBar):
         # title of application and settings
         self.addWidget(self.title)
         self.addWidget(self.initBlank(10))
+        # app settings, ribbon controls, fullscreen.
         self.addWidget(self.settingsBtn)
-        self.addWidget(self.initBlank(10))
-        # ribbon controls, fullscreen.
+        self.addWidget(self.initBlank(5))
         self.addWidget(self.ribbonCollapseBtn)
+        self.addWidget(self.initBlank(5))
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         # control button/window icon
@@ -1004,11 +1001,23 @@ class WindowTitleBar(QToolBar):
 
     def initContextMenu(self) -> QMenu:
         contextMenu = QMenu()
-        contextMenu.addAction(FigD.Icon("tabbar/rename.svg"), "Rename window   ", 
-                              self.triggerRenameWindow, QKeySequence("Alt+Shift+R"))
-        contextMenu.addSeparator()
-        contextMenu.addAction(FigD.Icon("widget/show.svg"), "Show tab bar", self.showTabBar.emit)
-        contextMenu.addAction(FigD.Icon("widget/hide.svg"), "Hide tab bar", self.hideTabBar.emit)
+        contextMenu.addAction(
+            FigD.Icon("tabbar/rename.svg"), "Rename window   ", 
+            self.triggerRenameWindow, QKeySequence("Alt+Shift+R")
+        )
+        if hasattr(self, "window") and hasattr(self.window, "tabs"):
+            contextMenu.addSeparator()
+            tabBar = self.window.tabs.tabBar()
+            if tabBar.isVisible():
+                contextMenu.addAction(
+                    FigD.Icon("widget/hide.svg"), 
+                    "Hide tabbar", self.hideTabBar.emit
+                )
+            else:
+                contextMenu.addAction(
+                    FigD.Icon("widget/show.svg"), 
+                    "Show tabbar", self.showTabBar.emit
+                )
 
         return contextMenu
 
@@ -1176,8 +1185,6 @@ class WindowTitleBar(QToolBar):
         #     snippet = "self.shortcutsBtn.clicked.connect(self.window.showShortcutList)"
         #     print(f"ui::titlebar::WindowTitleBar.connectWindow: {snippet}", e)
         # self.findBtn.clicked.connect(self.tabs.triggerFind)
-        # self.zoomInBtn.clicked.connect(self.tabs.zoomInTab)
-        # self.zoomOutBtn.clicked.connect(self.tabs.zoomOutTab)
         # self.saveSourceBtn.clicked.connect(self.tabs.saveAs)
         # self.CtrlS = QShortcut(QKeySequence("Ctrl+S"), self)
         # self.CtrlS.activated.connect(self.tabs.saveAs)
@@ -1201,18 +1208,10 @@ class WindowTitleBar(QToolBar):
         if text: btn.setText(text)
         size = kwargs.get("size", (22,22))
         btn.setIconSize(QSize(*size))
-        callback = kwargs.get(
-            "callback", 
-            self.callback
-        )
-        btn.clicked.connect(
-            self.callback if callback is None else callback
-        )
+        callback = kwargs.get("callback", self.callback)
+        btn.clicked.connect(self.callback if callback is None else callback)
         style = kwargs.get("style", "default")
-        BACKGROUND = kwargs.get(
-            "background", 
-            self.background
-        )
+        BACKGROUND = kwargs.get("background", self.background)
         if style == "l": btn.setStyleSheet(
             title_btn_style_l.render(BACKGROUND=BACKGROUND)
         )
