@@ -16,7 +16,7 @@ from pathlib import Path
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.browser import DebugWebBrowser, DebugWebView
 # from fig_dash.config import PDFJS_VIEWER_PATH
 from fig_dash.ui import styleContextMenu, FigDMainWindow, DashRibbonMenu
 # PyQt5 imports
@@ -132,6 +132,9 @@ class FileViewerFolderSearchBar(QLineEdit):
         # self.completer.setFilterMode(Qt.MatchContains)
         self.setCompleter(self.completer)
 
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerFolderSearchBar\x1b[0m"
+
     def toggle(self):
         if self.isVisible():
             self.hide()
@@ -163,6 +166,9 @@ class PyMuPdfThumbnailer:
         except ValueError as e:
             print(f"ui::system::fileviewer::PyMuPdfThumbnailer.getThumbnail raised ValueError", e)
 
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::PyMuPdfThumbnailer\x1b[0m"
+
 # File viewer thumbnailing backend worker.
 class FileViewerThumbnailer(QObject):
     """generate thumbnails for video files, 3D objects and pdfs."""
@@ -177,6 +183,9 @@ class FileViewerThumbnailer(QObject):
         # create caching folder in case it doesn't exist.
         os.makedirs(self.__cache_path, exist_ok=True)
         self.__file_path = None
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerThumbnailer\x1b[0m"
 
     def setBackend(self, backend, thumb_types: List[str]=[]):
         for thumb_type in thumb_types:
@@ -221,19 +230,17 @@ class FileViewerThumbnailer(QObject):
             self.progress.emit(path, "None")
         self.finished.emit()
         
-
 # statusbar for file viewer.
 class FileViewerStatus(QWidget):
     def __init__(self, parent: Union[None, QWidget]=None, 
-                 webview: Union[DebugWebView, None]=None):
+                 webview: Union[DebugWebBrowser, None]=None):
         super(FileViewerStatus, self).__init__(parent)    
         self.webview = webview
         # horizontal layout.
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(5)    
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(5)
         # thumbnailer workers and threads.
-
         self.selected = self.initBtn(icon="file.svg", text=" selected: None") # name of seelcted item.
         self.num_items = self.initBtn(icon="item.png", text="(contains 0 items)") # number of items in selected item 
         self.file_size = self.initBtn(icon="storage.svg", text=" 0kB") # size of selected item
@@ -246,20 +253,19 @@ class FileViewerStatus(QWidget):
         self.symlink = self.initBtn(icon=None, text=None)
         self.shortcut = self.initBtn(icon=None, text=None)
         # add widgets.
-        self.layout.addWidget(self.breakdown)
-        # self.layout.addWidget(self.user)
-        self.layout.addWidget(self.hostname)
-        self.layout.addStretch(1)
-        self.layout.addWidget(self.selected)
-        self.layout.addWidget(self.num_items)
-        self.layout.addWidget(self.file_size)
-        self.layout.addWidget(self.owner)
-        self.layout.addWidget(self.group)
-        self.layout.addWidget(self.permissions)
-        self.layout.addWidget(self.symlink)
-        self.layout.addWidget(self.shortcut)
+        self.hboxlayout.addWidget(self.breakdown)
+        self.hboxlayout.addWidget(self.hostname)
+        self.hboxlayout.addStretch(1)
+        self.hboxlayout.addWidget(self.selected)
+        self.hboxlayout.addWidget(self.num_items)
+        self.hboxlayout.addWidget(self.file_size)
+        self.hboxlayout.addWidget(self.owner)
+        self.hboxlayout.addWidget(self.group)
+        self.hboxlayout.addWidget(self.permissions)
+        self.hboxlayout.addWidget(self.symlink)
+        self.hboxlayout.addWidget(self.shortcut)
         # set layout and style
-        self.setLayout(self.layout)
+        self.setLayout(self.hboxlayout)
         self.setObjectName("FileViewerStatus")
         self.setStyleSheet('''
         QWidget#FileViewerStatus {
@@ -277,6 +283,9 @@ class FileViewerStatus(QWidget):
             background: transparent;
         }''')
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerStatus\x1b[0m"
 
     def updateSelected(self, **data):
         size = data.get("size", 0)
@@ -305,16 +314,10 @@ class FileViewerStatus(QWidget):
         self.permissions.setText(f" {permissions}")
         self.owner.setText(f" {owner}")
         self.group.setText(f" {group}")
-        # self.last_read.setText()
-        # self.last_modified.setText()
-        # self.
-
-        if icon != "":
-            self.selected.setIcon(QIcon(icon))
-        if items != 0:
-            self.num_items.setText(f"(contains {items} items)")
-        else:
-            self.num_items.setText("")
+        
+        if icon != "": self.selected.setIcon(QIcon(icon))
+        if items != 0: self.num_items.setText(f"(contains {items} items)")
+        else: self.num_items.setText("")
 
     def updateBreakdown(self, **data):
         items = data.get("items", 0)
@@ -347,13 +350,12 @@ class FileViewerStatus(QWidget):
 
         return btn
 
-
-class FileViewerWebView(DebugWebView):
+# webview for rendering content.
+class FileViewerBrowser(DebugWebBrowser):
     '''fileviewer web view'''
-    def __init__(self, accent_color="yellow"):
-        super(FileViewerWebView, self).__init__()
-        # set accent color.
-        self.accent_color = accent_color
+    def __init__(self, accent_color="blue"):
+        super(FileViewerBrowser, self).__init__()
+        self.accent_color = accent_color # set accent color.
 
     def initOrchardMenu(self):
         self.orchardMenu = QMenu()
@@ -497,6 +499,21 @@ selectedItemSpan.addEventListener('keypress', handleItemRename);
         orchard.prepend(newItemDivElement); // add the new file item to the green boxes section which is marked by the 'orchard' id.
         '''
         self.page().runJavaScript(code)
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerBrowser\x1b[0m"
+
+# file viewer's webview.
+class FileViewerWebView(DebugWebView):
+    def __init__(self, *args, accent_color: str="blue", **kwargs):
+        browser = FileViewerBrowser(accent_color=accent_color)
+        super(FileViewerWebView, self).__init__(
+            *args, browser=browser, 
+            **kwargs
+        )
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerWebView\x1b[0m"
 
 #eb5f34
 file_viewer_btn_style = jinja2.Template('''
@@ -2086,6 +2103,9 @@ class FileViewerMenu(DashRibbonMenu):
             if group_name.lower().strip().endswith("tools"):
                 self.widgetGroupAt(group_name).hide()
 
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerMenu\x1b[0m"
+
     def connectFileViewerWidget(self, widget):
         self.widget = widget
         # self.renameBtn.clicked.connect(widget.renameDialog)
@@ -2219,6 +2239,9 @@ class FileViewerFolderBtn(QToolButton):
         if not self.is_selected:
             self.setIcon(FigD.Icon("system/fileviewer/folder_btn.svg"))
         super().leaveEvent(event)
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerFolderBtn\x1b[0m"
 
     def contextMenuEvent(self, event):
         self.contextMenu = QMenu()
@@ -2666,10 +2689,10 @@ class FileViewerNavPane(QScrollArea):
             btn.connectWidget(widget)
 
 # PDF webview.
-class FileViewerPreviewWebView(DebugWebView):
+class FileViewerPreview(DebugWebBrowser):
     def __init__(self, accent_color: str="gray", 
                  parent: Union[QWidget, None]=None):
-        super(FileViewerPreviewWebView, self).__init__(
+        super(FileViewerPreview, self).__init__(
             accent_color=accent_color, 
             parent=parent,
         )
@@ -2730,8 +2753,10 @@ class FileViewerPreviewWebView(DebugWebView):
     #     print(f"loaded PDF url: {load_url.toString(QUrl.FullyEncoded)}")
     #     self.load(load_url)
     def loadPDF(self, path: str):
+        PDFJS = "file:///home/atharva/GUI/FigUI/FigUI/handler/Document/pdf/static/pdfjs/web/viewer.html"
+        PDF = QUrl.fromLocalFile(path).toString()
         print(QUrl.fromUserInput(path))
-        self.load(QUrl.fromUserInput(path))
+        self.load(QUrl.fromUserInput(f'{PDFJS}?file={PDF}'))
         self.setZoomFactor(1.35)
 # preview of a file:
 # 1. text, pdf, image, gif: webview
@@ -2741,9 +2766,10 @@ class FileViewerPreviewPanel(QWidget):
     def __init__(self, accent_color: str="gray", 
                  parent: Union[QWidget, None]=None):
         super(FileViewerPreviewPanel, self).__init__(parent)
+        self.accent_color = accent_color
         self.mime_db = QMimeDatabase()
         self.vboxlayout = QVBoxLayout()
-        self.web_preview = FileViewerPreviewWebView(accent_color=accent_color)
+        self.web_preview = FileViewerPreview(accent_color=accent_color)
         self.web_preview.hide()
         self.default = QLabel()
         self.default.setText("No preview available")
@@ -2763,6 +2789,9 @@ class FileViewerPreviewPanel(QWidget):
         if self.isVisible():
             self.hide()
         else: self.show()
+
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerPreviewPanel\x1b[0m"
 
     def generatePreview(self, paths: List[str]):
         path = paths[0]
@@ -2828,6 +2857,9 @@ class FileViewerThumbnailPreview(QWidget):
         # set layout.
         self.setLayout(self.vboxlayout)
 
+    def __str__(self):
+        return "\x1b[34mui::system::fileviewer::FileViewerThumbnailPreview\x1b[0m"
+
     def setThumbnail(self, thumbnail_path: str):
         self._thumbnail = QPixmap(thumbnail_path)
         self.thumbnail.setPixmap(
@@ -2878,6 +2910,9 @@ class FileViewerMetaDataPanel(QWidget):
 		self.vboxlayout.addWidget(self.panel)
 		drop_shadow = self.createDropShadow(accent_color, "back")
 		self.setGraphicsEffect(drop_shadow)
+
+	def __str__(self):
+		return "\x1b[34mui::system::fileviewer::FileViewerMetaDataPanel\x1b[0m"
 
 	def createDropShadow(self, accent_color: str, where: str):
 		from fig_dash.ui import extractFromAccentColor
@@ -3019,7 +3054,8 @@ class FileViewerWidget(FigDMainWindow):
         self.layout.setContentsMargins(0, 0, 0, 0)
         self.layout.setSpacing(0)
         # webview for rendering file and folder items.
-        self.webview = FileViewerWebView(accent_color=accent_color)
+        self.debug_webview = FileViewerWebView(accent_color=accent_color)
+        self.webview = self.debug_webview.browser
         self.browser = self.webview
         self.browser.zoomChanged.connect(self.signalZoom)
         self.zoom_factor = zoom_factor
@@ -3122,17 +3158,13 @@ class FileViewerWidget(FigDMainWindow):
         self.CtrlShiftT.activated.connect(self.terminal.toggle)
         # self.SelectAll.setEnabled(False)
     
-        # add the dev tools button to the view group.
-        self.webview.devToolsBtn.setText("dev\ntools")
-        self.webview.devToolsBtn.setIconSize(QSize(25,25))
-        self.webview.devToolsBtn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
         # add more panels to web view splitter.
-        self.webview.splitter.insertWidget(0, self.navpane)
-        self.webview.splitter.addWidget(self.previewPanel)
-        self.webview.splitter.addWidget(self.metaDataPanel)
-        self.webview.splitter.setSizes([200, 600, 200, 200, 200])
-        self.webview.splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.debug_webview.insertWidget(0, self.navpane)
+        self.debug_webview.addWidget(self.previewPanel)
+        self.debug_webview.addWidget(self.metaDataPanel)
+        self.debug_webview.setSizes([200, 600, 200, 200, 200])
+        self.debug_webview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
         # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
@@ -3151,7 +3183,7 @@ class FileViewerWidget(FigDMainWindow):
         # self.menuArea.hide()
         # vertical splitter: webview splitter + terminal.
         self.vsplitter = QSplitter(Qt.Vertical)
-        self.vsplitter.addWidget(self.webview.splitter)
+        self.vsplitter.addWidget(self.debug_webview)
         self.vsplitter.addWidget(self.terminal)
         # build central widget.
         self.layout.insertWidget(0, self.vsplitter, 0)
@@ -3729,7 +3761,7 @@ selItemSpan.style.webkitLineClamp = 10;""").render(ID=item)
     def onUrlChange(self):
         self.selected_item = None
         self.webview.setZoomFactor(self.zoom_factor)
-        self.webview.loadFinished.connect(self.webview.loadDevTools)
+        self.webview.loadFinished.connect(self.debug_webview.loadDevTools)
         self.folderbar.refresh()
 
     def copyUrlToClipboard(self):

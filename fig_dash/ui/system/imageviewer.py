@@ -15,8 +15,7 @@ from PIL import Image, ImageCms
 import os, io, re, sys, time, platform
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
-from fig_dash.theme import FigDAccentColorMap
+from fig_dash.ui.browser import DebugWebView, DebugWebBrowser
 from fig_dash.ui import DashRibbonMenu, DashSimplifiedMenu, FigDMainWidget, FigDAppContainer, FigDNavBar, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad, extractFromAccentColor
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontMetricsF, QPalette, QPainterPath, QRegion, QTransform
@@ -1047,7 +1046,6 @@ class ImageViewerMetaDataPanel(QWidget):
 			birthTime = self.info.birthTime().toPyDateTime()
 			birthTime = birthTime.strftime("%b %d, %Y %H:%M %p")
 		except ValueError as e: 
-			print(e)
 			birthTime = f"Creation time not available for {platform.system()}"
 		lastRead = self.info.lastRead().toPyDateTime().strftime("%b %d, %Y %H:%M %p")
 		lastModified = self.info.lastModified().toPyDateTime().strftime("%b %d, %Y %H:%M %p")
@@ -1273,30 +1271,23 @@ class ImageViewerSidePanel(QTabWidget):
 			self.hide()
 		else: self.show()
 
-
-class ImageViewerWebView(DebugWebView):
+# web browser for image viewer
+class ImageViewerBrowser(DebugWebBrowser):
     def __init__(self, *args, imageviewer=None, **kwargs):
-        super(ImageViewerWebView, self).__init__(*args, **kwargs)
+        super(ImageViewerBrowser, self).__init__(*args, **kwargs)
         self.imageviewer = imageviewer
         self.accent_color = "yellow" 
         self.shortcut_mapper = {}
-        # self.menu = self.createContextMenu()
+
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
-
-    def inspectTriggered(self):
-        print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
-        if not self.dev_view.isVisible():
-            self.dev_view.show()
-        self.inspect_action.trigger()
-        print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
-
+    # def inspectTriggered(self):
+    #     print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
+    #     if not self.dev_view.isVisible():
+    #         self.dev_view.show()
+    #     self.inspect_action.trigger()
+    #     print(f"triggered inspect dev_view.isVisible() = {self.dev_view.isVisible()}")
     def activateShortcut(self, action: QAction):
-        # def printMapper(d):
-        #     dmap = {}
-        #     for k,v in d.items():
-        #         dmap[k] = v.text()
-        #     print(dmap)
         for keySeq in action.shortcuts():
             if keySeq.toString() in self.shortcut_mapper: continue
             self.shortcut_mapper[keySeq.toString()] = QShortcut(keySeq, self)
@@ -1306,11 +1297,6 @@ class ImageViewerWebView(DebugWebView):
         self.contextMenuActions = []
         menu = self.page().createStandardContextMenu()
         menu.setObjectName("ImageViewerContextMenu")
-        # background_blur = BackgroundBlurEffect()
-        # background_blur.setEnabled(False)
-        # background_blur.setBlurRadius(10)
-        # menu.setGraphicsEffect(background_blur)
-        # data = self.page().contextMenuData()
         menu = styleContextMenu(menu, accent_color=self.accent_color)
         copyMenu = None
         copyImageAddress = None
@@ -1361,18 +1347,18 @@ class ImageViewerWebView(DebugWebView):
                 copyImageAddress.setVisible(False)
                 # action.setShortcut(QKeySequence("Ctrl+Shift+C"))
                 # action.setIcon(FigD.Icon("system/imageviewer/copy_image_address.svg"))
-            elif action.text() == "Inspect":
-                self.inspect_action = action
-                action.setVisible(False) # hide original aspect action.
-                wrappedInspectAction = menu.addAction("Inspect")
-                wrappedInspectAction.setShortcut(QKeySequence("Ctrl+Shift+I"))
-                if wrappedInspectAction.isEnabled():
-                    wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
-                else:
-                    wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
-                wrappedInspectAction.triggered.connect(
-                    self.inspectTriggered
-                ) 
+            # elif action.text() == "Inspect":
+            #     self.inspect_action = action
+            #     action.setVisible(False) # hide original aspect action.
+            #     wrappedInspectAction = menu.addAction("Inspect")
+            #     wrappedInspectAction.setShortcut(QKeySequence("Ctrl+Shift+I"))
+            #     if wrappedInspectAction.isEnabled():
+            #         wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
+            #     else:
+            #         wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
+            #     wrappedInspectAction.triggered.connect(
+            #         self.inspectTriggered
+            #     ) 
             self.activateShortcut(action)
         if copyMenu:
             copyMenu.addAction(
@@ -1456,9 +1442,24 @@ class ImageViewerWebView(DebugWebView):
         self.menu = self.createContextMenu()
         data = self.page().contextMenuData()
         self.menu.popup(event.globalPos())
-        # elif data.mediaType() == 0:
-        #     for action in self.menu.actions():
-        #         print(action.text())
+
+# image viewer webview.
+class ImageViewerWebView(DebugWebView):
+    def __init__(self, *args, imageviewer=None, 
+				 accent_color: str="yellow", **kwargs):
+        browser = ImageViewerBrowser(
+			accent_color=accent_color, 
+			imageviewer=imageviewer
+		)
+        super(ImageViewerWebView, self).__init__(
+            *args, browser=browser, 
+            **kwargs
+        )
+
+    def __str__(self):
+        return "\x1b[34mui::system::imageviewer::ImageViewerWebView\x1b[0m"
+
+# image viewer widget.
 class ImageViewerWidget(FigDMainWidget):
     changeTabIcon = pyqtSignal(str)
     changeTabTitle = pyqtSignal(str)
@@ -1507,12 +1508,13 @@ class ImageViewerWidget(FigDMainWidget):
         # create layout
         layout = QVBoxLayout()
         # TODO: Check if margin is needed anymore at all.
-        margin = 10
+        margin = 0
         layout.setContentsMargins(margin, 0, margin, margin)
         layout.setSpacing(0)
         self.centralLayout = layout
         # build layout.
-        self.browser = ImageViewerWebView(imageviewer=self)
+        self.debug_webview = ImageViewerWebView(imageviewer=self)
+        self.browser = self.debug_webview.browser
         self.browser.CtrlC = FigDShortcut(QKeySequence.Copy, self.browser, "Copy image to clipboard")
         self.browser.CtrlC.activated.connect(self.copyImageToClipboard)
         self.file_watcher.fileChanged.connect(self.browser.reload)
@@ -1541,15 +1543,12 @@ class ImageViewerWidget(FigDMainWidget):
         self.filetree.connectImageViewer(self)
         self.side_panel.hide()
         # self.filetree.hide()
-        self.browser.splitter.insertWidget(0, self.side_panel)
-        self.browser.splitter.addWidget(self.metadata_panel)
+        self.debug_webview.insertWidget(0, self.side_panel)
+        self.debug_webview.addWidget(self.metadata_panel)
         layout.addWidget(self.navbar)
-        layout.addWidget(self.browser.splitter)
+        layout.addWidget(self.debug_webview)
         # set layout.
         self.setLayout(layout)
-
-		# connect slots to signals.
-        self.browser.urlChanged.connect(self.onUrlChange)
         # parameters stuff.
         self.zoom_factor = args.get("zoom_factor", 1.3)
         # set icon.
@@ -1707,17 +1706,10 @@ class ImageViewerWidget(FigDMainWidget):
         self.filetree.connectImageViewer(self)
         self.side_panel.hide()
         # self.filetree.hide()
-        self.browser.splitter.insertWidget(0, self.side_panel)
-        layout.addWidget(self.browser.splitter)
+        self.debug_webview.insertWidget(0, self.side_panel)
+        layout.addWidget(self.debug_webview)
         # set layout.
         centralWidget.setLayout(layout)
-
-    def onUrlChange(self):
-        self.browser.setZoomFactor(self.zoom_factor)
-        self.browser.loadFinished.connect(self.onLoadFinished)
-
-    def onLoadFinished(self):        
-        self.browser.loadDevTools()
         # self.browser.page().runJavaScript("viewer.full();")
     def toggleAutoSave(self, state: int):
         """toggle auto save state of the image viewer"""
@@ -1858,6 +1850,7 @@ class ImageViewerWidget(FigDMainWidget):
         # print(path)
 def launch_imageviewer(app):
     # accent color and css grad color.
+    from fig_dash.theme import FigDAccentColorMap
     accent_color = FigDAccentColorMap["imageviewer"]
     grad_colors = extract_colors_from_qt_grad(accent_color)
     css_grad = create_css_grad(grad_colors)
@@ -1928,6 +1921,7 @@ def imageviewer_factory(**args):
     return imageviewer
 
 def imageviewer_window_factory(**args):
+    from fig_dash.theme import FigDAccentColorMap
     # accent color and css grad color.
     LENNA_PATH = FigD.icon("system/imageviewer/lenna.png")
     openpath = args.get("openpath", LENNA_PATH)
@@ -1949,8 +1943,8 @@ def imageviewer_window_factory(**args):
 			"autoSave": imageviewer.toggleAutoSave,
 			"viewSourceBtn": imageviewer.viewSource,
 		}, window_factory=imageviewer_window_factory,
+		find_function=imageviewer.browser.reactToCtrlF,
 		tab_title=tab_title, tab_icon=tab_icon,
-		ctrl_btns_loc="left",
 	)
 
     return window
@@ -1976,38 +1970,6 @@ def test_imageviewer():
 	)
     window.show()
     app.exec()
-# def test_imageviewer():
-#     FigD("/home/atharva/GUI/fig-dash/resources")
-#     s = time.time()
-#     app = FigDAppContainer(sys.argv)
-#     print(f"app created in: {time.time()-s}")
-#     # accent color and css grad color.
-#     s = time.time()
-#     accent_color = FigDAccentColorMap["imageviewer"]
-#     grad_colors = extract_colors_from_qt_grad(accent_color)
-#     css_grad = create_css_grad(grad_colors)
-#     print(f"grads & accents in: {time.time()-s}")
-#     try: openpath = sys.argv[1]
-#     except IndexError: # openpath = "~/Pictures/atharva.jpg"
-#         openpath = FigD.icon("system/imageviewer/lenna.png") 
-# 		# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
-#     widget_args = {
-# 		"css_grad": css_grad,
-# 		"openpath": openpath,
-# 		"accent_color": accent_color,
-# 	}
-#     imageviewer = imageviewer_factory(**widget_args)
-#     window = wrapFigDWindow(
-# 		imageviewer, title="Image Viewer", 
-# 		icon="system/imageviewer/logo.svg",
-# 		accent_color=accent_color, name="imageviewer",
-# 		titlebar_callbacks={
-# 			"autoSave": imageviewer.toggleAutoSave,
-# 			"viewSourceBtn": imageviewer.viewSource,
-# 		}, widget_factory=imageviewer_factory,
-#         widget_args=widget_args,
-# 	)
-#     window.show()
-#     app.exec()
+
 if __name__ == "__main__":
     test_imageviewer()

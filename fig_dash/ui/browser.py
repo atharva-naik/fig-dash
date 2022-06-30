@@ -11,7 +11,7 @@ import socket
 import getpass
 import pathlib
 import subprocess
-from typing import Union, Tuple, List
+from typing import *
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
@@ -19,7 +19,7 @@ from PyQt5.QtWebEngineCore import QWebEngineFindTextResult
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
 from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QMovie, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
-from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
+from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QSplitterHandle, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.utils import collapseuser
@@ -768,6 +768,9 @@ class DevToolbarBtn(QToolButton):
         self.setToolTip(tip)
         self.setStatusTip(tip)
 
+    def __str__(self):
+        return "\x1b[34mui::browser::DevToolbarBtn\x1b[0m"
+
     def enterEvent(self, event):
         self.setIcon(self.active_icon)
         super(DevToolbarBtn, self).enterEvent(event)
@@ -818,71 +821,369 @@ class ZoomFactor:
 
     def __call__(self):
         return self.value
+# class DebugWebView(QWebEngineView):
+#     zoomChanged = pyqtSignal(float)
+#     backgroundChanged = pyqtSignal(int, int, int)
+#     def __init__(self, parent: Union[QWidget, None]=None, zoomFactor: float=1.25, 
+#                  dev_tools_zoom: float=1.35, accent_color: str="green"):
+#         super(DebugWebView, self).__init__(parent)
+#         self.accent_color = accent_color
+#         self.devTools = self.initDevTools()
+#         self.devCloseBtn.clicked.connect(self.devTools.hide)
+#         self.devToolsBtn = DevToolsBtn(self)    
+#         self.dev_tools_zoom = dev_tools_zoom
+#         self.devToolsBtn.clicked.connect(self.toggleDevTools)
+#         # current zoom factor of the main web view.
+#         self.currentZoomFactor = zoomFactor
+#         zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+#         self.zoomFactors = [ZoomFactor(zf) for zf in zoomFactors]
 
-# web view class with dev tools.
-class DebugWebView(QWebEngineView):
+#         self.splitter = QSplitter(Qt.Horizontal)
+#         self.splitter.addWidget(self)
+#         self.splitter.addWidget(self.devTools)
+#         # self.splitter.addWidget(self.py_dev_view)
+#         self.splitter.setSizes([500, 300])
+#         # back reference to browser.
+#         self.splitter.browser = self
+#         self._page_background_colors = []
+
+#         self.searchPanel = BrowserSearchPanel()
+#         self.searchPanel.connectBrowser(self)
+#         self.searchPanel.move(50,50)
+
+#         custom_page = CustomWebPage(
+#             self, logging_level=3, 
+#             search_panel=self.searchPanel,            
+#         )
+#         self.setPage(custom_page)
+#         # shortcuts.
+#         self.Esc = QShortcut(QKeySequence("Esc"), self)
+#         self.Esc.activated.connect(self.searchPanel.closePanel)
+
+#         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
+#         self.CtrlF.activated.connect(self.reactToCtrlF)
+        
+#         self.RefreshShortcut = QShortcut(QKeySequence.Refresh, self)
+#         self.RefreshShortcut.activated.connect(self.reload)
+        
+#         self.ForwardShortcut = QShortcut(QKeySequence.Forward, self)
+#         self.ForwardShortcut.activated.connect(self.forward)
+        
+#         self.BackShortcut = QShortcut(QKeySequence.Back, self)
+#         self.BackShortcut.activated.connect(self.back)
+        
+#         self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
+#         self.CtrlShiftI.activated.connect(self.toggleDevTools)
+        
+#         self.CtrlPlus = QShortcut(QKeySequence.ZoomIn, self)
+#         self.CtrlPlus.activated.connect(self.__zoomIn)
+        
+#         self.CtrlMinus = QShortcut(QKeySequence.ZoomOut, self)
+#         self.CtrlMinus.activated.connect(self.__zoomOut)
+
+#         self.devTools.hide()
+#         self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+#         self.titlebar = None
+
+#     def __zoomIn(self):
+#         """zoom into browser."""
+#         currentZoom = self.currentZoomFactor
+#         zoomFactor = ZoomFactor(currentZoom).gt(self.zoomFactors).value
+#         self.setZoomFactor(zoomFactor)
+#         self.currentZoomFactor = zoomFactor
+#         self.zoomChanged.emit(self.currentZoomFactor)
+
+#     def __zoomOut(self):
+#         """zoom out of browser."""
+#         currentZoom = self.currentZoomFactor
+#         zoomFactor = ZoomFactor(currentZoom).lt(self.zoomFactors[::-1]).value
+#         self.setZoomFactor(zoomFactor)
+#         self.currentZoomFactor = zoomFactor
+#         self.zoomChanged.emit(self.currentZoomFactor)
+
+#     def getPageBackground(self):
+#         """get page background colors from computed css style."""
+#         self.page().runJavaScript(
+#             "window.getComputedStyle(document.body).backgroundColor", 
+#             self._set_background_color,
+#         )
+
+#     def _set_background_color(self, bgColor: str):
+#         """set the background gradient from the returned gradient result."""
+#         # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
+#         import parse
+#         try: 
+#             matchExpr = "rgb({},{},{})"
+#             bgColor = tuple(parse.parse(
+#                 matchExpr, bgColor
+#             ))
+#         except Exception as e:
+#             print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
+#             # handle a case where alpha is also present.
+#             try:
+#                 matchExpr = "rgba({},{},{},{})"
+#                 bgColor = tuple(parse.parse(
+#                     matchExpr, bgColor
+#                 ))
+#             except Exception as e:
+#                 print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
+#                 # the default color.
+#                 bgColor = [89,89,89]
+#         self.backgroundChanged.emit(bgColor[0], bgColor[1], bgColor[2])
+#         # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
+#         self._page_background_color = bgColor
+#         # print("\x1b[31;1mself.titlebar =\x1b[0m", self.titlebar)
+#         if self.titlebar is not None:
+#             r = bgColor[0]
+#             g = bgColor[1]
+#             b = bgColor[2]
+#             self.titlebar.setTitleBarColor(r, g, b)
+
+#     def prevInHistory(self):
+#         self.back()
+
+#     def nextInHistory(self):
+#         self.forward()
+
+#     def onPrintRequest(self):
+#         print("\x1b[34mprint requested\x1b[0m")
+#         defaultPrinter = QPrinter(
+#                 QPrinterInfo.defaultPrinter()
+#             )
+#         dialog = QPrintDialog(defaultPrinter, self)
+#         if dialog.exec():
+#             # printer object has to be persistent
+#             self._printer = dialog.printer()
+#             self.page().print(self._printer, self.printResult)
+
+#     def printResult(self, success):
+#         print("\x1b[32mprint result\x1b[0m")
+#         if success:
+#             QMessageBox.information(self, 'Print completed', 
+#                 'Printing has been completed!', QMessageBox.Ok)
+#         else:
+#             QMessageBox.warning(self, 'Print failed', 
+#                 'Printing has failed!', QMessageBox.Ok)
+#             # self.onPrintRequest()
+#         del self._printer    
+    
+#     def setSpellCheck(self, lang: str="en-US") -> None:
+#         """[summary]
+#         set the dictionary for spellchecking.
+#         Args:
+#             lang (str, optional): [description]. Defaults to "en-US".
+#         """
+#         # print(f"setting spell check for {lang}")
+#         self.page().profile().setSpellCheckEnabled(True)
+#         self.page().profile().setSpellCheckLanguages((lang,))
+
+#     def initDevTools(self) -> QWidget:
+#         """[summary]
+#         create the dev tools widget.
+#         (dev toolbar and dev tools webpage view.)
+#         Returns:
+#             QWidget: [description]
+#         """
+#         self.dev_view = QWebEngineView()
+#         sizePolicy = self.dev_view.sizePolicy()
+#         sizePolicy.setVerticalPolicy(QSizePolicy.Expanding)
+#         self.dev_view.setSizePolicy(sizePolicy)
+#         devTools = QSplitter(Qt.Vertical)
+#         devTools.setStyleSheet("""QWidget {
+#             background: transparent;
+#         }""")
+#         self.devToolbar = self.initDevToolbar()
+#         self.devToolbar.setFixedHeight(30)
+#         devTools.addWidget(self.devToolbar)
+#         devTools.addWidget(self.dev_view)
+#         # devToolsLayout.addStretch(1)
+#         return devTools
+
+#     def initDevToolbar(self) -> QWidget:
+#         devToolbar = QWidget()
+#         # devToolbar.setMaximumWidth(200)
+#         devToolbarLayout = QHBoxLayout()
+#         devToolbarLayout.setSpacing(10)
+#         devToolbarLayout.setContentsMargins(0, 0, 0, 0)
+#         self.devCloseBtn = DevToolbarBtn("close", type="png", tip="close dev tools")
+#         devToolbar.setFixedHeight(20)
+#         devToolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+#         devToolbar.setStyleSheet("""
+#         QWidget {
+#             background: transparent;
+#         }""")
+#         devToolbarLayout.addStretch(1)
+#         devToolbarLayout.addWidget(self.devCloseBtn, 0)
+#         # devToolbarLayout.addWidget(self.devMinBtn, 0)
+#         devToolbarLayout.addStretch(1)
+#         devToolbar.setLayout(devToolbarLayout)
+
+#         return devToolbar
+
+#     def getPageScreenshot(self):
+#         size = self.contentsRect()
+#         img = QPixmap(size.width(), size.height())
+#         self.render(img)
+#         # print(img)
+#         return img
+
+#     def saveAs(self, name: str):
+#         self.saveAsName = name
+#         self.page().runJavaScript(
+#             "document.body.outerHTML", 
+#             self._save_as_callback
+#         )
+
+#     def _save_as_callback(self, content: str):
+#         try:
+#             with open(self.saveAsName, "w") as f:
+#                 print(f"writing content to {self.saveAsName}")
+#                 f.write(content)
+#         except Exception as e:
+#             print(f"\x1b[31;1mbrowser._save_as_callback\x1b[0m:", e)
+
+#     def reactToCtrlF(self):
+#         # print("is browser pane in focus: ", self.hasFocus())
+#         print("triggered \x1b[34;1mui.browser.reactToCtrlF\x1b[0m")
+#         print(f"self.searchPanel.isVisible(): {self.searchPanel.isVisible()}")
+#         self.searchPanel.show()
+#         print(self.searchPanel.x(), self.searchPanel.y())
+
+#     def focusInEvent(self, event):
+#         print("entering focus")
+#         self.CtrlF.setEnabled(True)
+
+#     def focusOutEvent(self, event):
+#         print("exiting focus")
+#         self.CtrlF.setEnabled(False)
+
+#     def setUrl(self, url):
+#         # self.searchPanel.closePanel()
+#         super(DebugWebView, self).setUrl(url)
+
+#     def load(self, url):
+#         # self.searchPanel.closePanel()
+#         super(DebugWebView, self).load(url)
+
+#     def contextMenuEvent(self, event):
+#         self.contextMenu = self.page().createStandardContextMenu()
+#         self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
+#         for action in self.contextMenu.actions():
+#             if action.text() == "Back":
+#                 action.setShortcut(QKeySequence.Back)
+#             elif action.text() == "Forward":
+#                 action.setShortcut(QKeySequence.Forward)
+#             elif action.text() == "Reload":
+#                 action.setShortcut(QKeySequence.Refresh)
+#         self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+#         self.contextMenu.popup(event.globalPos())
+#         # # update palette.
+#         # palette = self.menu.palette()
+#         # palette.setColor(QPalette.Base, QColor(0,0,0))
+#         # palette.setColor(QPalette.Text, QColor(125,125,125))
+#         # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+#         # print(vars(QPalette))
+#         # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
+#         # palette.setColor(QPalette.Window, QColor(48,48,48))
+#         # palette.setColor(QPalette.Highlight, QColor(235,95,52))
+#         # # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
+#         # self.menu.setPalette(palette)
+#         # # apply rounding mask.
+#         # roundingPath = QPainterPath()
+#         # self.menu.popup(event.globalPos())
+#         # roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
+#         # mask = QRegion(roundingPath.toFillPolygon().toPolygon())
+#         # self.menu.setMask(mask)
+#     def alert(self, msg: str):
+#         self.page().runJavaScript(f"alert(`{msg}`);")
+
+#     def setDevToolsZoom(self):
+#         self.dev_view.setZoomFactor(self.dev_tools_zoom)
+        
+#     def toggleDevTools(self):
+#         if self.dev_view.isVisible():
+#             self.devTools.hide()
+#         else:
+#             self.devTools.show()
+
+#     def loadDevTools(self):
+#         self.dev_view.load(QUrl("http://0.0.0.0:5000/"))
+#         dev_view_page = SilentWebPage(self.dev_view)
+#         self.dev_view.setPage(dev_view_page)
+#         self.page().setDevToolsPage(dev_view_page)
+
+# QWebEngineView for debug web view splitter.
+class DebugWebBrowser(QWebEngineView):
     zoomChanged = pyqtSignal(float)
-    backgroundChanged = pyqtSignal(int, int, int)
-    def __init__(self, parent: Union[QWidget, None]=None, zoomFactor: float=1.25, 
-                 dev_tools_zoom: float=1.35, accent_color: str="green"):
-        super(DebugWebView, self).__init__(parent)
+    def __init__(self, accent_color: str="green",
+                 zoomFactor: float=1.25, 
+                 parent: Union[QWidget, None]=None):
+        super(DebugWebBrowser, self).__init__(parent)
         self.accent_color = accent_color
-        self.devTools = self.initDevTools()
-        self.devCloseBtn.clicked.connect(self.devTools.hide)
-        self.devToolsBtn = DevToolsBtn(self)    
-        self.dev_tools_zoom = dev_tools_zoom
-        self.devToolsBtn.clicked.connect(self.toggleDevTools)
-        # current zoom factor of the main web view.
-        self.currentZoomFactor = zoomFactor
-        zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
-        self.zoomFactors = [ZoomFactor(zf) for zf in zoomFactors]
-
-        self.splitter = QSplitter(Qt.Horizontal)
-        self.splitter.addWidget(self)
-        self.splitter.addWidget(self.devTools)
-        # self.splitter.addWidget(self.py_dev_view)
-        self.splitter.setSizes([500, 300])
-        # back reference to browser.
-        self.splitter.browser = self
-        self._page_background_colors = []
-
+        # search panel for "find in page".
         self.searchPanel = BrowserSearchPanel()
         self.searchPanel.connectBrowser(self)
         self.searchPanel.move(50,50)
-
+        # custom web page.
         custom_page = CustomWebPage(
             self, logging_level=3, 
             search_panel=self.searchPanel,            
         )
         self.setPage(custom_page)
+        # current zoom factor and webview.
+        self.currentZoomFactor = zoomFactor
+        zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+        self.zoomFactors = [ZoomFactor(zf) for zf in zoomFactors]
         # shortcuts.
         self.Esc = QShortcut(QKeySequence("Esc"), self)
-        self.Esc.activated.connect(self.searchPanel.closePanel)
-
         self.CtrlF = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.CtrlF.activated.connect(self.reactToCtrlF)
-        
         self.RefreshShortcut = QShortcut(QKeySequence.Refresh, self)
-        self.RefreshShortcut.activated.connect(self.reload)
-        
         self.ForwardShortcut = QShortcut(QKeySequence.Forward, self)
-        self.ForwardShortcut.activated.connect(self.forward)
-        
         self.BackShortcut = QShortcut(QKeySequence.Back, self)
-        self.BackShortcut.activated.connect(self.back)
-        
-        self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
-        self.CtrlShiftI.activated.connect(self.toggleDevTools)
-        
         self.CtrlPlus = QShortcut(QKeySequence.ZoomIn, self)
-        self.CtrlPlus.activated.connect(self.__zoomIn)
-        
         self.CtrlMinus = QShortcut(QKeySequence.ZoomOut, self)
+
+        self.Esc.activated.connect(self.searchPanel.closePanel)
+        self.CtrlF.activated.connect(self.reactToCtrlF)
+        self.RefreshShortcut.activated.connect(self.reload)
+        self.ForwardShortcut.activated.connect(self.forward)
+        self.BackShortcut.activated.connect(self.back)
+        self.CtrlPlus.activated.connect(self.__zoomIn)
         self.CtrlMinus.activated.connect(self.__zoomOut)
 
-        self.devTools.hide()
-        self.dev_view.loadFinished.connect(self.setDevToolsZoom)
-        self.titlebar = None
+    def reactToCtrlF(self):
+        # print("is browser pane in focus: ", self.hasFocus())
+        print("triggered \x1b[34;1mui.browser.reactToCtrlF\x1b[0m")
+        print(f"self.searchPanel.isVisible(): {self.searchPanel.isVisible()}")
+        self.searchPanel.show()
+        print(self.searchPanel.x(), self.searchPanel.y())
+
+    def focusInEvent(self, event):
+        print("entering focus")
+        self.CtrlF.setEnabled(True)
+        super(DebugWebBrowser, self).focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        print("exiting focus")
+        self.CtrlF.setEnabled(False)
+        super(DebugWebBrowser, self).focusOutEvent(event)
+
+    def setUrl(self, url):
+        # self.searchPanel.closePanel()
+        super(DebugWebBrowser, self).setUrl(url)
+
+    def load(self, url):
+        # self.searchPanel.closePanel()
+        super(DebugWebBrowser, self).load(url)
+
+    def alert(self, msg: str):
+        self.page().runJavaScript(f"alert(`{msg}`);")
+
+    def prevInHistory(self):
+        self.back()
+
+    def nextInHistory(self):
+        self.forward()
 
     def __zoomIn(self):
         """zoom into browser."""
@@ -900,59 +1201,11 @@ class DebugWebView(QWebEngineView):
         self.currentZoomFactor = zoomFactor
         self.zoomChanged.emit(self.currentZoomFactor)
 
-    def getPageBackground(self):
-        """get page background colors from computed css style."""
-        self.page().runJavaScript(
-            "window.getComputedStyle(document.body).backgroundColor", 
-            self._set_background_color,
-        )
-
-    def _set_background_color(self, bgColor: str):
-        """set the background gradient from the returned gradient result."""
-        # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
-        import parse
-        try: 
-            matchExpr = "rgb({},{},{})"
-            bgColor = tuple(parse.parse(
-                matchExpr, bgColor
-            ))
-        except Exception as e:
-            print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
-            # handle a case where alpha is also present.
-            try:
-                matchExpr = "rgba({},{},{},{})"
-                bgColor = tuple(parse.parse(
-                    matchExpr, bgColor
-                ))
-            except Exception as e:
-                print("\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:", e)
-                # the default color.
-                bgColor = [89,89,89]
-        self.backgroundChanged.emit(bgColor[0], bgColor[1], bgColor[2])
-        # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
-        self._page_background_color = bgColor
-        # print("\x1b[31;1mself.titlebar =\x1b[0m", self.titlebar)
-        if self.titlebar is not None:
-            r = bgColor[0]
-            g = bgColor[1]
-            b = bgColor[2]
-            self.titlebar.setTitleBarColor(r, g, b)
-
-    def prevInHistory(self):
-        self.back()
-
-    def nextInHistory(self):
-        self.forward()
-
     def onPrintRequest(self):
-        print("\x1b[34mprint requested\x1b[0m")
-        defaultPrinter = QPrinter(
-                QPrinterInfo.defaultPrinter()
-            )
+        defaultPrinter = QPrinter(QPrinterInfo.defaultPrinter())
         dialog = QPrintDialog(defaultPrinter, self)
         if dialog.exec():
-            # printer object has to be persistent
-            self._printer = dialog.printer()
+            self._printer = dialog.printer() # printer object has to be persistent
             self.page().print(self._printer, self.printResult)
 
     def printResult(self, success):
@@ -965,104 +1218,6 @@ class DebugWebView(QWebEngineView):
                 'Printing has failed!', QMessageBox.Ok)
             # self.onPrintRequest()
         del self._printer    
-    
-    def setSpellCheck(self, lang: str="en-US") -> None:
-        """[summary]
-        set the dictionary for spellchecking.
-        Args:
-            lang (str, optional): [description]. Defaults to "en-US".
-        """
-        # print(f"setting spell check for {lang}")
-        self.page().profile().setSpellCheckEnabled(True)
-        self.page().profile().setSpellCheckLanguages((lang,))
-
-    def initDevTools(self) -> QWidget:
-        """[summary]
-        create the dev tools widget.
-        (dev toolbar and dev tools webpage view.)
-        Returns:
-            QWidget: [description]
-        """
-        self.dev_view = QWebEngineView()
-        sizePolicy = self.dev_view.sizePolicy()
-        sizePolicy.setVerticalPolicy(QSizePolicy.Expanding)
-        self.dev_view.setSizePolicy(sizePolicy)
-        devTools = QSplitter(Qt.Vertical)
-        devTools.setStyleSheet("""QWidget {
-            background: transparent;
-        }""")
-        self.devToolbar = self.initDevToolbar()
-        self.devToolbar.setFixedHeight(30)
-        devTools.addWidget(self.devToolbar)
-        devTools.addWidget(self.dev_view)
-        # devToolsLayout.addStretch(1)
-        return devTools
-
-    def initDevToolbar(self) -> QWidget:
-        devToolbar = QWidget()
-        # devToolbar.setMaximumWidth(200)
-        devToolbarLayout = QHBoxLayout()
-        devToolbarLayout.setSpacing(10)
-        devToolbarLayout.setContentsMargins(0, 0, 0, 0)
-        self.devCloseBtn = DevToolbarBtn("close", type="png", tip="close dev tools")
-        devToolbar.setFixedHeight(20)
-        devToolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        devToolbar.setStyleSheet("""
-        QWidget {
-            background: transparent;
-        }""")
-        devToolbarLayout.addStretch(1)
-        devToolbarLayout.addWidget(self.devCloseBtn, 0)
-        # devToolbarLayout.addWidget(self.devMinBtn, 0)
-        devToolbarLayout.addStretch(1)
-        devToolbar.setLayout(devToolbarLayout)
-
-        return devToolbar
-
-    def getPageScreenshot(self):
-        size = self.contentsRect()
-        img = QPixmap(size.width(), size.height())
-        self.render(img)
-        # print(img)
-        return img
-
-    def saveAs(self, name: str):
-        self.saveAsName = name
-        self.page().runJavaScript(
-            "document.body.outerHTML", 
-            self._save_as_callback
-        )
-
-    def _save_as_callback(self, content: str):
-        try:
-            with open(self.saveAsName, "w") as f:
-                print(f"writing content to {self.saveAsName}")
-                f.write(content)
-        except Exception as e:
-            print(f"\x1b[31;1mbrowser._save_as_callback\x1b[0m:", e)
-
-    def reactToCtrlF(self):
-        # print("is browser pane in focus: ", self.hasFocus())
-        print("triggered \x1b[34;1mui.browser.reactToCtrlF\x1b[0m")
-        print(f"self.searchPanel.isVisible(): {self.searchPanel.isVisible()}")
-        self.searchPanel.show()
-        print(self.searchPanel.x(), self.searchPanel.y())
-
-    def focusInEvent(self, event):
-        print("entering focus")
-        self.CtrlF.setEnabled(True)
-
-    def focusOutEvent(self, event):
-        print("exiting focus")
-        self.CtrlF.setEnabled(False)
-
-    def setUrl(self, url):
-        # self.searchPanel.closePanel()
-        super(DebugWebView, self).setUrl(url)
-
-    def load(self, url):
-        # self.searchPanel.closePanel()
-        super(DebugWebView, self).load(url)
 
     def contextMenuEvent(self, event):
         self.contextMenu = self.page().createStandardContextMenu()
@@ -1076,25 +1231,177 @@ class DebugWebView(QWebEngineView):
                 action.setShortcut(QKeySequence.Refresh)
         self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
         self.contextMenu.popup(event.globalPos())
-        # # update palette.
-        # palette = self.menu.palette()
-        # palette.setColor(QPalette.Base, QColor(0,0,0))
-        # palette.setColor(QPalette.Text, QColor(125,125,125))
-        # palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        # print(vars(QPalette))
-        # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-        # palette.setColor(QPalette.Window, QColor(48,48,48))
-        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # # palette.setColor(QPalette.HighlightText, QColor(0,0,0))
-        # self.menu.setPalette(palette)
-        # # apply rounding mask.
-        # roundingPath = QPainterPath()
-        # self.menu.popup(event.globalPos())
-        # roundingPath.addRoundedRect(QRectF(self.menu.rect()), 15, 15)
-        # mask = QRegion(roundingPath.toFillPolygon().toPolygon())
-        # self.menu.setMask(mask)
-    def alert(self, msg: str):
-        self.page().runJavaScript(f"alert(`{msg}`);")
+
+    def setSpellCheck(self, lang: str="en-US") -> None:
+        """[summary]
+        set the dictionary for spellchecking.
+        Args:
+            lang (str, optional): [description]. Defaults to "en-US".
+        """
+        print(f"setting spell check for {lang}")
+        self.page().profile().setSpellCheckEnabled(True)
+        self.page().profile().setSpellCheckLanguages((lang,))
+
+    def getPageScreenshot(self):
+        size = self.contentsRect()
+        img = QPixmap(size.width(), size.height())
+        self.render(img)
+
+        return img
+
+    def saveAs(self, name: str):
+        self._save_as_name = name
+        self.page().runJavaScript(
+            "document.body.outerHTML", 
+            self._save_as_callback
+        )
+
+    def __str__(self):
+        return "\x1b[33;1mui::browser::DebugWebBrowser\x1b[0m"
+
+    def _save_as_callback(self, content: str):
+        try:
+            with open(self._save_as_name, "w") as f:
+                print(f"writing content to {self._save_as_name}")
+                f.write(content)
+        except Exception as e:
+            print(f"\x1b[31;1mbrowser._save_as_callback\x1b[0m:", e)
+
+# dev tools view (QWebEngineView)
+class DevToolsView(QWebEngineView):
+    def __str__(self):
+        return "\x1b[31;1mui::browser::DevToolsView\x1b[0m"
+
+# spitter with web browser and dev tools.
+class DebugWebView(QSplitter):
+    backgroundChanged = pyqtSignal(int, int, int)
+    def __init__(self, browser, parent: Union[QWidget, None]=None,
+                 dev_tools_zoom: float=1.35, accent_color: str="green"):
+        super(DebugWebView, self).__init__(Qt.Horizontal, parent)
+        self.accent_color = accent_color
+        self._page_background_colors = []
+        # dev tools pane.
+        self.devTools = self.initDevTools()
+        self.devTools.hide()
+        self.devCloseBtn.clicked.connect(self.devTools.hide)
+        # self.devToolsBtn = DevToolsBtn()    
+        self.dev_tools_zoom = dev_tools_zoom
+        # self.devToolsBtn.clicked.connect(self.toggleDevTools)
+        # browser.
+        self.browser = browser
+        self.browser.urlChanged.connect(self.onUrlChange)
+        self.addWidget(self.browser)
+        self.addWidget(self.devTools)
+        # splitter sizes.
+        self.setSizes([500, 300])
+        # dev tools toggling shortcut.
+        self.CtrlShiftI = QShortcut(QKeySequence("Ctrl+Shift+I"), self)
+        self.CtrlShiftI.activated.connect(self.toggleDevTools)
+        self.dev_view.loadFinished.connect(self.setDevToolsZoom)
+        self.titlebar_ptr = None
+
+    def onUrlChange(self):
+        self.browser.setZoomFactor(self.browser.currentZoomFactor)
+        self.browser.loadFinished.connect(self.onLoadFinished)
+
+    def onLoadFinished(self):        
+        self.loadDevTools()
+    # def reactToCtrlF(self):
+    #     self.browser.reactToCtrlF()
+    # def __zoomIn(self):
+    #     """zoom into browser."""
+    #     self.browser.__zoomIn()
+    # def __zoomOut(self):
+    #     """zoom out of browser."""
+    #     self.browser.__zoomOut()
+    def getPageBackground(self):
+        """get page background colors from computed css style."""
+        self.browser.page().runJavaScript(
+            "window.getComputedStyle(document.body).backgroundColor", 
+            self._set_background_color,
+        )
+
+    def _set_background_color(self, bgColor: str):
+        """set the background gradient from the returned gradient result."""
+        # print("\x1b[34;1mbgColor\x1b[0m:", bgColor)
+        scope_str = "\x1b[31;1mui.browser.DebugWebView._set_background_color\x1b[0m:"
+        import parse
+        try: 
+            matchExpr = "rgb({},{},{})"
+            bgColor = tuple(parse.parse(
+                matchExpr, bgColor
+            ))
+        except Exception as e:
+            print(scope_str, e)
+            # handle a case where alpha is also present.
+            try:
+                matchExpr = "rgba({},{},{},{})"
+                bgColor = tuple(parse.parse(
+                    matchExpr, bgColor
+                ))
+            except Exception as e:
+                print(scope_str, e)
+                bgColor = [89,89,89] # the default color.
+        # emit background changed signal for the browser.
+        self.backgroundChanged.emit(bgColor[0], bgColor[1], bgColor[2])
+        self._page_background_color = bgColor
+        if self.titlebar_ptr is not None:
+            r = bgColor[0]
+            g = bgColor[1]
+            b = bgColor[2]
+            self.titlebar_ptr.setTitleBarColor(r, g, b)
+
+    def initDevTools(self) -> QWidget:
+        """[summary]
+        create the dev tools widget.
+        (dev toolbar and dev tools webpage view.)
+        Returns:
+            QWidget: [description]
+        """
+        self.dev_view = DevToolsView()
+        sizePolicy = self.dev_view.sizePolicy()
+        sizePolicy.setVerticalPolicy(QSizePolicy.Expanding)
+        self.dev_view.setSizePolicy(sizePolicy)
+        # create dev tools.
+        dev_tools = QSplitter(Qt.Vertical)
+        dev_tools.addWidget(self.initDevToolbar())
+        dev_tools.addWidget(self.dev_view)
+        dev_tools.setStyleSheet("""QWidget {
+            background: transparent;
+        }""")
+        return dev_tools
+
+    def initDevToolbar(self) -> QWidget:
+        toolbar = QWidget()
+        toolbar.setFixedHeight(20)
+        toolbar.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        toolbar.setStyleSheet("""
+        QWidget {
+            background: transparent;
+        }""")
+        self.devCloseBtn = DevToolbarBtn("close", type="png", tip="close dev tools")
+        # create dev toolbar layout.
+        layout = QHBoxLayout()
+        layout.setSpacing(10)
+        layout.setContentsMargins(0, 0, 0, 0)        
+        # build layout.
+        layout.addStretch(1)
+        layout.addWidget(self.devCloseBtn, 0)
+        layout.addStretch(1)
+        # set layout.
+        toolbar.setLayout(layout)
+        toolbar.setFixedHeight(30)
+
+        return toolbar
+
+    def __str__(self):
+        return "\x1b[32;1mui::browser::DebugWebView\x1b[0m"
+
+    def getPageScreenshot(self):
+        return self.browser.getPageScreenshot()
+
+    def saveAs(self, name: str):
+        self.browser.saveAs(name)
 
     def setDevToolsZoom(self):
         self.dev_view.setZoomFactor(self.dev_tools_zoom)
@@ -1109,8 +1416,7 @@ class DebugWebView(QWebEngineView):
         self.dev_view.load(QUrl("http://0.0.0.0:5000/"))
         dev_view_page = SilentWebPage(self.dev_view)
         self.dev_view.setPage(dev_view_page)
-        self.page().setDevToolsPage(dev_view_page)
-
+        self.browser.page().setDevToolsPage(dev_view_page)
         
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;
@@ -1822,7 +2128,6 @@ document.head.appendChild(newSelectStyle);
         self.page().runJavaScript(code)
 
     # def drop
-
     def iconSetCallback(self, html: str):
         from bs4 import BeautifulSoup
         from fig_dash.utils import QFetchIcon

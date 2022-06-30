@@ -78,7 +78,8 @@ QToolBar {
 ''')
 title_btn_style = '''
 QToolButton {
-    border-radius: 12px; 
+    padding: 4px;
+    border-radius: 5px; 
     font-family: Helvetica;
 }
 QToolButton:hover {
@@ -120,7 +121,9 @@ QToolButton {
 }'''
 window_title_btn_style = '''
 QToolButton {
-    border-radius: 11px; 
+    color: #fff;
+    padding: 4px;
+    border-radius: 5px; 
     font-family: Helvetica;
 }
 QToolButton:hover {
@@ -548,9 +551,9 @@ class TitleBarRibbonCollapseBtn(QToolButton):
                  accent_color: str="yellow"):
         super(TitleBarRibbonCollapseBtn, self).__init__()
         self.setToolTip("collapse the ribbon menu")
-        self.setIcon(FigD.Icon(
-            "titlebar/widgets_bar.svg"
-        ))
+        self.setIcon(FigD.Icon("titlebar/widgets_bar.svg"))
+        # self.setText("▾")
+        # self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.setIconSize(QSize(*size))
         self.setStyleSheet(window_title_btn_style)
         if callback is not None:
@@ -780,7 +783,7 @@ class WindowTitleBar(QToolBar):
     def __init__(self, parent: Union[QWidget, None]=None, 
                  background: str="#292929", title_widget=None, 
                  callbacks: dict={}, where: str="back", 
-                 ctrl_btns_loc: str="left"):
+                 ctrl_btns_loc: str="right"):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
@@ -812,8 +815,9 @@ class WindowTitleBar(QToolBar):
             tip="view the source of the webpage.",
             callback=callbacks.get("viewSourceBtn"),
         )
-        if "viewSourceBtn" not in callbacks:
-            self.viewSourceBtn.hide()
+        # if "viewSourceBtn" not in callbacks:
+        #     self.viewSourceBtn.hide()
+        self.viewSourceBtn.hide() # TODO: remove this
         self.saveSourceBtn = self.initTitleBtn(
             "titlebar/save.svg", style="c",
             tip="save the source of the webpage.",
@@ -825,6 +829,7 @@ class WindowTitleBar(QToolBar):
             "titlebar/zoom_in.svg", 
             tip="zoom in", style="r"
         )
+        self.zoomInBtn.hide() # TODO: remove this
         self.findBtn = self.initTitleBtn("titlebar/find_in_page.svg", tip="find in page", style="c")
         if "findBtn" not in callbacks: 
             self.findBtn.hide()
@@ -839,6 +844,7 @@ class WindowTitleBar(QToolBar):
             "titlebar/zoom_out.svg", tip="zoom out", 
             style="l" if "viewSourceBtn" not in callbacks else "c"
         )
+        self.zoomOutBtn.hide() # TODO: remove this
         self.zoomInBtn.clicked.connect(self.increaseZoom)
         self.zoomOutBtn.clicked.connect(self.decreaseZoom)
         self.fullscreenBtn = FullScreenBtn(
@@ -867,10 +873,12 @@ class WindowTitleBar(QToolBar):
         zoomSliderWrapper = self.initZoomSliderWrapper(
             self.zoomSlider, background=background
         )
+        zoomSliderWrapper.hide() # TODO: remove this
         # create zoom label.
         self.zoomLabel = self.initZoomLabel(
             background=background, where=where
         )
+        self.zoomLabel.hide() # TODO: remove this
         # connect zoom slider and readout.
         self.zoomSlider.connectLabel(self.zoomLabel)
         # exctract slider handle color.
@@ -955,7 +963,6 @@ class WindowTitleBar(QToolBar):
         # accent color customization & shortcuts.
         self.addWidget(self.initBlank(10))
         self.addWidget(self.accentColorBtn)
-        self.addWidget(self.initBlank(10))
         self.addWidget(self.shortcutsBtn)
         self.addWidget(self.initBlank(10))
         # title of application and settings
@@ -963,20 +970,18 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.initBlank(10))
         # app settings, ribbon controls, fullscreen.
         self.addWidget(self.settingsBtn)
-        self.addWidget(self.initBlank(5))
         self.addWidget(self.ribbonCollapseBtn)
-        self.addWidget(self.initBlank(5))
         self.addWidget(self.fullscreenBtn)
         self.addWidget(self.initBlank())
         # control button/window icon
         if ctrl_btns_loc == "left":
             self.addWidget(self.windowIcon)
         else:
-            self.addWidget(self.closeBtn)
-            self.addWidget(self.initBlank(3))
             self.addWidget(self.minimizeBtn)
             self.addWidget(self.initBlank(3))
             self.addWidget(self.maximizeBtn)
+            self.addWidget(self.initBlank(3))
+            self.addWidget(self.closeBtn)
         self.addWidget(self.initBlank(10))
         # set maximum height.
         self.setMaximumHeight(30)
@@ -1179,6 +1184,7 @@ class WindowTitleBar(QToolBar):
         except Exception as e:
             snippet = "self.window_name = self.window.appName"
             print(f"ui::titlebar::WindowTitleBar.connectWindow: {snippet}", e)
+            self.window_name = "Unknown"
         # try: 
         #     self.shortcutsBtn.clicked.connect(self.window.showShortcutList)
         # except Exception as e:
@@ -1190,7 +1196,9 @@ class WindowTitleBar(QToolBar):
         # self.CtrlS.activated.connect(self.tabs.saveAs)
         # self.zoomSlider.connectTabWidget(self.tabs)
     def __str__(self):
-        return self.window_name
+        if hasattr(self, "window_name"):
+            return self.window_name
+        else: return "Unknown"
 
     def initBlank(self, width: Union[None, int]=None):
         btn = QToolButton(self)

@@ -71,6 +71,7 @@ def smooth_transition(target: QWidget):
     # print(f"target class: {target}")
     return target
 
+FIGD_TABBAR_BACKGROUND = "#141414"
 DASH_WIDGET_SCROLL_AREA = jinja2.Template("""
 QWidget {
     color: #fff;
@@ -1387,7 +1388,7 @@ class FigDZoomSlider(FigDSlider):
         value = max(min(value, 25), 0)
         value /= 250
         if hasattr(self, "window_ptr"):
-            self.window_ptr.setWindowOpacity(value)
+            self.window_ptr.setWindowZoom(value)
 
         return value
 
@@ -1514,10 +1515,18 @@ class FigDAppSettingsMenu(QMenu):
         self.accent_color = accent_color
         # make the window transparent.
         if tabs_enabled: 
-            self.addAction(FigD.Icon("tabbar/new-tab.png"), "New tab", blank, QKeySequence("Ctrl+T"))
-            self.addAction("New window", blank, QKeySequence("Ctrl+N"))
-            self.addAction("New Private window", blank, 
-                           QKeySequence("Ctrl+Shift+N"))
+            self.addAction(
+                FigD.Icon("tabbar/new-tab.png"), 
+                "New tab", blank, QKeySequence("Ctrl+T")
+            )
+            self.addAction(
+                "New window", blank, 
+                QKeySequence("Ctrl+N")
+            )
+            self.addAction(
+                "New Private window", blank, 
+                QKeySequence("Ctrl+Shift+N")
+            )
         self.addSeparator()
         self.addAction(FigD.Icon("textedit/history.svg"), "History")
         self.addAction(FigD.Icon("navbar/download.svg"), "Downloads", 
@@ -1528,6 +1537,11 @@ class FigDAppSettingsMenu(QMenu):
         self.opacitySlider = self.addSlider(
             "Opacity", class_=FigDOpacitySlider, 
             value=100, plus=True, minus=True
+        )
+        self.zoomSlider = self.addSlider(
+            "Zoom   ", class_=FigDZoomSlider, 
+            value=100, plus=True, minus=True,
+            minm=25, maxm=250
         )
         # self.opacitySlider.setFixedWidth(320)
         self.addSeparator()
@@ -1547,7 +1561,10 @@ class FigDAppSettingsMenu(QMenu):
             FigD.Icon("menu/notifications.svg"), 
             "Notifications"
         )
-        self.notifsMenu.addAction("Mute", blank, QKeySequence("Alt+Shift+M"))
+        self.notifsMenu.addAction(
+            "Mute", blank, 
+            QKeySequence("Alt+Shift+M")
+        )
         self.notifsMenu.addAction("Manage", blank)
         self.notifsMenu = styleContextMenu(self.notifsMenu, accent_color)
         self.addSeparator()
@@ -1573,6 +1590,7 @@ class FigDAppSettingsMenu(QMenu):
                 window.find_function
             )
         self.opacitySlider.connectWindow(self.__window_ptr)
+        self.zoomSlider.connectWindow(self.__window_ptr)
 
     def addSlider(self, text: str="", class_=None, **kwargs):
         if class_:slider = class_(text=text, **kwargs)
@@ -1670,19 +1688,17 @@ class FigDAppContainer(QApplication):
     def notify(self, obj, event):
         if isinstance(obj, FigDWindow):
             if event.type() == QEvent.WindowDeactivate:
-                # print("deactivated", obj.appName)
                 obj.titlebar.deactivate()
             if event.type() == QEvent.WindowActivate:
-                # print("activated", obj.appName)
                 obj.titlebar.activate()
 
         return super(FigDAppContainer, self).notify(obj, event)
 
 # FigD style tab corner widget class.
-class FigDTabCornerWidget(QWidget):
+class FigDTabManager(QWidget):
     def __init__(self, accent_color: str="gray", 
                  parent: Union[None, QWidget]=None):
-        super(FigDTabCornerWidget, self).__init__(parent=parent)
+        super(FigDTabManager, self).__init__(parent=parent)
         self.setGraphicsEffect(self.createDropShadow(accent_color))
         self.hboxlayout = QHBoxLayout()
         self.hboxlayout.setSpacing(2)
@@ -1702,7 +1718,16 @@ class FigDTabCornerWidget(QWidget):
         self.hboxlayout.addWidget(self.deletedBtn, 0, Qt.AlignVCenter)
         self.hboxlayout.addWidget(self.searchBtn, 0, Qt.AlignVCenter)
         # set layout and size policy.
-        self.setLayout(self.hboxlayout)
+        wrapper = QWidget()
+        wrapper.setStyleSheet(f"""background: {FIGD_TABBAR_BACKGROUND};""")
+        wrapper.setLayout(self.hboxlayout)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(wrapper, 0, Qt.AlignTop)
+        wrapper.setFixedHeight(35)
+        # set layout.
+        self.setLayout(layout)
 
     def createDropShadow(self, accent_color: str="gray", 
                          where: str="back") -> QGraphicsDropShadowEffect:
@@ -1797,6 +1822,7 @@ class FigDTabBar(QTabBar):
                  tabwidget: QTabWidget=None,
                  parent: Union[None, QWidget]=None):
         super(FigDTabBar, self).__init__(parent)
+        self.setDrawBase(False)
         self.accent_color = accent_color
         self.border_color = extractFromAccentColor(accent_color)
         self.bg_alpha = setAccentColorAlpha(accent_color, alpha=150)
@@ -1829,6 +1855,7 @@ class FigDTabBar(QTabBar):
         )
         self.plusBtn.setIconSize(QSize(22,22))
         self.plusBtn.clicked.connect(self.openTab)
+        self.setDrawBase(False)
 
     def initTabControls(self, menu: QMenu) -> QWidgetAction:
         # widget and layout.
@@ -1863,13 +1890,14 @@ class FigDTabBar(QTabBar):
         self.moveNewTabBtn()
 
     def moveNewTabBtn(self):
+        self.setDrawBase(False)
         size = sum(self.tabRect(i).width() for i in range(self.count()))
         # Set the new tab button location in a visible area
         y = self.geometry().top()+4
         if size > self.width():
             x = self.width()-54
         else: x = size
-        x = x+10
+        x = x+5
         # Show just to the left of the scroll buttons
         self.plusBtn.move(x, y)
 
@@ -2001,6 +2029,81 @@ class FigDTabBar(QTabBar):
         #     window.show()
 
 # FigD style tabwidget class.
+class FigDTabCtrlBtn(QToolButton):
+    """tab control buttons."""
+    def __init__(self, icon, active_icon=None,
+                 size: Tuple[int,int]=(18,18),
+                 parent: Union[QWidget, None]=None):
+        super(FigDTabCtrlBtn, self).__init__(parent)
+        self.icon_obj = FigD.Icon(icon)
+        if active_icon:
+            self.active_icon_obj = FigD.Icon(active_icon)
+        else: self.active_icon_obj = self.icon_obj
+        self.setIcon(self.icon_obj)
+        self.setIconSize(QSize(*size))
+
+    def enterEvent(self, event):
+        self.setIcon(self.active_icon_obj)
+        super(FigDTabCtrlBtn, self).enterEvent(event)
+
+    def leaaveEvent(self, event):
+        self.setIcon(self.icon_obj)
+        super(FigDTabCtrlBtn, self).leaveEvent(event)
+
+# FigD tabbar settings button.
+class FigDTabSettingsBtn(QWidget):
+    def __init__(self, accent_color: str="gray", 
+                 where: str="back", parent=None):
+        super(FigDTabSettingsBtn, self).__init__(parent=parent)
+        self.accent_color = accent_color
+        self.border_color = extractFromAccentColor(accent_color, where)
+        self.bg_alpha = setAccentColorAlpha(accent_color)
+        # settings btn.
+        btn = QToolButton()
+        btn.setIcon(FigD.Icon("tabbar/settings.svg"))
+        btn.setStyleSheet(jinja2.Template('''
+        QToolButton {
+            color: #fff;
+            font-size: 14px;
+            border-radius: 2px;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: {{ background }};
+            border: 1px solid {{ border_color }};
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }''').render(
+                background=self.bg_alpha,
+                border_color=self.border_color,
+            )
+        )
+        btn.setIconSize(QSize(22,22))
+        # wrapper for ..
+        wrapper = QWidget()
+        wrapper.setStyleSheet(f"""background: {FIGD_TABBAR_BACKGROUND};""")
+        wrapper.setFixedHeight(35)
+        # vboxlayout.
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.vboxlayout.setSpacing(0)
+        self.vboxlayout.addWidget(btn, 0, Qt.AlignVCenter)
+        # set vboxlayout to wrapper.
+        wrapper.setLayout(self.vboxlayout)
+        # wrapper layout.
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        layout.addWidget(wrapper, 0, Qt.AlignTop)
+        # set layout.
+        self.setLayout(layout)
+
+# tab widget for FigD.
 class FigDTabWidget(QTabWidget):
     def __init__(self, widget_factory=None, window_factory=None, 
                  parent: Union[None, QWidget]=None, tab_icon: str="",
@@ -2019,21 +2122,28 @@ class FigDTabWidget(QTabWidget):
         drop_shadow = self.createDropShadow(
             accent_color, where
         )
+        self.accent_color = accent_color        
+        self.border_color = extractFromAccentColor(accent_color)
+        self.bg_alpha = setAccentColorAlpha(accent_color, alpha=150)
         # set style sheet.
         self.setStyleSheet("""
         QTabWidget {
             color: #fff;
-            border: 0px;
+            border: none;
             font-family: 'Be Vietnam Pro';
             background: transparent;
         }
         QTabWidget::pane {
-            border: 0px;
+            border: none;
             background: transparent;
         }
+        QTabWidget::right-corner {
+            border: none;
+        }
         QTabBar {
-            border: 0px;
-            background: transparent;
+            border: none;
+            qproperty-drawBase: 0;
+            background: """+FIGD_TABBAR_BACKGROUND+""";
         }
         QTabBar::close-button {
             background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
@@ -2046,7 +2156,7 @@ class FigDTabWidget(QTabWidget):
             background-position: center;
         }
         QTabBar::tab {
-            border: 0px;
+            border: none;
             color: #fff;
 
             margin-left: 0px;
@@ -2073,7 +2183,7 @@ class FigDTabWidget(QTabWidget):
         }
         QTabBar::tab:selected {
             color: #eee;
-            border: 0px;
+            border: none;
             font-weight: bold;
             background: #323232;
             
@@ -2094,7 +2204,10 @@ class FigDTabWidget(QTabWidget):
             font-size: 17px;
             font-weight: bold;
         }""")
-        self.corner_widget = FigDTabCornerWidget(
+        self.tab_manager = FigDTabManager(
+            accent_color=accent_color,
+        )
+        self.tab_settings = FigDTabSettingsBtn(
             accent_color=accent_color,
         )
         self.tab_bar = FigDTabBar(
@@ -2102,16 +2215,21 @@ class FigDTabWidget(QTabWidget):
             tabwidget=self,
         )
         # set stuff.
+        self.tab_bar.setDrawBase(False)
         self.setTabBar(self.tab_bar)
+        self.tab_bar.setDrawBase(False)
+
         self.setMovable(True)
         self.setTabsClosable(True)
         self.setDocumentMode(True)
+        
         self.setTabBarAutoHide(True)
         self.setElideMode(Qt.ElideRight)
         self.setObjectName("FigDTabWidget")
-        self.setCornerWidget(self.corner_widget)
-        self.tabBar().setGraphicsEffect(drop_shadow)
-        self.tabBar().setDrawBase(False)
+        self.setCornerWidget(self.tab_settings, Qt.TopLeftCorner)
+        self.setCornerWidget(self.tab_manager, Qt.TopRightCorner)
+        self.tab_bar.setGraphicsEffect(drop_shadow)
+        self.tab_bar.setDrawBase(False)
         # connect slots to signals.
         self.currentChanged.connect(self.onTabChange)
         self.tabCloseRequested.connect(self.closeRequestedTab)
@@ -2210,6 +2328,13 @@ class FigDTabWidget(QTabWidget):
         if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
         i = self.addTab(widget, self.tab_icon, self.tab_title)
+        # create missing mute buttons.
+        # for i in range(len(self)):
+        #     ctrlBtns = self.initTabCtrlBtns() # tab control buttons.
+        #     self.tabBar().setTabButton(
+        #         i, QTabBar.RightSide, 
+        #         ctrlBtns, # set tab buttons (controls).
+        #     )
         self.setCurrentIndex(i)
         # return web page. (required by createWindow, to create new tab).
         page = None
@@ -2219,6 +2344,72 @@ class FigDTabWidget(QTabWidget):
             page = widget.browser.page()
 
         return page
+
+    def initTabCtrlBtns(self) -> QWidget:
+        ctrlBtns = QWidget()
+        ctrlLayout = QHBoxLayout()
+        ctrlLayout.setSpacing(0)
+        ctrlLayout.setContentsMargins(0, 0, 0, 0)
+        ctrlBtns.setLayout(ctrlLayout)
+        # mute & close button.
+        muteBtn = self.initTabCtrlBtn("tabbar/mute.svg")
+        closeBtn = self.initTabCtrlBtn(
+            "close.png", 
+            "close-active.png",
+            size=(24,24),
+        )
+        ctrlLayout.addWidget(muteBtn)
+        ctrlLayout.addWidget(closeBtn)
+
+        return ctrlBtns
+
+    def initTabCtrlBtn(self, icon, active_icon=None, 
+                       size: Tuple[int,int]=(18,18)) -> QToolButton:
+        """tab control buttons."""
+        btn = FigDTabCtrlBtn(icon, active_icon, size)
+        if active_icon:
+            self.setStyleSheet(jinja2.Template('''
+            QToolButton {
+                color: #fff;
+                font-size: 14px;
+                border-radius: 2px;
+                background: transparent;
+                border: 1px solid transparent;
+            }
+            QToolTip {
+                color: #fff;
+                border: 0px;
+                background: #000;
+            }''').render(
+                    background=self.bg_alpha,
+                    border_color=self.border_color,
+                )
+            )
+        else:
+            self.setStyleSheet(jinja2.Template('''
+            QToolButton {
+                color: #fff;
+                font-size: 14px;
+                border-radius: 2px;
+                background: transparent;
+                border: 1px solid transparent;
+            }
+            QToolButton:hover {
+                color: #292929;
+                background: {{ background }};
+                border: 1px solid {{ border_color }};
+            }
+            QToolTip {
+                color: #fff;
+                border: 0px;
+                background: #000;
+            }''').render(
+                    background=self.bg_alpha,
+                    border_color=self.border_color,
+                )
+            )
+
+        return btn
 
     def removeLeft(self, i: int):
         """
@@ -2989,7 +3180,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     titlebar = WindowTitleBar(
         background=accent_color, callbacks=titlebar_callbacks,
         title_widget=args.get("title_widget"), where=_where, 
-        ctrl_btns_loc=args.get("ctrl_btns_loc", "left"),
+        ctrl_btns_loc=args.get("ctrl_btns_loc", "right"),
     )
     settingsMenu = FigDAppSettingsMenu(tabs_enabled=add_tabs)
     titlebar.settingsBtn.setContextMenu(settingsMenu)
@@ -3063,13 +3254,13 @@ def wrapFigDWindow(widget: QWidget, **args):
     centralWidget.setLayout(layout)
 
     window = FigDWindow(widget=centralWidget, **args)
+    window.appName = app_name
     window.find_function = find_function
     window.bookmark_manager = bookmark_manager
     if not add_tabs: 
         widget.CtrlW.activated.connect(window.close)
     else:
         window.tabs = tabwidget
-    window.appName = app_name
     window.setWindowOpacity(1)
     window.connectTitleBar(titlebar)
     window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
