@@ -187,6 +187,7 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
     ),
 }
 def setAccentColorAlpha(bg, alpha: int=150):
+    if bg == "transparent": return bg
     qt_grad_elem = bg.split("stop")[0].strip()
     hex_color_list = ["#"+i.split("#")[-1].split()[0].replace(")","").replace(",","").replace(";","") for i in bg.split("stop")[1:]]
     stop = 0
@@ -397,7 +398,6 @@ class DashWidgetGroupBtn(QToolButton):
         self.setStatusTip(tip)
         bg_with_alpha = setAccentColorAlpha(background, alpha=150)
         # stylesheet attributes.
-        # print(font_size)
         if stylesheet:
             self.setStyleSheet(stylesheet)
         elif self.hover_response == "background":
@@ -1161,7 +1161,8 @@ class FigDSlider(QWidget):
     def __init__(self, text: str="", value: int=0, minm: int=0, 
                  maxm: int=100, plus: bool=False, minus: bool=False,
                  accent_color: str="gray", orient: str="horizontal",
-                 where: str="back", parent: Union[None, QWidget]=None):
+                 where: str="back", parent: Union[None, QWidget]=None,
+                 btns_list: List[QToolButton]=[]):
         super(FigDSlider, self).__init__(parent)
         self.accent_color = accent_color
         self.vboxlayout = QVBoxLayout()
@@ -1228,6 +1229,9 @@ class FigDSlider(QWidget):
             self.plusBtn.clicked.connect(self.increase)
             self.hboxlayout.addWidget(self.plusBtn)
         self.addSeparator()
+        for btn in btns_list:
+            self.hboxlayout.addWidget(btn)
+        self.btns_list = btns_list
         self.hboxlayout.addStretch(1)
         # build widget vertical layout.
         self.setLayout(self.vboxlayout)
@@ -1511,6 +1515,7 @@ class FigDAppSettingsMenu(QMenu):
                  parent: Union[None, QWidget]=None,
                  tabs_enabled: bool=True):
         super(FigDAppSettingsMenu, self).__init__(parent)
+        from fig_dash.ui.titlebar import FullScreenBtn
         self.sliders = []
         self.accent_color = accent_color
         # make the window transparent.
@@ -1538,10 +1543,15 @@ class FigDAppSettingsMenu(QMenu):
             "Opacity", class_=FigDOpacitySlider, 
             value=100, plus=True, minus=True
         )
+        self.fullscreenBtn = FullScreenBtn(
+            fs_icon="titlebar/fullscreen.svg", 
+            efs_icon="titlebar/exit_fullscreen.svg", 
+            style="r", background=accent_color,
+        )
         self.zoomSlider = self.addSlider(
-            "Zoom   ", class_=FigDZoomSlider, 
-            value=100, plus=True, minus=True,
-            minm=25, maxm=250
+            "Zoom     ", class_=FigDZoomSlider, 
+            value=100, plus=True, minus=True, minm=25, 
+            maxm=250, btns_list=[self.fullscreenBtn],
         )
         # self.opacitySlider.setFixedWidth(320)
         self.addSeparator()
@@ -1591,6 +1601,7 @@ class FigDAppSettingsMenu(QMenu):
             )
         self.opacitySlider.connectWindow(self.__window_ptr)
         self.zoomSlider.connectWindow(self.__window_ptr)
+        self.fullscreenBtn.setWindow(window)
 
     def addSlider(self, text: str="", class_=None, **kwargs):
         if class_:slider = class_(text=text, **kwargs)
@@ -2060,7 +2071,7 @@ class FigDTabSettingsBtn(QWidget):
         self.bg_alpha = setAccentColorAlpha(accent_color)
         # settings btn.
         btn = QToolButton()
-        btn.setIcon(FigD.Icon("tabbar/settings.svg"))
+        btn.setIcon(FigD.Icon("tabbar/settings.png"))
         btn.setStyleSheet(jinja2.Template('''
         QToolButton {
             color: #fff;
@@ -2083,18 +2094,21 @@ class FigDTabSettingsBtn(QWidget):
                 border_color=self.border_color,
             )
         )
+        blank = QWidget()
+        blank.setFixedWidth(5)
         btn.setIconSize(QSize(22,22))
         # wrapper for ..
         wrapper = QWidget()
         wrapper.setStyleSheet(f"""background: {FIGD_TABBAR_BACKGROUND};""")
         wrapper.setFixedHeight(35)
         # vboxlayout.
-        self.vboxlayout = QVBoxLayout()
-        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
-        self.vboxlayout.setSpacing(0)
-        self.vboxlayout.addWidget(btn, 0, Qt.AlignVCenter)
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(0)
+        self.hboxlayout.addWidget(btn, 0, Qt.AlignVCenter)
+        self.hboxlayout.addWidget(blank, 0, Qt.AlignVCenter)
         # set vboxlayout to wrapper.
-        wrapper.setLayout(self.vboxlayout)
+        wrapper.setLayout(self.hboxlayout)
         # wrapper layout.
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -2102,6 +2116,18 @@ class FigDTabSettingsBtn(QWidget):
         layout.addWidget(wrapper, 0, Qt.AlignTop)
         # set layout.
         self.setLayout(layout)
+        btn.clicked.connect(self.showSettingsMenu)
+
+    def showSettingsMenu(self):
+        self.contextMenu = QMenu()
+        self.contextMenu.addAction("Turn on vertical tabs")
+        self.contextMenu.addAction("Tabs from other devices")
+        pos = self.mapToGlobal(QPoint(0, 0))
+        self.contextMenu = styleContextMenu(
+            self.contextMenu, 
+            self.accent_color,
+        )
+        self.contextMenu.popup(pos)
 
 # tab widget for FigD.
 class FigDTabWidget(QTabWidget):

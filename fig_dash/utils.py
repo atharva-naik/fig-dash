@@ -5,8 +5,6 @@ FigDLoad("fig_dash::utils")
 
 import os
 from typing import *
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import QEventLoop, QTimer
 
 # utility functions.
 def collapseuser(path: str):
@@ -14,10 +12,10 @@ def collapseuser(path: str):
 
 # sleep for `time` secs. 
 def pyqtSleep(time: int=1000):
-    '''
-    A pyqt5 friendly version of time.sleep.
+    """A pyqt5 friendly version of time.sleep.
     time to wait in millis
-    '''
+    """
+    from PyQt5.QtCore import QEventLoop, QTimer
     loop = QEventLoop()
     QTimer.singleShot(time, loop.quit)
     loop.exec_()
@@ -81,8 +79,10 @@ def secs_to_hms(secs):
     
     return (hrs, mins, secs)
 
-def QFetchIcon(url: str, is_svg=True) -> QIcon:
+def QFetchIcon(url: str, is_svg=True):
     import requests
+    from PyQt5.QtGui import QIcon
+
     content = requests.get(url)
     if is_svg: 
         path = "/tmp/lol1_2hjalx_ffl2c.svg"

@@ -599,6 +599,7 @@ class FullScreenBtn(QToolButton):
         self.setIconSize(QSize(22,22))
         self.clicked.connect(self.toggle)
         self.titlebar = None
+        self.___window = None
         self.setStyleSheet(title_btn_style)
         # style = kwargs.get("style", "c")
         # BACKGROUND = kwargs.get("background", "#292929")
@@ -610,13 +611,18 @@ class FullScreenBtn(QToolButton):
         # )
         # elif style == "c": self.setStyleSheet(
         #     title_btn_style_c.render(BACKGROUND=BACKGROUND)
-        # ) else: 
+        # ) else:
+    def setWindow(self, window):
+        self.___window = window
+
     def connectTitleBar(self, titlebar):
         self.titlebar = titlebar
 
     def fullscreen(self):
         print("fullscreen mode")        
         self.window().showFullScreen()
+        if self.___window:
+            self.___window.showFullScreen()
         self.setIcon(self.efs_icon)
         self.is_fullscreen = True
         if self.titlebar:
@@ -625,6 +631,8 @@ class FullScreenBtn(QToolButton):
     def exit_fullscreen(self):
         print("exiting fullscreen mode")
         self.window().showNormal()
+        if self.___window:
+            self.___window.showNormal()
         self.setIcon(self.fs_icon)
         self.is_fullscreen = False
         if self.titlebar:

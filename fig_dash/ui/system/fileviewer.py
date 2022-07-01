@@ -2266,7 +2266,8 @@ class FileViewerFolderBtn(QToolButton):
 class FileViewerFolderNavBtn(QToolButton):
     def __init__(self, icon: str="", tip: str="", 
                  parent: Union[None, QWidget]=None,
-                 stylesheet: str="", accent_color: str=""):
+                 stylesheet: str="", accent_color: str="",
+                 disabled_stylesheet: str=""):
         super(FileViewerFolderNavBtn, self).__init__(parent)
         self.accent_color = accent_color
         self.setToolTip(tip)
@@ -2274,12 +2275,20 @@ class FileViewerFolderNavBtn(QToolButton):
         self.role = Path(icon).stem
         icon = os.path.join("system/fileviewer", icon)
         self.setIcon(FigD.Icon(icon))
-        self.setStyleSheet(stylesheet)
+        self.___stylesheet = stylesheet
+        self.___disabled_stylesheet = disabled_stylesheet
+        self.setStyleSheet(self.___stylesheet)
         self.setIconSize(QSize(22,22))
         self.isenabled = True
 
+    def setEnabled(self, enabled: bool):
+        self.isenabled = enabled
+        if enabled:
+            self.setStyleSheet(self.___stylesheet)
+        else:
+            self.setStyleSheet(self.___disabled_stylesheet)
+
     def enterEvent(self, event):
-        # print(f"{self.role}: {self.isenabled}")
         if not self.isenabled: return
         icon = os.path.join(
             "system/fileviewer", 
@@ -2400,16 +2409,16 @@ class FileViewerFolderBar(QScrollArea):
         if not hasattr(self, "widget"): return
         history = self.widget.webview.history()
         if history.canGoBack():
-            self.backBtn.isenabled = True
+            self.backBtn.setEnabled(True)
             self.backBtn.setIcon(FigD.Icon("system/fileviewer/prev.svg"))
         else:
-            self.backBtn.isenabled = False
+            self.backBtn.setEnabled(False)
             self.backBtn.setIcon(FigD.Icon("system/fileviewer/prev_disabled.svg"))
         if history.canGoForward():
-            self.forwardBtn.isenabled = True
+            self.forwardBtn.setEnabled(True)
             self.forwardBtn.setIcon(FigD.Icon("system/fileviewer/next.svg"))
         else:
-            self.forwardBtn.isenabled = False
+            self.forwardBtn.setEnabled(False)
             self.forwardBtn.setIcon(FigD.Icon("system/fileviewer/next_disabled.svg"))
 
     def toggle(self):
@@ -2491,10 +2500,25 @@ class FileViewerFolderBar(QScrollArea):
         self.forwardBtn.widget = widget
 
     def initFolderNavBtn(self, icon: str, tip: str="tip"):
+        folderBtnDisStyle = """
+        QToolButton {
+            color: #fff;
+            font-size: 17px;
+            text-align: center;
+            border-radius: 2px;
+            background: transparent;
+            border: 1px solid transparent;
+            font-family: "Be Vietnam Pro";
+        }
+        QToolTip {
+            color: #fff;
+            background: #000;
+        }"""
         btn = FileViewerFolderNavBtn(
             parent=self, tip=tip, icon=icon, 
-            stylesheet=self.folderBtnStyle,
             accent_color=self.accent_color,
+            stylesheet=self.folderBtnStyle, 
+            disabled_stylesheet=folderBtnDisStyle,
         )
         btn.setFixedHeight(24)
 
@@ -2753,7 +2777,8 @@ class FileViewerPreview(DebugWebBrowser):
     #     print(f"loaded PDF url: {load_url.toString(QUrl.FullyEncoded)}")
     #     self.load(load_url)
     def loadPDF(self, path: str):
-        PDFJS = "file:///home/atharva/GUI/FigUI/FigUI/handler/Document/pdf/static/pdfjs/web/viewer.html"
+        FILE_VIEWER_PDFJS_PATH = os.path.expanduser("~/GUI/FigUI/FigUI/handler/Document/pdf/static/pdfjs/web/viewer.html")
+        PDFJS = QUrl.fromLocalFile(FILE_VIEWER_PDFJS_PATH).toString()
         PDF = QUrl.fromLocalFile(path).toString()
         print(QUrl.fromUserInput(path))
         self.load(QUrl.fromUserInput(f'{PDFJS}?file={PDF}'))
