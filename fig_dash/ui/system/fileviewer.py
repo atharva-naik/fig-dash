@@ -3057,9 +3057,9 @@ class FileViewerKeyPressSearch(QLineEdit):
 
 # main file viewer widget.
 class FileViewerWidget(FigDMainWindow):
-    # changeTabIcon = pyqtSignal(str)
     zoomChanged = pyqtSignal(float)
     changeTabTitle = pyqtSignal(str)
+    changeWindowTitle = pyqtSignal(str)
     selectionChanged = pyqtSignal(list)
     def __init__(self, parent: Union[None, QWidget]=None, 
                  zoom_factor: float=1.35, **args):
@@ -3238,6 +3238,9 @@ class FileViewerWidget(FigDMainWindow):
             "Unselect selected files/folders"
         )
         self.EscKey.connect(self.EscHandler)
+
+    def getWindowTitle(self):
+        return f"File Viewer ({Path(self.folder).name})"
 
     def initFolderSearchBar(self) -> QWidget:
         fsbar_wrapper = QWidget()
@@ -3677,6 +3680,7 @@ class FileViewerWidget(FigDMainWindow):
         for path in full_paths: 
             self.createThumbnailWorker(path=path, thumb_size=240)
         print(f"\x1b[32;1m**created thumbnail workers in {time.time()-s}s**\x1b[0m")
+        self.changeWindowTitle.emit(self.getWindowTitle())
 
     def updateThumbnail(self, thumbnail_path: str):
         if thumbnail_path.startswith("file://"):
@@ -3875,7 +3879,6 @@ def fileviewer_factory(**args):
     return fileviewer
 
 def fileviewer_window_factory(**args):
-    import pathlib
     from fig_dash.ui import wrapFigDWindow
     from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
     path = args.get("path", os.path.expanduser("~"))
@@ -3886,7 +3889,7 @@ def fileviewer_window_factory(**args):
         "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
     fileviewer = fileviewer_factory(path=path, **widget_args)
-    title = f"File Viewer ({pathlib.Path(path).name})"
+    title = f"File Viewer ({Path(path).name})"
     window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700,
                             accent_color=accent_color, tab_title="Home", title=title,
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),

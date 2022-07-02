@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from logging import PlaceHolder
 from fig_dash import FigDLoad
 FigDLoad("fig_dash::ui::titlebar")
 # titlebar for the main window
@@ -1084,10 +1085,13 @@ class WindowTitleBar(QToolBar):
     def triggerRenameWindow(self):
         """initiate rename dialog to rename current FigDWindow"""
         currentTitle = self.title.text()
+        if currentTitle == "":
+            placeHolder = "Enter new window title"
+        else: placeHolder = currentTitle
         newWindowTitle, done = TitleBarInputDialog.getText(
             self, f"Rename '{currentTitle}' window", 
             f"Rename window from {currentTitle} to", 
-            QLineEdit.Normal, "Enter new window title"
+            QLineEdit.Normal, placeHolder,
         )
         if done:
             self.title.setText(newWindowTitle)

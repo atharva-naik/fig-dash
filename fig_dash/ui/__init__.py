@@ -2225,6 +2225,7 @@ class FigDTabSettingsBtn(QWidget):
 
 # tab widget for FigD.
 class FigDTabWidget(QTabWidget):
+    changeWindowTitle = pyqtSignal(str)
     def __init__(self, widget_factory=None, window_factory=None, 
                  parent: Union[None, QWidget]=None, tab_icon: str="",
                  tab_title: str="New tab", widget_args={}, window_args={},
@@ -2415,6 +2416,9 @@ class FigDTabWidget(QTabWidget):
 
     def onTabChange(self):
         widget = self.currentWidget()
+        if hasattr(widget, "getWindowTitle"):
+            windowTitle = widget.getWindowTitle()
+            self.changeWindowTitle.emit(windowTitle)
         # if hasattr(widget, "signalZoom"):
         #     widget.signalZoom()
     def connectTitleBar(self, titlebar):
@@ -2446,6 +2450,8 @@ class FigDTabWidget(QTabWidget):
             widget.changeTabTitle.connect(self.changeCurrentTabTitle)
         if hasattr(widget, "changeTabIcon"):
             widget.changeTabTitle.connect(self.changeCurrentTabIcon)
+        if hasattr(widget, "changeWindowTitle")  and hasattr(self, "titlebar"):
+            widget.changeWindowTitle.connect(self.titlebar.setTitle)
         if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
         j = self.insertTab(
@@ -2471,6 +2477,8 @@ class FigDTabWidget(QTabWidget):
             widget.changeTabTitle.connect(self.changeCurrentTabTitle)
         if hasattr(widget, "changeTabIcon"):
             widget.changeTabTitle.connect(self.changeCurrentTabIcon)
+        if hasattr(widget, "changeWindowTitle")  and hasattr(self, "titlebar"):
+            widget.changeWindowTitle.connect(self.titlebar.setTitle)
         if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
             widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
         i = self.addTab(widget, self.tab_icon, self.tab_title)
@@ -3401,6 +3409,7 @@ def wrapFigDWindow(widget: QWidget, **args):
             autohide=autohide,
         )
         tabwidget.connectTitleBar(titlebar)
+        tabwidget.changeWindowTitle.connect(titlebar.setTitle)
         titlebar.showTabBar.connect(tabwidget.tabBar().show)
         titlebar.hideTabBar.connect(tabwidget.tabBar().hide)
         
@@ -3412,7 +3421,9 @@ def wrapFigDWindow(widget: QWidget, **args):
             widget.changeTabTitle.connect(
                 tabwidget.changeCurrentTabIcon
             )
-        if hasattr(widget, "zoomChanged") and hasattr(tabwidget, "titlebar"):
+        if hasattr(widget, "changeWindowTitle"):
+            widget.changeWindowTitle.connect(titlebar.setTitle)
+        if hasattr(widget, "zoomChanged"):
             widget.zoomChanged.connect(
                 titlebar.zoomSlider.setZoomValue
             )
