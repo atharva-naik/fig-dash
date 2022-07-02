@@ -12,7 +12,7 @@ from functools import partial
 from fig_dash.assets import FigD
 # PyQt5 imports
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
-from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QPropertyAnimation, QEasingCurve
+from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QVariant, QPropertyAnimation, QEasingCurve
 from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
 
 # blannk function.
@@ -166,6 +166,10 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/cut.svg"),
         FigD.icon("textedit/cut_disabled.svg")
     ),
+    "Cut	Ctrl+X": (
+        FigD.icon("textedit/cut.svg"),
+        FigD.icon("textedit/cut_disabled.svg")
+    ),
     "Copy": (
         FigD.icon("textedit/copy.svg"),
         FigD.icon("textedit/copy_disabled.svg")
@@ -178,6 +182,14 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/copy.svg"),
         FigD.icon("textedit/copy_disabled.svg")
     ),
+    "Undo	Ctrl+Z": (
+        FigD.icon("textedit/undo.svg"),
+        FigD.icon("textedit/undo_disabled.svg")
+    ),
+    "Redo	Ctrl+Shift+Z": (
+        FigD.icon("textedit/redo.svg"),
+        FigD.icon("textedit/redo_disabled.svg")
+    ),
     "&Undo	Ctrl+Z": (
         FigD.icon("textedit/undo.svg"),
         FigD.icon("textedit/undo_disabled.svg")
@@ -185,6 +197,10 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
     "&Redo	Ctrl+Shift+Z": (
         FigD.icon("textedit/redo.svg"),
         FigD.icon("textedit/redo_disabled.svg")
+    ),
+    "Paste	Ctrl+V": (
+        FigD.icon("textedit/paste.svg"),
+        FigD.icon("textedit/paste_disabled.svg")
     ),
     "&Paste	Ctrl+V": (
         FigD.icon("textedit/paste.svg"),
@@ -228,7 +244,7 @@ def extractFromAccentColor(bg, where="back"):
 def styleTextEditMenuIcons(menu):
     """substitute TextEdit/LineEdit icons for consistent styling."""
     for action in menu.actions():
-        # print(action.text())
+        # print(action.text(), action.text() in TEXT_EDIT_CONTEXT_MENU_MAP)
         icon, icon_disabled = TEXT_EDIT_CONTEXT_MENU_MAP.get(
             action.text(), 
             ("NOT_FOUND","NOT_FOUND")
@@ -1546,7 +1562,30 @@ class FigDAppSettingsMenu(QMenu):
         self.addAction(FigD.Icon("navbar/download.svg"), "Downloads", 
                        blank, QKeySequence("Ctrl+J"))
         self.bookmarksMenu = self.addMenu("Bookmarks")
-        self.bookmarksMenu.setVisible(True)
+        self.bookmarksMenu = styleContextMenu(
+            self.bookmarksMenu,
+            self.accent_color,
+        )
+        self.bookmarksMenu.addAction(
+            "Bookmark this tab...", blank,
+            QKeySequence("Ctrl+D"),
+        )
+        self.bookmarksMenu.addAction(
+            "Bookmark all tabs...", blank,
+            QKeySequence("Ctrl+Shift+D"),
+        )
+        self.bookmarksMenu.addSeparator()
+        self.bookmarksMenu.addAction(
+            "Show bookmarks", blank,
+            QKeySequence("Ctrl+Shift+B"),
+        )
+        self.bookmarksMenu.addAction(
+            "Bookmark manager", blank,
+            QKeySequence("Ctrl+Shift+O"),
+        )
+        self.bookmarksMenu.addAction("Import bookmarks and settings...")
+        self.bookmarksMenu.addSeparator()
+        # self.bookmarksMenu.setVisible(True)
         self.addSeparator()
         self.opacitySlider = self.addSlider(
             "Opacity", class_=FigDOpacitySlider, 
@@ -1862,16 +1901,16 @@ class FigDTabControls(QWidget):
         # move, rename, duplicate, pin, share.
         self.hboxlayout.addStretch()
         self.hboxlayout.addStretch()
-        self.addBtn(FigD.Icon("tabbar/reload.svg"))
-        self.addBtn(FigD.Icon("tabbar/rename.svg"))
-        self.addBtn(FigD.Icon("tabbar/move.svg"))
-        self.addBtn(FigD.Icon("tabbar/duplicate.png"))
-        self.addBtn(FigD.Icon("tabbar/pin.svg"))
-        self.addBtn(FigD.Icon("tabbar/share.svg"))
+        self.addBtn(FigD.Icon("tabbar/reload.svg"), tip="Reload")
+        self.addBtn(FigD.Icon("tabbar/rename.svg"), tip="Rename")
+        self.addBtn(FigD.Icon("tabbar/move.svg"), tip="Move")
+        self.addBtn(FigD.Icon("tabbar/duplicate.png"), tip="Duplicate")
+        self.addBtn(FigD.Icon("tabbar/pin.svg"), tip="Pin")
+        self.addBtn(FigD.Icon("tabbar/share.svg"), tip="Share")
         # set layout.
         self.setLayout(self.hboxlayout)
 
-    def addBtn(self, icon: QIcon, func=None, 
+    def addBtn(self, icon: QIcon, tip="", func=None, 
                icon_size: Tuple[int,int]=(22,22)) -> QToolButton:
         btn = QToolButton()
         btn.setIcon(icon)
@@ -1886,6 +1925,8 @@ class FigDTabControls(QWidget):
         QToolButton:hover {
             background: """+self.accent_color+""";
         }""")
+        btn.setToolTip(tip)
+        btn.setStatusTip(tip)
         count = self.hboxlayout.count()
         if func: btn.clicked.connect(func)
         self.hboxlayout.insertWidget(count-1, btn)
@@ -1974,7 +2015,7 @@ class FigDTabBar(QTabBar):
             x = self.width()-54
         else: x = size
         x = x+5
-        print("ui::FigDTabBar.moveNewTabBtn:", x, y)
+        # print("ui::FigDTabBar.moveNewTabBtn:", x, y)
         # Show just to the left of the scroll buttons
         self.plusBtn.move(x, y)
 
@@ -1999,10 +2040,12 @@ class FigDTabBar(QTabBar):
         )
         contextMenu.addAction("Add tab to group")
         contextMenu.addSeparator()
-        contextMenu.addAction("Split Up")
-        contextMenu.addAction("Split Down")
-        contextMenu.addAction("Split Left")
-        contextMenu.addAction("Split Right")
+        self._split_submenu = contextMenu.addMenu(FigD.Icon("tabbar/split.svg"), "Split")
+        self._split_submenu = styleContextMenu(self._split_submenu, self.accent_color)
+        self._split_submenu.addAction(FigD.Icon("tabbar/split-up.svg"), "Split Up")
+        self._split_submenu.addAction(FigD.Icon("tabbar/split-down.svg"), "Split Down")
+        self._split_submenu.addAction(FigD.Icon("tabbar/split-left.svg"), "Split Left")
+        self._split_submenu.addAction(FigD.Icon("tabbar/split-right.svg"), "Split Right")
 
         return contextMenu
 
@@ -2443,61 +2486,69 @@ class FigDTabWidget(QTabWidget):
         i = self.currentIndex() # print("\x1b[31;1mui::__init__::FigDTabWidget.changeCurrentTabIcon:\x1b[0m", icon)
         self.setTabIcon(i, QIcon(icon))
 
+    def widgetFactory(self) -> QWidget:
+        """factory function for intialization of the widget
+        type which is being tabbed."""
+        if self.widget_factory is None: 
+            raise NotImplementedError("`widget_factory` method not implemented.")
+        widget = self.widget_factory(**self.widget_args)
+        # connects slots to optionally defined widget signals.
+        if hasattr(widget, "changeTabTitle"):
+            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
+        if hasattr(widget, "changeTabIcon"):
+            widget.changeTabTitle.connect(self.changeCurrentTabIcon)
+        if hasattr(widget, "changeTabToolTip"):
+            widget.changeTabToolTip.connect(self.changeCurrentTabToolTip)
+        if hasattr(widget, "changeWindowTitle") and hasattr(self, "titlebar"):
+            widget.changeWindowTitle.connect(self.titlebar.setTitle)
+        if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
+            widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
+
+        return widget 
+
+    def tabFactory(self, widget: QWidget, index=None):
+        """create tab from widget and index value."""
+        if index is None:
+            i = self.addTab(
+                widget, self.tab_icon, 
+                self.tab_title
+            )
+        else: 
+            i = self.insertTab(
+                index, widget, 
+                self.tab_icon, 
+                self.tab_title,
+            )
+        # web page to be returned. (required by createWindow, to create new tab).
+        # NOTE: assumption: 
+        # the webview/browser instance associated with any widget is
+        # contained inside the .browser or .webview attribute
+        # otherwise `None` is returned as the value of the loaded page.
+        page = None
+        if hasattr(widget, "webview"):
+            page = widget.webview.page()
+        if hasattr(widget, "browser"):
+            page = widget.browser.page()
+
+        return i, page
+
     def openTabAt(self, i):
-        if self.widget_factory is None: return
-        widget = self.widget_factory(**self.widget_args)
-        if hasattr(widget, "changeTabTitle"):
-            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
-        if hasattr(widget, "changeTabIcon"):
-            widget.changeTabTitle.connect(self.changeCurrentTabIcon)
-        if hasattr(widget, "changeWindowTitle")  and hasattr(self, "titlebar"):
-            widget.changeWindowTitle.connect(self.titlebar.setTitle)
-        if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
-            widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
-        j = self.insertTab(
-            i, widget, 
-            self.tab_icon, 
-            self.tab_title
-        )
+        widget = self.widgetFactory()
+        j, page = self.tabFactory(widget, i)
         self.setCurrentIndex(j)
-        # return web page. (required by createWindow, to create new tab).
-        page = None
-        if hasattr(widget, "webview"):
-            page = widget.webview.page()
-        if hasattr(widget, "browser"):
-            page = widget.browser.page()
-
-        return page       
-
-    def openTab(self):
-        # print(f"self.widget_factory: {self.widget_factory}")
-        if self.widget_factory is None: return
-        widget = self.widget_factory(**self.widget_args)
-        if hasattr(widget, "changeTabTitle"):
-            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
-        if hasattr(widget, "changeTabIcon"):
-            widget.changeTabTitle.connect(self.changeCurrentTabIcon)
-        if hasattr(widget, "changeWindowTitle")  and hasattr(self, "titlebar"):
-            widget.changeWindowTitle.connect(self.titlebar.setTitle)
-        if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
-            widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
-        i = self.addTab(widget, self.tab_icon, self.tab_title)
-        # create missing mute buttons.
-        # for i in range(len(self)):
-        #     ctrlBtns = self.initTabCtrlBtns() # tab control buttons.
-        #     self.tabBar().setTabButton(
-        #         i, QTabBar.RightSide, 
-        #         ctrlBtns, # set tab buttons (controls).
-        #     )
-        self.setCurrentIndex(i)
-        # return web page. (required by createWindow, to create new tab).
-        page = None
-        if hasattr(widget, "webview"):
-            page = widget.webview.page()
-        if hasattr(widget, "browser"):
-            page = widget.browser.page()
 
         return page
+
+    def openTab(self):
+        widget = self.widgetFactory()
+        i, page = self.tabFactory(widget)
+        self.setCurrentIndex(i)
+
+        return page
+
+    def changeCurrentTabToolTip(self, tabToolTip: str):
+        i = self.currentIndex()
+        self.setTabToolTip(i, tabToolTip)
 
     def initTabCtrlBtns(self) -> QWidget:
         ctrlBtns = QWidget()
@@ -3413,6 +3464,7 @@ def wrapFigDWindow(widget: QWidget, **args):
         titlebar.showTabBar.connect(tabwidget.tabBar().show)
         titlebar.hideTabBar.connect(tabwidget.tabBar().hide)
         
+        # connects slots to optionally defined widget signals.
         if hasattr(widget, "changeTabTitle"):
             widget.changeTabTitle.connect(
                 tabwidget.changeCurrentTabTitle
@@ -3421,13 +3473,18 @@ def wrapFigDWindow(widget: QWidget, **args):
             widget.changeTabTitle.connect(
                 tabwidget.changeCurrentTabIcon
             )
+        if hasattr(widget, "changeTabToolTip"):
+            widget.changeTabToolTip.connect(
+                tabwidget.changeCurrentTabToolTip
+            )
         if hasattr(widget, "changeWindowTitle"):
             widget.changeWindowTitle.connect(titlebar.setTitle)
         if hasattr(widget, "zoomChanged"):
             widget.zoomChanged.connect(
                 titlebar.zoomSlider.setZoomValue
             )
-        tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
+        tabwidget.tabFactory(widget)
+        # tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
         layout.addWidget(tabwidget)
         tabwidget.CtrlShiftW = FigDShortcut(
             QKeySequence("Ctrl+Shift+W"),

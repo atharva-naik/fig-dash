@@ -5,11 +5,11 @@ FigDLoad("fig_dash::ui::browser")
 # from PyQt5.QtGui import QIcon, QFontMetrics
 import os
 import sys
-import copy
 import jinja2
 import socket
 import getpass
 import pathlib
+import argparse
 import subprocess
 from typing import *
 from requests.exceptions import MissingSchema, InvalidSchema
@@ -18,7 +18,7 @@ from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
 from PyQt5.QtWebEngineCore import QWebEngineFindTextResult
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
 from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QMovie, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
-from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
+from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject, QBuffer, QIODevice
 from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QMenu, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
@@ -1111,6 +1111,34 @@ class ZoomFactor:
 #         dev_view_page = SilentWebPage(self.dev_view)
 #         self.dev_view.setPage(dev_view_page)
 #         self.page().setDevToolsPage(dev_view_page)
+class EditFlagsDict:
+    def __init__(self, editFlags):
+        tot = int(editFlags)
+        self.tot = int(editFlags)
+        self.flag_names = ["Undo", "Redo", "Cut", "Copy", "Paste", "Delete", "SelectAll", "Translate", "EditRichly"] 
+        self.flag_enums = [getattr(QWebEngineContextMenuData, f"Can{flag_name}") for flag_name in self.flag_names]
+        self.flag_ints = [int(flag_enum) for flag_enum in self.flag_enums]
+        self.flag_values = [False for i in range(len(self))]
+        # 
+        for i in range(len(self)):
+            flag_int = self.flag_ints[len(self)-1-i]
+            if tot - flag_int >= 0:
+                self.flag_values[len(self)-1-i] = True
+                tot -= flag_int
+
+    def __str__(self):
+        return str({f"Can{k}": v for k,v in zip(self.flag_names, self.flag_values)})
+
+    def __len__(self):
+        return len(self.flag_names)
+
+    def __iter__(self):
+        for name in self.flag_names:
+            yield name
+
+    def __getattr__(self, flag_name: str):
+        index = self.flag_names.index(flag_name)
+        return self.flag_values[index]
 
 # QWebEngineView for debug web view splitter.
 class DebugWebBrowser(QWebEngineView):
@@ -1130,6 +1158,16 @@ class DebugWebBrowser(QWebEngineView):
             search_panel=self.searchPanel,            
         )
         self.setPage(custom_page)
+        # update settings.
+        self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
+        self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
+        self.settings().setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.ScrollAnimatorEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+        self.settings().setAttribute(QWebEngineSettings.PdfViewerEnabled, True)
         # current zoom factor and webview.
         self.currentZoomFactor = zoomFactor
         zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
@@ -1150,6 +1188,10 @@ class DebugWebBrowser(QWebEngineView):
         self.BackShortcut.activated.connect(self.back)
         self.CtrlPlus.activated.connect(self.__zoomIn)
         self.CtrlMinus.activated.connect(self.__zoomOut)
+
+    def changeUserAgent(self):
+        userAgentStr = "Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0" 
+        self.page().profile().setHttpUserAgent(userAgentStr)    
 
     def reactToCtrlF(self):
         # print("is browser pane in focus: ", self.hasFocus())
@@ -1223,47 +1265,168 @@ class DebugWebBrowser(QWebEngineView):
         baseContextMenu = self.page().createStandardContextMenu()
         data = self.page().contextMenuData()
         actionMap = {}
+        enabledMap = {}
         for action in baseContextMenu.actions():
             actionMap[action.text()] = action.trigger
+            enabledMap[action.text()] = action.isEnabled()
         # new context menu.
         self.contextMenu = QMenu()
+        def blank(): pass
+        print(f"""\x1b[34;1mdata: {data.mediaType()}\x1b[0m""")
+        editFlags = EditFlagsDict(data.editFlags())
+        print(editFlags)
+        # print(int(data.editFlags()), int(QWebEngineContextMenuData.CanUndo), int(QWebEngineContextMenuData.CanRedo))
+        # print(int(QWebEngineContextMenuData.CanRedo | QWebEngineContextMenuData.CanUndo | QWebEngineContextMenuData.CanPaste))
         if data.mediaType() == QWebEngineContextMenuData.MediaTypeNone:
+            if "Undo" in actionMap:
+                undo = self.contextMenu.addAction(
+                    "&Undo", actionMap["Undo"],
+                    QKeySequence.Undo,
+                )
+                undo.setEnabled(enabledMap["Undo"])
+            if "Redo" in actionMap:
+                redo = self.contextMenu.addAction(
+                    "&Redo", actionMap["Redo"],
+                    QKeySequence.Redo,
+                )
+                redo.setEnabled(enabledMap["Redo"])
+                self.contextMenu.addSeparator()
+            if "Cut" in actionMap:
+                cut = self.contextMenu.addAction(
+                    "Cu&t", actionMap["Cut"],
+                    QKeySequence.Cut,
+                )
+                cut.setEnabled(enabledMap["Cut"])
+            if "Copy" in actionMap:
+                copy = self.contextMenu.addAction(
+                    "Copy", actionMap["Copy"],
+                    QKeySequence.Copy,
+                )
+                copy.setEnabled(enabledMap["Copy"])
+            if "Paste" in actionMap:
+                paste = self.contextMenu.addAction(
+                    "&Paste", actionMap["Paste"],
+                    QKeySequence.Paste,
+                )
+                paste.setEnabled(enabledMap["Paste"])
+            if "Paste and match style" in actionMap:
+                pasteAndMatchStyle = self.contextMenu.addAction(
+                    "Paste and match style      ", 
+                    actionMap["Paste and match style"],
+                    QKeySequence("Ctrl+Shift+V"),
+                )
+                pasteAndMatchStyle.setEnabled(enabledMap["Paste and match style"])
+            if "Paste as plain text" in actionMap:
+                self.contextMenu.addAction(
+                    "Paste as plain text", 
+                    actionMap["Paste as plain text"],
+                    QKeySequence("Ctrl+Shift+V"),
+                )
+            if "Select all" in actionMap:
+                selectAll = self.contextMenu.addAction(
+                    "Select all", 
+                    actionMap["Select all"],
+                    QKeySequence.SelectAll,
+                )
+                selectAll.setEnabled(enabledMap["Select all"])
+                self.contextMenu.addSeparator()
+            if "Back" in actionMap:
+                back = self.contextMenu.addAction(
+                    "Back", actionMap["Back"], 
+                    QKeySequence.Back,
+                )
+                back.setEnabled(enabledMap["Back"])
+            if "Forward" in actionMap:
+                forward = self.contextMenu.addAction(
+                    "Forward", actionMap["Forward"], 
+                    QKeySequence.Forward,
+                )
+                forward.setEnabled(enabledMap["Forward"])
+            if "Reload" in actionMap:
+                reload_ = self.contextMenu.addAction(
+                    "Reload", actionMap.get("Reload", blank), 
+                    QKeySequence.Refresh,
+                )
+                reload_.setEnabled(enabledMap["Reload"])
+                self.contextMenu.addSeparator()
+            if "Save page" in actionMap:
+                savePage = self.contextMenu.addAction(
+                    "Save as...", 
+                    actionMap["Save page"],
+                    QKeySequence.Save,
+                )
+                savePage.setEnabled(enabledMap["Save page"])
+            if not data.isContentEditable():
+                self.contextMenu.addAction(
+                    "Print...", blank, 
+                    QKeySequence.Print,
+                )
+                self.contextMenu.addAction("Cast...", blank)
+                self.contextMenu.addAction("Search images with Google Lens      ")
+                self.contextMenu.addSeparator()
+                self.contextMenu.addAction("Send to your devices")
+                self.contextMenu.addAction("Create QR code for this page")
+                self.contextMenu.addSeparator()
+                self.contextMenu.addAction("Translate to English")
+                self.contextMenu.addSeparator()
+            else:
+                self.spellCheckMenu = self.contextMenu.addMenu("Spell check")
+                self.spellCheckMenu.addAction("All your languages")
+                self.spellCheckMenu.addAction("English (United States)")
+                self.spellCheckMenu.addAction("English")
+                self.spellCheckMenu.addAction("Language settings")
+                self.spellCheckMenu.addSeparator()
+                self.spellCheckMenu.addAction("Use basic spell check")
+                self.spellCheckMenu.addAction("Use enhanced spell check")
+                self.spellCheckMenu = styleContextMenu(
+                    self.spellCheckMenu, 
+                    self.accent_color,
+                )
+                # sub menu to change writing direction,
+                self.writingMenu = self.contextMenu.addMenu("Writing Direction")
+                self.writingMenu.addAction("Default")
+                self.writingMenu.addAction("Left to Right")
+                self.writingMenu.addAction("Right to Left")
+                self.writingMenu = styleContextMenu(
+                    self.writingMenu, 
+                    self.accent_color,
+                )
+                self.contextMenu.addSeparator()
+            if "View page source" in actionMap:
+                self.contextMenu.addAction(
+                    "View page source", 
+                    actionMap["View page source"],
+                    QKeySequence("Ctrl+U"),
+                )
             self.contextMenu.addAction(
-                "Back", actionMap["Back"], 
-                QKeySequence.Back,
+                "Inspect", blank,
+                QKeySequence("Ctrl+Shift+I"),
             )
-            self.contextMenu.addAction(
-                "Forward", actionMap["Forward"], 
-                QKeySequence.Forward,
+        elif data.mediaType() == QWebEngineContextMenuData.MediaTypeImage:
+            self.contextMenu.addAction("Open image in new tab") 
+            saveImage = self.contextMenu.addAction(
+                "Save image as...",
+                actionMap["Save image"],
+            ) 
+            saveImage.setEnabled(enabledMap["Save image"])
+            copyImage = self.contextMenu.addAction(
+                "Copy image", 
+                actionMap["Copy image"]
             )
-            self.contextMenu.addAction(
-                "Reload", actionMap["Reload"], 
-                QKeySequence.Refresh,
+            copyImage.setEnabled(enabledMap["Copy image"]) 
+            copyImageAddress = self.contextMenu.addAction(
+                "Copy image address", 
+                actionMap["Copy image address"]
             )
+            copyImageAddress.setEnabled(enabledMap["Copy image address"])
+            self.contextMenu.addSeparator()            
+            self.contextMenu.addAction("Create QR code for this image")
+            self.contextMenu.addAction("Search image with Google Lens      ")
             self.contextMenu.addSeparator()
             self.contextMenu.addAction(
-                "Save as...", 
-                actionMap["Save page"],
-                QKeySequence.Save,
+                "Search Google with this image"
             )
-            def blank(): pass
-            self.contextMenu.addAction(
-                "Print...", blank, 
-                QKeySequence.Print,
-            )
-            self.contextMenu.addAction("Cast...", blank)
-            self.contextMenu.addAction("Search images with Google Lens")
             self.contextMenu.addSeparator()
-            self.contextMenu.addAction("Send to your devices")
-            self.contextMenu.addAction("Create QR code for this page")
-            self.contextMenu.addSeparator()
-            self.contextMenu.addAction("Translate to English")
-            self.contextMenu.addSeparator()
-            self.contextMenu.addAction(
-                "View page source", 
-                actionMap["View page source"],
-                QKeySequence("Ctrl+U"),
-            )
             self.contextMenu.addAction(
                 "Inspect", blank,
                 QKeySequence("Ctrl+Shift+I"),
@@ -1271,15 +1434,6 @@ class DebugWebBrowser(QWebEngineView):
         else: 
             self.contextMenu = baseContextMenu
         print(actionMap)
-        # for action in self.contextMenu.actions():
-        #     if action.text() == "Back":
-        #         action.setShortcut(QKeySequence.Back)
-        #     elif action.text() == "Forward":
-        #         action.setShortcut(QKeySequence.Forward)
-        #     elif action.text() == "Reload":
-        #         action.setShortcut(QKeySequence.Refresh)
-        # TODO: change
-        baseContextMenu = self.contextMenu
         # style context menu.
         self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
         self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
@@ -1328,6 +1482,9 @@ class DevToolsView(QWebEngineView):
 
 # spitter with web browser and dev tools.
 class DebugWebView(QSplitter):
+    changeTabIcon = pyqtSignal(str)
+    changeTabTitle = pyqtSignal(str)
+    changeTabToolTip = pyqtSignal(str)
     backgroundChanged = pyqtSignal(int, int, int)
     def __init__(self, browser, parent: Union[QWidget, None]=None,
                  dev_tools_zoom: float=1.35, accent_color: str="green"):
@@ -1361,16 +1518,75 @@ class DebugWebView(QSplitter):
     def viewSource(self):
         print("trigger viewSource for ui::browser::DebugWebView")
 
-    def onLoadFinished(self):        
+    def onLoadFinished(self):
+        lang: str="en-US"        
         self.loadDevTools()
-    # def reactToCtrlF(self):
-    #     self.browser.reactToCtrlF()
-    # def __zoomIn(self):
-    #     """zoom into browser."""
-    #     self.browser.__zoomIn()
-    # def __zoomOut(self):
-    #     """zoom out of browser."""
-    #     self.browser.__zoomOut()
+        self.browser.setSpellCheck(lang)
+        self.changeTabTitle.emit(
+            self.browser.page().title()
+        )
+        self.browser.page().printRequested.connect(
+            self.browser.onPrintRequest
+        )
+        # navbar.reloadBtn.setStopMode(False)
+        # navbar stuff: set url to searchbar.
+        
+        # use page background to change navbar color.
+        # self.browser.getPageBackground()
+
+        # show howered link on statusbar.
+        # browser.page().linkHovered.connect(self.showLinkOnStatusBar)
+
+        # if browser.isTerminalized():
+        #     browser.execTerminalJS()
+        # else:
+        
+        # change user agent.
+        self.browser.changeUserAgent()
+
+        # load annotation tools and update word count.
+        # browser.execAnnotationJS() 
+        # browser.setWordCount()
+        
+        # fetch page icon and emit changeTabIcon
+        # self.changeTabIcon.emit(
+        #     self.browser.page().icon()
+        # )
+
+        # update scrollbar and selection style.
+        # browser.setSelectionStyle()
+        # browser.setScrollbar(scrollbar_style)
+        
+        # emit tab tool tip.
+        self.browser.page().runJavaScript(
+            "document.body.outerHTML",
+            self.emitTabToolTip,
+        )
+
+    def emitTabToolTip(self, html):
+        """emit tab tooltip once document.body.outerHTML is constructed."""
+        screenshot = self.browser.getPageScreenshot()
+        screenshot = screenshot.scaled(
+            400, 400, 
+            aspectRatioMode=Qt.KeepAspectRatio,
+            transformMode=Qt.SmoothTransformation
+        )
+        # convert pixmap to base 64 in memory.
+        buffer = QBuffer()
+        buffer.open(QIODevice.WriteOnly)
+        screenshot.save(buffer, "PNG")
+        encoded = buffer.data().toBase64()
+        # create the tooltip
+        tabToolTip = f"""
+        <img src="data:image/png;base64,{bytes(encoded).decode()}">
+        <div style='text-align: center;'>
+            <h3 style='font-weight: bold;'>{self.browser.page().title()}</h3>
+            <br> 
+            <span style='color: #6e6e6e;'>{self.browser.url().host()}</span>
+        </div>
+        """
+        self.changeTabToolTip.emit(tabToolTip)
+
     def getPageBackground(self):
         """get page background colors from computed css style."""
         self.browser.page().runJavaScript(
@@ -1593,14 +1809,6 @@ class PageInfo(QWidget):
         self.time_to_read.setText(f" {word_count // 200} mins")
         # self.setFixedHeight(100)
 
-# class BrowserHistory:
-#     def __init__(self, path: str=CHROME_LINUX_PATH):
-#         self.history = []
-#         # open chrome's browsing history file.
-#         if os.path.exists(path):
-#         # use custom history file
-#         elif os.p
-#         else:    
 # class WrappedAction(QAction):
 #     def __init__(self, action: QAction):
 #         super(WrappedAction, self).__init__()
@@ -1619,697 +1827,15 @@ def inspectTriggered(browser, inspect_action):
         browser.dev_view.show()
     inspect_action.trigger()
 
+def parse_debug_webview_args():
+	parser = argparse.ArgumentParser("system imageviewer application for Fig Dashboard")
+	parser.add_argument("-p", "--path", type=str, default=None,
+                        help="path to file to be opened")
+	parser.add_argument("-u", "--url", type=str, 
+                        default="https://www.google.com", 
+						help="url to be opened")
 
-class Browser(DebugWebView):
-    def __init__(self, parent: Union[None, QWidget], zoomFactor: float=1.25, window: QWidget=None):
-        super(Browser, self).__init__(parent=parent)
-        self.mime_database = QMimeDatabase()
-        self.historyIndex = 0
-        self.dash_window = window
-        custom_page = CustomWebPage(
-            self, search_panel=self.searchPanel, 
-            logging_level=3, dash_window=window)
-        self.setPage(custom_page)
-        # if window is not None:
-        #     self.page().connectWindow(self.dash_window)
-        # self.pbar = tqdm(range(100)) 
-        # self.currentZoomFactor = zoomFactor
-        # self.setZoomFactor(self.currentZoomFactor)
-        # self.extension_manager = ExtensionManager()
-        # modify settings.
-        self.progress_started = False
-        self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
-        self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
-        self.settings().setAttribute(QWebEngineSettings.DnsPrefetchEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.ScrollAnimatorEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.ErrorPageEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
-        self.settings().setAttribute(QWebEngineSettings.PdfViewerEnabled, True)
-        # set true if clipboard permission is granted.
-        # self.settings().setAttribute(QWebEngineSettings.JavascriptCanAccessClipboard, True)
-        # set true to allow spatial navigation
-        # self.settings().setAttribute(QWebEngineSettings.SpatialNavigationEnabled, True)
-        self.progress = 0
-        self._is_bookmarked = False
-        self._is_terminalized = False
-        self.loadProgress.connect(self.setProgress)
-        self.selectionChanged.connect(self.onSelectionChange)
-        # # shortcuts.
-        # self.SelectAll = QShortcut(QKeySequence.SelectAll, self)
-        # self.SelectAll.activated.connect(self.selectAll)
-        # self.Deselect = QShortcut(QKeySequence.Deselect, self)
-        # self.Deselect.activated.connect(self.deselect)
-    def onSelectionChange(self):
-        selText = self.selectedText()
-        selText = " ".join(selText.strip().split("\n"))
-        try:
-            menu = self.dash_window.menu
-            menu.browser_statusbar.updateSelection(selText)
-        except Exception as e:
-            print("\x1b[31;1mbrowser.onSelectionChange\x1b[0m", e)
-        # print(f"selection changed {self.selectedText()}")
-    def setBookmark(self, status: bool):
-        self._is_bookmarked = status
-
-    def setTerminalized(self, status: bool):
-        self._is_terminalized = status
-
-    def isBookmarked(self):
-        return self._is_bookmarked
-
-    def isTerminalized(self):
-        return self._is_terminalized
-
-    def setProgress(self, progress):
-        self.progress = progress
-        tabBar = self.tabWidget.tabBar()
-        i = self.tabWidget.currentIndex()
-        # when progress is started for the first time.
-        if self.progress_started == False:
-            # set the progress started for first time flag.
-            self.progress_started = True
-            # create animation label if it doesn't exist.
-            animLabel = tabBar.tabButton(i, QTabBar.LeftSide)
-            if animLabel is None: animLabel = QLabel()
-            # create the loading animation/movie/gif object.
-            movie = QMovie(FigD.icon("tabbar/loading.gif"))
-            # set the size.
-            movie.setScaledSize(QSize(20,20))
-            # set the movie for the label.
-            animLabel.setMovie(movie)
-            movie.start() # start showing the animation
-            tabBar.setTabButton(i, QTabBar.LeftSide, animLabel)
-        # when progress is finished.
-        if progress == 100:
-            # set the progress started flag to false.
-            self.progress_started = False
-            return 
-        try:
-            pass
-            # self.tabWidget.setTabText(i, f"Loading {self.progress}")
-            # print(f"Loaded {self.url().toString()} {self.progress}%")
-            # self.pbar.update(progress-self.pbar.n)
-        except Exception as e:
-            print("\x1b[31;1mbrowser.setProgress\x1b[0m", e)
-
-    def deselect(self):
-        pass
-    # def selectAll(self):
-    #     print("select all")
-    #     self.page().runJavaScript('''document.execCommand("selectAll");''')
-    # def pageIconCallback(self, html: str):
-    #     from bs4 import BeautifulSoup
-    #     soup = BeautifulSoup(html, features="html.parser")
-    #     icon_links = soup.findAll("link", **{"rel": "icon"})
-    #     icon_path = None
-    #     is_svg = False
-    #     for icon in icon_links:
-    #         icon_path = icon["href"]
-    #         if icon["type"] == "image/svg+xml": 
-    #             is_svg = True
-    #             break
-    #     if icon_path:
-    #         self.pageIcon = QFetchIcon(
-    #             icon_path, 
-    #             is_svg
-    #         )
-    #         pprint(icon_path)
-    def execTerminalCommand(self, cmd: str=""):
-        cmd = cmd.strip()
-        orig_cmd = copy.deepcopy(cmd)
-        if cmd == "clear":
-            self.page().runJavaScript(f"FigTerminal.clear();")            
-            return
-        argv = cmd.split()
-        for i in range(len(argv)):
-            if argv[i].startswith("$"):
-                argv[i] = os.environ.get(
-                    argv[i].replace("$","")
-                )
-        cmd = " ".join(argv)
-        if argv[0] == "cd":
-            path = cmd[2:].strip()
-            path = os.path.expanduser(path)
-            if path == ".": pass
-            elif path == "..":
-                path = str(pathlib.Path(os.getcwd()).parent)
-                os.chdir(path)                
-            else: 
-                try: 
-                    os.chdir(path)   
-                except FileNotFoundError:
-                    msg = f"bash: cd: {path}: No such file or directory"
-                    self.page().runJavaScript(
-                        f"FigTerminal.writeLine(`{orig_cmd}`, `{msg}`);"
-                    )                    
-            self.page().runJavaScript(
-                f"FigTerminal.write(`{orig_cmd}`, ``);"
-            )
-            path = collapseuser(path)
-            self.page().runJavaScript(f"FigTerminal.chdir(`{path}`);")
-            return
-        try:
-            result = subprocess.Popen(argv, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            op_str = result.communicate()[0].decode('utf-8')
-            err_str = result.communicate()[1].decode('utf-8')
-            ret_code = result.returncode
-            if ret_code == 0:
-                self.page().runJavaScript(
-                    f"FigTerminal.writeLine(`{orig_cmd}`, `{op_str}`);"
-                )
-            else:
-                self.page().runJavaScript(
-                    f"FigTerminal.writeErrorLine(`{orig_cmd}`, `{err_str}`);"
-                )
-        except FileNotFoundError:
-            # wow: command not found
-            self.page().runJavaScript(
-                f"FigTerminal.writeLine(`{orig_cmd}`, `{argv[0].strip()}: command not found`);"
-            )
-        except Exception as e:
-            self.page().runJavaScript(
-                f"FigTerminal.writeLine(`{orig_cmd}`, `{e}`);"
-            )
-            print("\x1b[31;1mbrowser.execTerminalCommand\x1b[0m", e)
-
-    def contextMenuEvent(self, event):
-        self.menu = self.page().createStandardContextMenu()
-        data = self.page().contextMenuData()
-        # print(QWebEngineContextMenuData.CanCopy) 
-        
-        print("None:", data.mediaType() == data.MediaTypeNone)
-        print("Image:", data.mediaType() == data.MediaTypeImage)
-        print("Video:", data.mediaType() == data.MediaTypeVideo)
-        print("Audio:", data.mediaType() == data.MediaTypeAudio)
-        print("Canvas:", data.mediaType() == data.MediaTypeCanvas)
-        print("Plugin:", data.mediaType() == data.MediaTypePlugin)
-        print(data.selectedText())
-        # this code snippet makes sure that the inspect action displays the dev tools if they are hidden.
-        transToEnglish = None
-        # openLinkInNewTab = None
-        # actions = self.menu.actions()
-        # for i, action in enumerate(actions):
-        #     if action.text() == "Open link in new tab":
-        #         openLinkInNewTab = actions[i]
-        # # open link in new tab action.
-        # if openLinkInNewTab:
-        #     qurl = data.linkUrl()
-        #     # print(f"open {qurl.toString()} in new tab")
-        #     openLinkInNewTab.triggered.connect(
-        #         lambda: self.tabs.openUrl(url=qurl)
-        #     )
-        # edit actions.
-        for action in self.menu.actions():
-            # print(action.text())
-            if action.text() == "Back":
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("navbar/prev.svg"))
-                else:
-                    action.setIcon(FigD.Icon("navbar/prev_disabled.svg"))
-                action.setShortcut(QKeySequence.Back)
-            elif action.text() == "Undo":
-                action.setShortcut(QKeySequence.Undo)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/undo.svg"))
-                else:
-                    action.setIcon(FigD.Icon("browser/undo_disabled.svg"))                
-            elif action.text() == "Redo":
-                action.setShortcut(QKeySequence.Redo)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/redo.svg"))
-                else:
-                    action.setIcon(FigD.Icon("browser/redo_disabled.svg"))  
-            elif action.text() == "Forward":
-                action.setShortcut(QKeySequence.Forward)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("navbar/next.svg"))
-                else:
-                    action.setIcon(FigD.Icon("navbar/next_disabled.svg"))
-            elif action.text() == "Reload":
-                action.setShortcut(QKeySequence.Refresh)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("navbar/reload.svg"))
-                else:
-                    action.setIcon(FigD.Icon("navbar/reload_disabled.svg"))
-            elif action.text() == "Cut":
-                action.setShortcut(QKeySequence.Cut)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/cut.svg"))
-                else:
-                    action.setIcon(FigD.Icon("browser/cut_disabled.svg"))
-            elif action.text() == "Select all":
-                action.setShortcut(QKeySequence.SelectAll)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/select_all.png"))
-                else:
-                    action.setIcon(FigD.Icon("browser/select_all_disabled.png"))
-            elif action.text() == "Paste":
-                action.setShortcut(QKeySequence.Paste)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/paste.svg"))
-                else:
-                    action.setIcon(FigD.Icon("browser/paste_disabled.svg"))
-            elif action.text() == "Paste and match style":
-                action.setShortcut(QKeySequence("Ctrl+Shift+V"))
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("browser/paste_and_match_style.png"))
-                else:
-                    action.setIcon(FigD.Icon("browser/paste_and_match_style_disabled.png"))
-            elif action.text() == "Copy":
-                action.setShortcut(QKeySequence.Copy)
-                action.setIcon(FigD.Icon("browser/copy.svg"))
-                copyLinkToHighlight = self.menu.addAction(FigD.Icon("browser/highlight.svg"), "Copy link to highlight")
-                self.menu.insertAction(action, copyLinkToHighlight)
-                def truncateText(text, thresh=30, num_dots=3):
-                    if len(text) > 30:
-                        text = text[:(30-num_dots)]+"."*num_dots
-                    else: text = text
-                    return text.strip()
-                searchGoogleFor = self.menu.addAction(FigD.Icon("browser/google.svg"), f'Search Google for "{truncateText(data.selectedText())}"')
-                self.menu.insertAction(action, searchGoogleFor)
-                copyLowerCase = self.menu.addAction("Copy lower case")
-                self.menu.insertAction(action, copyLowerCase)
-                copyUpperCase = self.menu.addAction("Copy upper case") 
-                self.menu.insertAction(action, copyUpperCase)
-                copyTitleCase = self.menu.addAction("Copy title case")
-                self.menu.insertAction(action, copyTitleCase)
-            elif action.text() == "Save page":
-                action.setShortcut(QKeySequence.Save)
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("titlebar/save.svg"))
-                else:
-                    action.setIcon(FigD.Icon("titlebar/save.svg"))
-            elif action.text() == "View page source":
-                action.setShortcut(QKeySequence("Ctrl+U"))
-                if action.isEnabled():
-                    action.setIcon(FigD.Icon("titlebar/source.svg"))
-                else:
-                    action.setIcon(FigD.Icon("titlebar/source.svg"))
-        # insert actions.
-        for action in self.menu.actions():
-            if action.text() == "Save page":
-                # print("adding print action")
-                printAction = self.menu.addAction(FigD.Icon("titlebar/print.svg"), "Print", print, shortcut=QKeySequence("Ctrl+P"))
-                self.menu.insertAction(action, printAction)
-                break
-        for action in self.menu.actions():
-            if data.mediaType() == data.MediaTypeImage:
-                if action.text() in ["Back", "Forward", "Reload", "Print", "Save page"]:
-                    action.setVisible(False)
-            # elif data.mediaType() == data.MediaTypeNone:
-            else:
-                if action.text() in ["Back", "Forward", "Reload", "Print", "Save page"]:
-                    action.setVisible(True)
-        # open link in new tab, window, incognito window for image media type.
-        if data.mediaType() == data.MediaTypeImage:
-            for action in self.menu.actions():
-                if action.text() == "Save image": break
-            openLinkInNewTab = self.menu.addAction("Open link in new  tab")
-            openLinkInNewWindow = self.menu.addAction("Open link in new window")
-            openLinkInIncognitoWindow = self.menu.addAction("Open link in incognito window")
-            self.menu.insertAction(action, openLinkInIncognitoWindow)
-            self.menu.insertAction(openLinkInIncognitoWindow, openLinkInNewWindow)
-            self.menu.insertAction(openLinkInNewWindow, openLinkInNewTab)
-            self.menu.insertSeparator(action)
-            copyLinkAddress = self.menu.addAction("Copy link address")
-            saveLinkAs = self.menu.addAction("Save link as...")
-            self.menu.insertAction(action, copyLinkAddress)
-            self.menu.insertAction(copyLinkAddress, saveLinkAs)
-            self.menu.insertSeparator(action)
-            action.setText("Save image as...")
-            # self.menu.addSeparator(action)
-        # get the inspect action
-        inspectAction = self.menu.actions()[-1]
-        # verify that it is in fact the Inspect action.
-        if inspectAction.text() == "Inspect":
-            # create a new action that trigger the Inspect action after opening dev tools if not opened.
-            wrappedInspectAction = self.menu.addAction("Inspect")
-            wrappedInspectAction.setShortcut(QKeySequence("Ctrl+Shift+I"))
-            if wrappedInspectAction.isEnabled():
-                wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
-            else:
-                wrappedInspectAction.setIcon(FigD.Icon("titlebar/dev_tools.svg"))
-            wrappedInspectAction.triggered.connect(
-                lambda: inspectTriggered(
-                    browser=self,
-                    inspect_action=inspectAction,
-                )
-            )
-            # hide original inspect action.
-            inspectAction.setVisible(False)
-        palette = self.menu.palette()
-        palette.setColor(QPalette.Disabled, QPalette.Text, QColor(128,128,128))
-        palette.setColor(QPalette.Base, QColor(48,48,48,255))
-        palette.setColor(QPalette.Text, QColor(125,125,125))
-        palette.setColor(QPalette.Window, QColor(48,48,48,255))
-        palette.setColor(QPalette.WindowText, QColor(255,255,255,255))
-        palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-        # gradient = QLinearGradient(QPointF(0,0), QPointF(50,100))
-        # gradient = QGradient(QGradient.YoungPassion)
-        # gradient.setColorAt(0, QColor(161,31,83))
-        # gradient.setColorAt(1, QColor(91,54,54))
-        # gradient.setColorAt(2, QColor(235,95,52))
-        palette.setColor(QPalette.Highlight, QColor(235,95,52,90))
-        # palette.setColor(QPalette.Highlight, QColor(235,95,52))
-        # palette.setColor(QPalette.HighlightedText, QColor(29,29,29,255))
-        self.menu.setPalette(palette)
-        # self.menu.palette().setBackground(
-        #     QColor(29,29,29)
-        # )
-        # self.menu.setStyleSheet("background: #292929; color: #fff;")
-        font = QFont("Be Vietnam Pro", 10)
-        self.menu.setFont(font)
-        self.menu.addSeparator()
-        if data.mediaType() == data.MediaTypeNone:  
-            shareToDevice = self.menu.addAction(FigD.Icon("system/fileviewer/devices.svg"), "Send to your devices")
-            self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
-        elif data.mediaType() == data.MediaTypeImage:
-            self.menu.addAction(FigD.Icon("qrcode.svg"), "Create QR code for this page")
-            shareToDevice = self.menu.addAction(FigD.Icon("system/fileviewer/devices.svg"), "Send link to your devices")
-        # browser/copy_link_to_highlight.svg
-        if data.mediaType() == data.MediaTypeNone:
-            # highighting features.
-            highlightAction = self.menu.addAction(FigD.Icon("browser/copy_link_to_highlight.svg"), "Highlight selected text")
-            self.menu.addSeparator()
-            highlightAction.triggered.connect(self.highlightSelectedText)
-            # translate webpage to English.
-            transToEnglish = self.menu.addAction(FigD.Icon("trans.svg"), "Translate to English")
-            transToEnglish.triggered.connect(
-                lambda: self.page().translate(target_lang="en")
-            )
-        if data.mediaType() == data.MediaTypeNone:  
-            searchImageGoogleLens = self.menu.addAction(FigD.Icon("browser/google_lens.png"), "Search images with Google Lens") 
-            castToTv = self.menu.addAction(FigD.Icon("browser/cast.svg"), "Cast")  
-        elif data.mediaType() == data.MediaTypeImage:
-            searchImageGoogleLens = self.menu.addAction(FigD.Icon("browser/google_lens.png"), "Search image with Google Lens") 
-        # profile = self.page().profile()
-        # languages = profile.spellCheckLanguages()
-        # menu = self.page().createStandardContextMenu()
-        # menu.setParent(self)
-        # menu.addSeparator()
-
-        # spellcheckAction = QAction(self.tr("Check Spelling"), None)
-        # spellcheckAction.setCheckable(True)
-        # spellcheckAction.setChecked(profile.isSpellCheckEnabled())
-        # spellcheckAction.toggled.connect(profile.setSpellCheckEnabled)
-        # menu.addAction(spellcheckAction)
-        # if profile.isSpellCheckEnabled():
-        #     subMenu = menu.addMenu(self.tr("Select Language"))
-        #     for key, lang in self.m_spellCheckLanguages.items():
-        #         action = subMenu.addAction(key)
-        #         action.setCheckable(True)
-        #         action.setChecked(lang in languages)
-        #         action.triggered.connect(partial(self.on_spell_check, lang))
-        # menu.aboutToHide.connect(menu.deleteLater)
-        # menu.popup(event.globalPos())
-
-        # print(f"context menu has {len(self.menu.actions())} actions")
-        # self.menu.actions()[0].setIcon(FigD.Icon("qrcode.svg"))
-        # highlight action.
-        self.menu.popup(event.globalPos())
-   
-    def prevInHistory(self):
-        self.back()
-        # try:
-        #     if self.history().canGoBack():
-        #         self.dash_window.navbar.prevBtn.setEnabled(True)
-        #     else:
-        #         self.dash_window.navbar.prevBtn.setEnabled(False)
-        # except Exception as e:
-        #     print(f"\x1b[31;1mbrowser.prevInHistory:\x1b[0m", e)
-    def nextInHistory(self):
-        self.forward()
-        # try:
-        #     if self.history().canGoForward():
-        #         self.dash_window.navbar.nextBtn.setEnabled(True)
-        #     else:
-        #         self.dash_window.navbar.nextBtn.setEnabled(False)
-        # except Exception as e:
-        #     print(f"\x1b[31;1mbrowser.prevInHistory:\x1b[0m", e)
-
-    def load(self, url):
-        '''redefined load function which shows url being loaded on status bar.'''
-        # print(f"\x1b[33;1mloading {url}\x1b[0m")
-        self.dash_window.statusBar().showMessage(f"loading {url.toString()}")
-        super(DebugWebView, self).load(url)
-
-    def dragEnterEvent(self, e):
-        from pathlib import Path
-        from pprint import pprint
-
-        mimeData = e.mimeData()
-        print(mimeData.formats())
-        filename = mimeData.text().strip()
-        filename = filename.replace("file://", "")
-        mimetype = self.mime_database.mimeTypeForFile(filename).name()
-        print(f"dragEvent for {'folder' if os.path.isdir(filename) else 'file'}: {filename}, with mimetype: {mimetype}")
-        if os.path.isdir(filename):
-            # case when item being opened is actually a folder.
-            self.dash_window.tabs.openWidget(
-                widget=self.dash_window.menu.fileviewer,
-                icon=FigD.Icon("system/fileviewer/folder.svg"),
-                title=filename, 
-            )
-            self.dash_window.menu.fileviewer.connectWindow(self.dash_window)
-            self.dash_window.menu.fileviewer.open(filename)
-        else:
-            # if mimetype == "application/octet-stream":
-            #     import urllib.parse
-            #     # url = urllib.parse.urlencode(filename)
-            #     url = QUrl(filename)
-            #     print(filename, url.toString())
-            #     self.dash_window.tabs.loadUrl(filename)
-            super(Browser, self).dragEnterEvent(e)
-
-    def changeUserAgent(self):
-        try:
-            userAgentStr = "Mozilla/5.0 (X11; Linux x86_64; rv:84.0) Gecko/20100101 Firefox/84.0" 
-            # userAgentStr = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.82 Safari/537.36"
-            self.page().profile().setHttpUserAgent(userAgentStr)
-            # print("changed user agent.")
-        except Exception as e:
-            print("\x1b[31;1mbrowser.changeUserAgent\x1b[0m", e)
-
-    def updateTabTitle(self):
-        try:
-            # self.searchPanel.closePanel()
-            self.dash_window.navbar.searchbar.setText(
-                self.url().toString(QUrl.FullyEncoded)
-            )
-            self.dash_window.statusBar().clearMessage()
-            # print(f"\x1b[33murlChanged({self.url().toString()})\x1b[0m")
-        except AttributeError as e:
-            print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
-        try:
-            # change title of the tab that contains this browser only.
-            currentWidget =  self.tabWidget.currentWidget()
-            if currentWidget is None: return 
-            if self != currentWidget.browser: return
-            i = self.tabWidget.currentIndex()
-            if i < 0: return
-            navbar = self.dash_window.navbar
-            navbar.reloadBtn.setStopMode(True)
-            # print(f"\x1b[33mscheduling setupTabForBrowser for urlChanged({self.url().toString()})\x1b[0m")
-            self.page().loadFinished.connect(
-                lambda: self.tabWidget.setupTabForBrowser(
-                    i=i, browser=self,
-                )
-            )
-        except AttributeError as e:
-            print(f"\x1b[31;1mbrowser.updateTabTitle:\x1b[0m {e}")
-            # print("not connected to a TabWidget")
-    def setUrl(self, url):
-        self.dash_window.statusBar().showMessage(f"loading {url.toString()}")
-        super(Browser, self).setUrl(url)
-
-    def setWordCount(self):
-        code = '''
-        function calculateWordCount(text) {
-            const wordsArr = text.trim().split(" ")
-            return wordsArr.filter(word => word !== "").length
-        }
-        calculateWordCount(document.body.textContent);
-        '''
-        self.page().runJavaScript(code, self._word_count_callback)
-
-    def _word_count_callback(self, word_count: int):
-        try:
-            self.dash_window.page_info.update(word_count)
-        except AttributeError as e:
-            print(f"\x1b[31;1mbrowser._word_count_callback:\x1b[0m {e}")
-            # print("TabWidget not connected to DashWindow") 
-    def connectTabWidget(self, tabWidget):
-        self.tabWidget = tabWidget 
-        self.CtrlPlus = QShortcut(QKeySequence.ZoomIn, self)
-        self.CtrlPlus.activated.connect(tabWidget.zoomInTab)
-        self.CtrlMinus = QShortcut(QKeySequence.ZoomOut, self)
-        self.CtrlMinus.activated.connect(tabWidget.zoomOutTab)
-        self.urlChanged.connect(self.updateTabTitle)
-        try: 
-            self.titlebar = self.dash_window.titlebar
-            print("self.titlebar =", self.titlebar)
-            self.dash_window = tabWidget.dash_window
-            self.dash_window.statusBar().addWidget(self.statusbar)
-        except AttributeError as e:
-            print(f"\x1b[31;1mbrowser.connectTabWidget:\x1b[0m {e}")
-            # print("TabWidget not connected to DashWindow") 
-    def highlightSelectedText(self):
-        '''highlight selected text by using the highlightSelection() function.'''
-        print("\x1b[33;1mhighlighting selected text\x1b[0m")
-        self.page().runJavaScript("highlightSelection()")
-        print("selected text:", self.selectedText())
-
-    def execAnnotationJS(self):
-        '''execute javascript needed for annotation shit'''
-        self.page().runJavaScript(WEBPAGE_ANNOT_JS)
-
-    def execTerminalJS(self):
-        '''execute javascript needed for running terminal related shit'''
-        self.page().runJavaScript(WEBPAGE_TERMINAL_JS)
-
-    def setScrollbar(self, style: str=scrollbar_style):
-        code = f'''Style = `{scrollbar_style}`
-newScrollbarStyle = document.createElement('style');
-newScrollbarStyle.innerHTML = Style
-document.head.appendChild(newScrollbarStyle);'''
-        self.page().runJavaScript(code)
-
-    def setSelectionStyle(self, style: str=selection_style):
-        code = f'''Style = `{style}`
-newSelectStyle = document.createElement('style');
-newSelectStyle.innerHTML = Style
-document.head.appendChild(newSelectStyle);
-'''
-        self.page().runJavaScript(code)
-
-    # def drop
-    def iconSetCallback(self, html: str):
-        from bs4 import BeautifulSoup
-        from fig_dash.utils import QFetchIcon
-
-        soup = BeautifulSoup(html, features="html.parser")
-        icon_links = soup.findAll("link", **{"rel": "icon"})
-        icon_path, is_svg = None, False
-        for icon in icon_links:
-            icon_path = icon["href"]
-            if icon.get("type")=="image/svg+xml": is_svg = True; break
-        if icon_path:
-            try:
-                pageIcon = QFetchIcon(icon_path, is_svg)
-            except MissingSchema:
-                pageIcon = FigD.Icon("browser.svg")
-            except InvalidSchema:  
-                pageIcon = QIcon(icon_path.replace("file://",""))
-        else:
-            pageIcon = FigD.Icon("browser.svg")
-        
-        tabBar = self.tabWidget.tabBar()
-        animLabel = tabBar.tabButton(self.i, QTabBar.LeftSide)
-        if animLabel is None: animLabel = QLabel()
-        
-        print("\x1b[34;1msetting pixmap\x1b[0m")
-        self.pagePixmap = pageIcon.pixmap(QSize(20,20))
-        self.pagePixmap.save("DELETE_THIS_BROWSER_PIXMAP.png")
-        # print("pixmap:", animLabel.pixmap())
-        # print("movie:", animLabel.movie())
-        animLabel.setPixmap(self.pagePixmap)
-        tabBar.setTabButton(self.i, QTabBar.LeftSide, animLabel)
-        # self.tabs.setTabIcon(self.i, pageIcon)
-    def setIcon(self, tabs, i: int):
-        self.i = i
-        self.tabs = tabs
-        self.page().toHtml(self.iconSetCallback)
-
-    def terminalize(self):
-        rendered = TermViewerHtml.render(
-            TERM_VIEWER_JS=TermViewerJS,
-            TERM_VIEWER_CSS=TermViewerCSS,
-        )
-        self.setTerminalized(True)
-        url = FigD.createTempUrl(rendered)
-        self.load(QUrl(url))
-
-    def unterminalize(self):
-        self.setTerminalized(False)
-        self.back()
-# class MainWindow(QWidget):
-#     def __init__(self, parent=None):
-#         super(QWidget, self).__init__(parent)
-#         self.defaultUrl = QUrl()
-
-
-#         toolbar = self.addToolBar("")
-#         toolbar.addWidget(self.urlLe)
-#         toolbar.addWidget(self.favoriteButton)
-
-#         self.addToolBarBreak()
-#         self.bookmarkToolbar = BookmarkBar()
-#         self.bookmarkToolbar.bookmarkClicked.connect(self.add_new_tab)
-#         self.addToolBar(self.bookmarkToolbar)
-#         self.readSettings()
-
-#     def onReturnPressed(self):
-#         self.tabs.currentWidget().setUrl(QUrl.fromUserInput(self.urlLe.text()))
-
-#     def addFavoriteClicked(self):
-#         loop = QtCore.QEventLoop()
-
-#         def callback(resp):
-#             setattr(self, "title", resp)
-#             loop.quit()
-
-#         web_browser = self.tabs.currentWidget()
-#         web_browser.page().runJavaScript("(function() { return document.title;})();", callback)
-#         url = web_browser.url()
-#         loop.exec_()
-#         self.bookmarkToolbar.addBookmarkAction(getattr(self, "title"), url)
-
-#     def add_new_tab(self, qurl=QUrl(), label='Blank'):
-#         web_browser = QtWebEngineWidgets.QWebEngineView()
-#         web_browser.setUrl(qurl)
-#         web_browser.adjustSize()
-#         web_browser.urlChanged.connect(self.updateUlrLe)
-#         index = self.tabs.addTab(web_browser, label)
-#         self.tabs.setCurrentIndex(index)
-#         self.urlLe.setText(qurl.toString())
-
-#     def updateUlrLe(self, url):
-#         self.urlLe.setText(url.toDisplayString())
-
-#     def readSettings(self):
-#         settings = QtCore.QSettings()
-#         self.defaultUrl = settings.value("defaultUrl", QUrl('http://www.google.com'))
-#         self.add_new_tab(self.defaultUrl, f'Hello {getpass.getuser()}!')
-#         bookmarks = settings.value("bookmarks", [])
-#         if bookmarks is None: bookmarks = []
-#         # print(settings.value("bookmarks", []))
-#         self.bookmarkToolbar.setBookmarks(bookmarks)
-
-#     def saveSettings(self):
-#         settings = QtCore.QSettings()
-#         settings.setValue("defaultUrl", self.defaultUrl)
-#         settings.setValue("bookmarks", self.bookmarkToolbar.bookmark_list)
-
-#     def closeEvent(self, event):
-#         self.saveSettings()
-#         super(MainWindow, self).closeEvent(event)
-class HomePageView(Browser):
-    # def dragEnterEvent(self, e):
-    #     e.ignore()
-    pass
-
-class ChromeBrowserContainer:
-    pass
-
-# page info widget.
-def test_page_info():
-    FigD("/home/atharva/GUI/fig-dash/resources")
-    app = QApplication(sys.argv)
-    page_info = PageInfo()
-    page_info.show()
-    app.exec()
+	return parser.parse_args()
 
 def debug_webview_factory(**args):
     """factory method to create debug webview."""
@@ -2361,7 +1887,8 @@ def test_debug_webview():
     FigD("/home/atharva/GUI/fig-dash/resources")
     from fig_dash.ui import FigDAppContainer
     app = FigDAppContainer(sys.argv)
-    window = debug_webview_window_factory()
+    args = parse_debug_webview_args()
+    window = debug_webview_window_factory(**vars(args))
     window.show()
     app.exec()
 
