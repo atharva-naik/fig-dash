@@ -19,6 +19,7 @@ FigDAccentColorMap = {
     "fileviewer": "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #124b7f, stop : 0.091 #175187, stop : 0.182 #1c578e, stop : 0.273 #215e96, stop : 0.364 #25649e, stop : 0.455 #296ba5, stop : 0.545 #2e71ad, stop : 0.636 #3278b5, stop : 0.727 #367ebd, stop : 0.818 #3a85c5, stop : 0.909 #3e8ccd, stop : 1.0 #4293d5);",
     "app_launcher": "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #105adf, stop : 0.091 #0067e7, stop : 0.182 #0073ed, stop : 0.273 #007ef2, stop : 0.364 #0089f6, stop : 0.455 #0093f9, stop : 0.545 #009dfb, stop : 0.636 #00a7fc, stop : 0.727 #00b1fd, stop : 0.818 #00bafd, stop : 0.909 #00c3fc, stop : 1.0 #0cccfc);",
     "terminal": "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #1c1e20, stop : 0.091 #232628, stop : 0.182 #2b2d30, stop : 0.273 #323538, stop : 0.364 #3a3d41, stop : 0.455 #424649, stop : 0.545 #4a4e52, stop : 0.636 #52575b, stop : 0.727 #5a6065, stop : 0.818 #63696e, stop : 0.909 #6b7277, stop : 1.0 #747b81)",
+    "debug_webview": "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #fa6102, stop : 0.091 #fa6700, stop : 0.182 #fb6e00, stop : 0.273 #fb7400, stop : 0.364 #fb7900, stop : 0.455 #fb7f00, stop : 0.545 #fb8500, stop : 0.636 #fb8a00, stop : 0.727 #fb8f00, stop : 0.818 #fb9500, stop : 0.909 #fa9a00, stop : 1.0 #fa9f02)",
 }
 FigDSystemAppIconMap = {
     "clipboard": FigD.icon("system/clipboard/logo.png"), 
@@ -32,11 +33,5 @@ FigDSystemAppIconMap = {
     "app_launcher": FigD.icon("system/app_launcher.png"),
     "terminal": FigD.icon("system/terminal/logo.svg"),
     "weather": FigD.icon("widget/weather/logo.png"), 
+    "debug_webview": FigD.icon("browser/browser.png"),
 }
-
-
-class DashStyleCenter:
-    pass
-
-class DashThemeCenter:
-    pass

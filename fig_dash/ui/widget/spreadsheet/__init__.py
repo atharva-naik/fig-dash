@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt, QSize, QUrl
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QSplitter, QComboBox, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 # widget for handling excel/csv/tsv spreadsheet data, using x-spreadsheet.js and pandas as a backend (saving, formulae etc.)
 
 spreadsheet_style = '''

@@ -19,7 +19,7 @@ from PyQt5.QtWebEngineCore import QWebEngineFindTextResult
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage, QWebEngineSettings, QWebEngineContextMenuData
 from PyQt5.QtGui import QColor, QFont, QPalette, QKeySequence, QIcon, QMovie, QPixmap, QGradient, QLinearGradient, QPainterPath, QRegion
 from PyQt5.QtCore import QUrl, pyqtSignal, pyqtSlot, QMimeDatabase, Qt, QUrl, QSize, QPoint, QPointF, QRectF, QObject
-from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QSplitterHandle, QLabel, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
+from PyQt5.QtWidgets import QTabBar, QToolBar, QToolButton, QSplitter, QLabel, QMenu, QWidget, QAction, QVBoxLayout, QHBoxLayout, QApplication, QSizePolicy, QGraphicsDropShadowEffect, QLineEdit, QTextEdit, QPlainTextEdit, QShortcut, QMessageBox, QFrame
 # fig_dash
 from fig_dash.assets import FigD
 from fig_dash.utils import collapseuser
@@ -1220,16 +1220,70 @@ class DebugWebBrowser(QWebEngineView):
         del self._printer    
 
     def contextMenuEvent(self, event):
-        self.contextMenu = self.page().createStandardContextMenu()
+        baseContextMenu = self.page().createStandardContextMenu()
+        data = self.page().contextMenuData()
+        actionMap = {}
+        for action in baseContextMenu.actions():
+            actionMap[action.text()] = action.trigger
+        # new context menu.
+        self.contextMenu = QMenu()
+        if data.mediaType() == QWebEngineContextMenuData.MediaTypeNone:
+            self.contextMenu.addAction(
+                "Back", actionMap["Back"], 
+                QKeySequence.Back,
+            )
+            self.contextMenu.addAction(
+                "Forward", actionMap["Forward"], 
+                QKeySequence.Forward,
+            )
+            self.contextMenu.addAction(
+                "Reload", actionMap["Reload"], 
+                QKeySequence.Refresh,
+            )
+            self.contextMenu.addSeparator()
+            self.contextMenu.addAction(
+                "Save as...", 
+                actionMap["Save page"],
+                QKeySequence.Save,
+            )
+            def blank(): pass
+            self.contextMenu.addAction(
+                "Print...", blank, 
+                QKeySequence.Print,
+            )
+            self.contextMenu.addAction("Cast...", blank)
+            self.contextMenu.addAction("Search images with Google Lens")
+            self.contextMenu.addSeparator()
+            self.contextMenu.addAction("Send to your devices")
+            self.contextMenu.addAction("Create QR code for this page")
+            self.contextMenu.addSeparator()
+            self.contextMenu.addAction("Translate to English")
+            self.contextMenu.addSeparator()
+            self.contextMenu.addAction(
+                "View page source", 
+                actionMap["View page source"],
+                QKeySequence("Ctrl+U"),
+            )
+            self.contextMenu.addAction(
+                "Inspect", blank,
+                QKeySequence("Ctrl+Shift+I"),
+            )
+        else: 
+            self.contextMenu = baseContextMenu
+        print(actionMap)
+        # for action in self.contextMenu.actions():
+        #     if action.text() == "Back":
+        #         action.setShortcut(QKeySequence.Back)
+        #     elif action.text() == "Forward":
+        #         action.setShortcut(QKeySequence.Forward)
+        #     elif action.text() == "Reload":
+        #         action.setShortcut(QKeySequence.Refresh)
+        # TODO: change
+        baseContextMenu = self.contextMenu
+        # style context menu.
         self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
-        for action in self.contextMenu.actions():
-            if action.text() == "Back":
-                action.setShortcut(QKeySequence.Back)
-            elif action.text() == "Forward":
-                action.setShortcut(QKeySequence.Forward)
-            elif action.text() == "Reload":
-                action.setShortcut(QKeySequence.Refresh)
         self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+        # show context menu popup with global position based on the event.
         self.contextMenu.popup(event.globalPos())
 
     def setSpellCheck(self, lang: str="en-US") -> None:
@@ -1303,6 +1357,9 @@ class DebugWebView(QSplitter):
     def onUrlChange(self):
         self.browser.setZoomFactor(self.browser.currentZoomFactor)
         self.browser.loadFinished.connect(self.onLoadFinished)
+
+    def viewSource(self):
+        print("trigger viewSource for ui::browser::DebugWebView")
 
     def onLoadFinished(self):        
         self.loadDevTools()
@@ -2246,15 +2303,68 @@ class HomePageView(Browser):
 class ChromeBrowserContainer:
     pass
 
-
+# page info widget.
 def test_page_info():
     FigD("/home/atharva/GUI/fig-dash/resources")
-    import sys
     app = QApplication(sys.argv)
     page_info = PageInfo()
     page_info.show()
     app.exec()
 
+def debug_webview_factory(**args):
+    """factory method to create debug webview."""
+    path = args.get("path")
+    url = args.get("url", "https://www.google.com")
+    accent_color = args.get("accent_color", 'orange')
+    browser = DebugWebBrowser(accent_color=accent_color)
+    webview = DebugWebView(
+        browser=browser,
+        accent_color=accent_color,
+    )
+    if path is None: url = QUrl(url)
+    else: url = QUrl.fromLocalFile(path)
+    browser.load(url)
 
+    return webview
+
+def debug_webview_window_factory(**args):
+    from fig_dash.ui import wrapFigDWindow
+    from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
+    # accent color.
+    icon_size = (25,25)
+    icon = FigDSystemAppIconMap["debug_webview"]
+    accent_color = FigDAccentColorMap["debug_webview"]
+    widget_args = {
+		# "css_grad": create_css_grad(extract_colors_from_qt_grad(accent_color)),
+		"path": args.get("path"),
+        "accent_color": accent_color,
+        "url": args.get("url", "https://www.google.com"),
+	}
+    webview = debug_webview_factory(**widget_args)
+    tab_title = f"Welcome {getpass.getuser()}!"
+    tab_icon = FigD.icon("browser.svg")
+    window = wrapFigDWindow(
+		webview, title="Debug Webview", icon=icon, size=icon_size, autohide=False,
+        name="debug_webview", accent_color=accent_color, widget_args=widget_args,
+        widget_factory=debug_webview_factory, window_args=args, 
+		titlebar_callbacks={
+			"viewSourceBtn": webview.viewSource,
+		}, window_factory=debug_webview_window_factory,
+		find_function=webview.browser.reactToCtrlF,
+		tab_title=tab_title, tab_icon=tab_icon,
+	)
+
+    return window
+
+# test debug webview.
+def test_debug_webview():
+    FigD("/home/atharva/GUI/fig-dash/resources")
+    from fig_dash.ui import FigDAppContainer
+    app = FigDAppContainer(sys.argv)
+    window = debug_webview_window_factory()
+    window.show()
+    app.exec()
+
+# main function
 if __name__ == "__main__":
-    test_page_info()
+    test_debug_webview()

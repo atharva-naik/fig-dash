@@ -23,6 +23,15 @@ class FigDShortcut(QShortcut):
                  description: str="description"):
         super(FigDShortcut, self).__init__(keyseq, parent)
         self.description = description
+        self.func = None
+
+    def connect(self, func):
+        self.activated.connect(func)
+        self.func = func
+
+    def activate(self):
+        print(self.description + " activated")
+        if self.func is not None: self.func()
 
 # property animation based show/hide.
 def smooth_transition(target: QWidget):
@@ -1705,6 +1714,60 @@ class FigDAppContainer(QApplication):
 
         return super(FigDAppContainer, self).notify(obj, event)
 
+# FigD tabwidget splitter button.
+class FigDTabSplitBtn(QToolButton):
+    def __init__(self, size: Tuple[int,int]=(20,20), 
+                 accent_color: str="gray", alpha=150,
+                 parent: Union[None, QWidget]=None):
+        super(FigDTabSplitBtn, self).__init__(parent=parent)
+        # accent color, bg alpha, border color.
+        self.accent_color = accent_color
+        self.border_color = extractFromAccentColor(accent_color)
+        self.bg_alpha = setAccentColorAlpha(
+            accent_color, 
+            alpha=alpha,
+        )
+        self.setIcon(FigD.Icon("tabbar/split.svg"))
+        self.setStyleSheet(jinja2.Template('''
+        QToolButton {
+            color: #fff;
+            font-size: 14px;
+            border-radius: 2px;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+        QToolButton:hover {
+            color: #292929;
+            background: {{ background }};
+            border: 1px solid {{ border_color }};
+        }
+        QToolTip {
+            color: #fff;
+            border: 0px;
+            background: #000;
+        }''').render(
+                background=self.bg_alpha,
+                border_color=self.border_color,
+            )
+        )
+        self.setIconSize(QSize(*size))
+        self.clicked.connect(self.showSplitterMenu)
+
+    def showSplitterMenu(self):
+        self.splitterMenu = QMenu()
+        self.splitterMenu.addAction(FigD.Icon("tabbar/split-up.svg"), "Split Up")
+        self.splitterMenu.addAction(FigD.Icon("tabbar/split-down.svg"), "Split Down")
+        self.splitterMenu.addAction(FigD.Icon("tabbar/split-left.svg"), "Split Left")
+        self.splitterMenu.addAction(FigD.Icon("tabbar/split-right.svg"), "Split Right")
+        # style splitter menu.
+        self.splitterMenu = styleContextMenu(
+            self.splitterMenu, 
+            self.accent_color,
+        )
+        # show splitter menu.
+        pos = self.mapToGlobal(QPoint(0, 0))
+        self.splitterMenu.popup(pos)
+
 # FigD style tab corner widget class.
 class FigDTabManager(QWidget):
     def __init__(self, accent_color: str="gray", 
@@ -1714,18 +1777,20 @@ class FigDTabManager(QWidget):
         self.hboxlayout = QHBoxLayout()
         self.hboxlayout.setSpacing(2)
         self.hboxlayout.setContentsMargins(0, 0, 5, 0)
+        alpha = 150
         # accent color, bg alpha, border color.
         self.accent_color = accent_color
         self.border_color = extractFromAccentColor(accent_color)
-        self.bg_alpha = setAccentColorAlpha(accent_color, alpha=150)
+        self.bg_alpha = setAccentColorAlpha(accent_color, alpha=alpha)
         # tab related buttons.
-        self.vSplitBtn = self.initCornerBtn("tabbar/split-vertical.svg")
-        self.hSplitBtn = self.initCornerBtn("tabbar/split-horizontal.svg")
+        self.splitterBtn = FigDTabSplitBtn(
+            accent_color=accent_color, 
+            size=(24,24), alpha=alpha,
+        )
         self.deletedBtn = self.initCornerBtn("tabbar/trash.svg", size=(20,20))
         self.searchBtn = self.initCornerBtn("tabbar/search_tabs.svg", size=(20,20))
         # build layout.
-        self.hboxlayout.addWidget(self.vSplitBtn, 0, Qt.AlignVCenter)
-        self.hboxlayout.addWidget(self.hSplitBtn, 0, Qt.AlignVCenter)
+        self.hboxlayout.addWidget(self.splitterBtn, 0, Qt.AlignVCenter)
         self.hboxlayout.addWidget(self.deletedBtn, 0, Qt.AlignVCenter)
         self.hboxlayout.addWidget(self.searchBtn, 0, Qt.AlignVCenter)
         # set layout and size policy.
@@ -1904,11 +1969,12 @@ class FigDTabBar(QTabBar):
         self.setDrawBase(False)
         size = sum(self.tabRect(i).width() for i in range(self.count()))
         # Set the new tab button location in a visible area
-        y = self.geometry().top()+4
+        y = 4 # y = self.geometry().top()+4
         if size > self.width():
             x = self.width()-54
         else: x = size
         x = x+5
+        print("ui::FigDTabBar.moveNewTabBtn:", x, y)
         # Show just to the left of the scroll buttons
         self.plusBtn.move(x, y)
 
@@ -1918,17 +1984,25 @@ class FigDTabBar(QTabBar):
         tabControls = self.initTabControls(self)
         contextMenu.addAction(tabControls)
         # if new tab requested (True signifies towards the right.)
-        contextMenu.addAction(
+        self._cmenu_new_tab_to_left = contextMenu.addAction(
             "New tab to left", 
             self.addTabToTheLeft
         )
-        contextMenu.addAction(
+        self._cmenu_new_tab_to_right = contextMenu.addAction(
             "New tab to right", 
             self.addTabToTheRight
         )
         contextMenu.addSeparator()
-        contextMenu.addAction(FigD.Icon("tabbar/reading_list.svg"), "Add tab to reading list")
+        contextMenu.addAction(
+            FigD.Icon("tabbar/reading_list.svg"), 
+            "Add tab to reading list"
+        )
         contextMenu.addAction("Add tab to group")
+        contextMenu.addSeparator()
+        contextMenu.addAction("Split Up")
+        contextMenu.addAction("Split Down")
+        contextMenu.addAction("Split Left")
+        contextMenu.addAction("Split Right")
 
         return contextMenu
 
@@ -1937,28 +2011,26 @@ class FigDTabBar(QTabBar):
         contextMenu.addAction("Minimize")
         contextMenu.addAction("Maximize")
         contextMenu.addSeparator()
-        contextMenu.addAction(
+        self._cmenu_new_tab = contextMenu.addAction(
             FigD.Icon("tabbar/new-tab.png"), 
             "New tab", blank, QKeySequence("Ctrl+T")
         )
-        contextMenu.addAction(
+        self._cmenu_reopen_closed_tab = contextMenu.addAction(
             "Reopen closed tab", blank, 
             QKeySequence("Ctrl+Shift+T")
         )
-        contextMenu.addAction(
+        self._cmenu_save_tab_list = contextMenu.addAction(
             FigD.Icon("tabbar/save-tab-list.png"), 
             "Bookmark all tabs...", blank, 
             QKeySequence("Ctrl+Shift+D")
         )
         contextMenu.addSeparator()
-        contextMenu.addAction(
+        self._cmenu_open_task_manager = contextMenu.addAction(
             "Task Manager", blank, 
             QKeySequence("Shift+Esc")
         )
         contextMenu.addSeparator()
-        contextMenu.addAction("Use system title bar and borders")
-        contextMenu.addSeparator()
-        contextMenu.addAction(
+        self._cmenu_close = contextMenu.addAction(
             "Close", blank, 
             QKeySequence("Ctrl+Shift+W")
         )
@@ -2064,8 +2136,10 @@ class FigDTabCtrlBtn(QToolButton):
 # FigD tabbar settings button.
 class FigDTabSettingsBtn(QWidget):
     def __init__(self, accent_color: str="gray", 
-                 where: str="back", parent=None):
+                 where: str="back", tabwidget=None,
+                 parent: Union[None, QWidget]=None):
         super(FigDTabSettingsBtn, self).__init__(parent=parent)
+        self.tabwidget = tabwidget
         self.accent_color = accent_color
         self.border_color = extractFromAccentColor(accent_color, where)
         self.bg_alpha = setAccentColorAlpha(accent_color)
@@ -2120,7 +2194,27 @@ class FigDTabSettingsBtn(QWidget):
 
     def showSettingsMenu(self):
         self.contextMenu = QMenu()
-        self.contextMenu.addAction("Turn on vertical tabs")
+        if self.tabwidget:
+            if self.tabwidget.tabPosition() != QTabWidget.North:
+                self.contextMenu.addAction(
+                    "Horizontal tabbar at top",
+                    self.tabwidget.setNorth,
+                )
+            if self.tabwidget.tabPosition() != QTabWidget.South:
+                self.contextMenu.addAction(
+                    "Horizontal tabbar at bottom",
+                    self.tabwidget.setSouth,
+                )
+            if self.tabwidget.tabPosition() != QTabWidget.West:
+                self.contextMenu.addAction(
+                    "Vertical tabbar at left",
+                    partial(self.tabwidget.setTabPosition, QTabWidget.West),
+                )
+            if self.tabwidget.tabPosition() != QTabWidget.East:
+                self.contextMenu.addAction(
+                    "Vertical tabbar at right",
+                    partial(self.tabwidget.setTabPosition, QTabWidget.East),
+                )
         self.contextMenu.addAction("Tabs from other devices")
         pos = self.mapToGlobal(QPoint(0, 0))
         self.contextMenu = styleContextMenu(
@@ -2134,7 +2228,7 @@ class FigDTabWidget(QTabWidget):
     def __init__(self, widget_factory=None, window_factory=None, 
                  parent: Union[None, QWidget]=None, tab_icon: str="",
                  tab_title: str="New tab", widget_args={}, window_args={},
-                 accent_color: str="gray", where: str="back"):
+                 accent_color: str="gray", autohide: bool=True, where: str="back"):
         super(FigDTabWidget, self).__init__(parent)
         # tab icon and title for new tabs.
         self.tab_icon = FigD.Icon(tab_icon)
@@ -2230,12 +2324,7 @@ class FigDTabWidget(QTabWidget):
             font-size: 17px;
             font-weight: bold;
         }""")
-        self.tab_manager = FigDTabManager(
-            accent_color=accent_color,
-        )
-        self.tab_settings = FigDTabSettingsBtn(
-            accent_color=accent_color,
-        )
+        self.resetCornerWidgets()
         self.tab_bar = FigDTabBar(
             accent_color=accent_color,
             tabwidget=self,
@@ -2248,12 +2337,9 @@ class FigDTabWidget(QTabWidget):
         self.setMovable(True)
         self.setTabsClosable(True)
         self.setDocumentMode(True)
-        
-        self.setTabBarAutoHide(True)
+        self.setTabBarAutoHide(autohide)
         self.setElideMode(Qt.ElideRight)
         self.setObjectName("FigDTabWidget")
-        self.setCornerWidget(self.tab_settings, Qt.TopLeftCorner)
-        self.setCornerWidget(self.tab_manager, Qt.TopRightCorner)
         self.tab_bar.setGraphicsEffect(drop_shadow)
         self.tab_bar.setDrawBase(False)
         # connect slots to signals.
@@ -2261,12 +2347,46 @@ class FigDTabWidget(QTabWidget):
         self.tabCloseRequested.connect(self.closeRequestedTab)
         # shortcuts
         self.AddTab = FigDShortcut(QKeySequence.AddTab, self, "Open new tab")
-        self.AddTab.activated.connect(self.openTab)
+        self.AddTab.connect(self.openTab)
         self.NewWindow = FigDShortcut(QKeySequence.New, self, "Open new window")
-        self.NewWindow.activated.connect(self.openWindow)
+        self.NewWindow.connect(self.openWindow)
         self.CloseTab = FigDShortcut(QKeySequence.Close, self, "Close tab/window")
-        self.CloseTab.activated.connect(self.closeCurrentTab)
+        self.CloseTab.connect(self.closeCurrentTab)
         self.setAttribute(Qt.WA_TranslucentBackground)
+
+    def resetCornerWidgets(self, loc=Qt.TopLeftCorner, loc1=Qt.TopRightCorner):
+        print(f"\x1b[34;1mui::FigDTabWidget.resetCornerWidgets({loc}, {loc1})\x1b[0m")
+        tab_manager1 = FigDTabManager(
+            accent_color=self.accent_color,
+        )
+        tab_manager2 = FigDTabManager(
+            accent_color=self.accent_color,
+        )
+        tab_settings1 = FigDTabSettingsBtn(
+            accent_color=self.accent_color,
+            tabwidget=self,
+        )
+        tab_settings2 = FigDTabSettingsBtn(
+            accent_color=self.accent_color,
+            tabwidget=self,
+        )
+        self.setCornerWidget(tab_settings1, Qt.TopLeftCorner)
+        self.setCornerWidget(tab_settings2, Qt.BottomLeftCorner)
+        self.setCornerWidget(tab_manager1, Qt.TopRightCorner)
+        self.setCornerWidget(tab_manager2, Qt.BottomRightCorner)
+
+    def setSouth(self):
+        self.setTabPosition(QTabWidget.South)
+        self.resetCornerWidgets(
+            Qt.BottomLeftCorner, 
+            Qt.BottomRightCorner,
+        )
+        self.tabBar().moveNewTabBtn()
+
+    def setNorth(self):
+        self.setTabPosition(QTabWidget.North)
+        self.resetCornerWidgets()
+        self.tabBar().moveNewTabBtn()
 
     def showEvent(self, event):
         """if you want to modify show event"""
@@ -2767,6 +2887,18 @@ class FigDNavBar(QWidget):
             getattr(self, name+"Btn").show()
         self.setLayout(self.hboxlayout)
         self.setFixedHeight(35)
+        self.setGraphicsEffect(
+            self.createDropShadow(accent_color)
+        )
+
+    def createDropShadow(self, accent_color: str, where: str):
+        drop_shadow_color = extractFromAccentColor(accent_color, where=where)
+        drop_shadow = QGraphicsDropShadowEffect()
+        drop_shadow.setColor(QColor(drop_shadow_color))
+        drop_shadow.setBlurRadius(10)
+        drop_shadow.setOffset(0, 0)
+
+        return drop_shadow
 
     def navBtns(self):
         for name in self.navbtns:
@@ -2947,6 +3079,29 @@ class FigDMainWindow(QMainWindow):
             self.hideRibbon()
         else: self.showRibbon()
 
+# shortcut description label
+class FigDShortcutDescription(QLabel):
+    clicked = pyqtSignal()
+    def __init__(self, text: str="shortcut does...", 
+                 parent: Union[None, QWidget]=None):
+        super(FigDShortcutDescription, self).__init__(parent)
+        self.setStyleSheet("""
+        QLabel {
+            color: #949494;
+            font-size: 18px;
+            /* font-family: 'Be Vietnam Pro'; */
+            background: transparent;
+        }
+        QLabel:hover {
+            color: #fff;
+        }""")
+        self.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        self.setText("    "+text)
+
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        super(FigDShortcutDescription, self).mousePressEvent(event)
+
 # FigD application window object.
 class FigDWindow(QMainWindow):
     def __init__(self, widget, **args):
@@ -2965,7 +3120,7 @@ class FigDWindow(QMainWindow):
             QKeySequence("F11"), 
             self, "Toggle fullscreen mode"
         )
-        self.FnF11.activated.connect(self.toggleFullScreen)
+        self.FnF11.connect(self.toggleFullScreen)
         self.titlebar = None
         self.shortcuts_pane = self.createShortcutsPane()
 
@@ -2984,7 +3139,9 @@ class FigDWindow(QMainWindow):
             print(shortcut.key().toString()) 
             print(type(action), action.text(), action.toolTip(), [x.toString() for x in action.shortcuts()])
 
-    def createShortcutLine(self, shortcut: str, action: str) -> QWidget:
+    def createShortcutLine(self, figd_shortcut) -> QWidget:
+        shortcut = figd_shortcut.key().toString()
+        action = figd_shortcut.description
         line = QWidget()
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -3031,16 +3188,8 @@ class FigDWindow(QMainWindow):
         layout.addWidget(keyBtn, 0, Qt.AlignLeft | Qt.AlignVCenter)
         layout.addStretch(1)
         # add description text for the action.
-        description = QLabel()
-        description.setStyleSheet("""
-        QLabel {
-            color: #fff;
-            font-size: 16px;
-            font-family: 'Be Vietnam Pro';
-            background: transparent;
-        }""")
-        description.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        description.setText(action)
+        description = FigDShortcutDescription(action)
+        description.clicked.connect(figd_shortcut.activate)
         layout.addWidget(description)
 
         return line
@@ -3069,10 +3218,7 @@ class FigDWindow(QMainWindow):
             if shortcut.key().toString() in covered_keys: continue
             if isinstance(shortcut, FigDShortcut):
                 vboxlayout.addWidget(
-                    self.createShortcutLine(
-                        shortcut.key().toString(),
-                        shortcut.description,
-                    )
+                    self.createShortcutLine(shortcut)
                 )
                 covered_keys[shortcut.key().toString()] = ""
         # account for action related shortcuts not covered by QShortucts. 
@@ -3194,6 +3340,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     height = args.get("height", 800)
     _where = args.get("where", "front")
     add_tabs = args.get("add_tabs", True)
+    autohide = args.get("autohide", True)
     animated = args.get("animated", False)
     app_name = args.get("app_name", "Unknown")
     show_titlebar = args.get("titlebar", True)
@@ -3251,6 +3398,7 @@ def wrapFigDWindow(widget: QWidget, **args):
             widget_factory=args.get("widget_factory"),
             window_factory=args.get("window_factory"),
             accent_color=accent_color, where=_where,
+            autohide=autohide,
         )
         tabwidget.connectTitleBar(titlebar)
         titlebar.showTabBar.connect(tabwidget.tabBar().show)
@@ -3270,9 +3418,13 @@ def wrapFigDWindow(widget: QWidget, **args):
             )
         tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
         layout.addWidget(tabwidget)
+        tabwidget.CtrlShiftW = FigDShortcut(
+            QKeySequence("Ctrl+Shift+W"),
+            tabwidget, "Close app window",
+        )
     else:
         widget.CtrlW = FigDShortcut(QKeySequence.Close, 
-                                    widget, "Close window")
+                                    widget, "Close app window")
         layout.addWidget(widget)
     try:
         layout.addWidget(widget.statusbar)
@@ -3284,14 +3436,15 @@ def wrapFigDWindow(widget: QWidget, **args):
     window.find_function = find_function
     window.bookmark_manager = bookmark_manager
     if not add_tabs: 
-        widget.CtrlW.activated.connect(window.close)
+        widget.CtrlW.connect(window.close)
     else:
         window.tabs = tabwidget
+        tabwidget.CtrlShiftW.connect(window.close)
     window.setWindowOpacity(1)
     window.connectTitleBar(titlebar)
     window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
                                     "Rename the current window")
-    window.AltShiftR.activated.connect(titlebar.triggerRenameWindow)
+    window.AltShiftR.connect(titlebar.triggerRenameWindow)
     settingsMenu.connectWindow(window)
     if add_tabs: window.tabs = tabwidget
     # changeZoom function may not exist.
@@ -3310,11 +3463,11 @@ def wrapFigDWindow(widget: QWidget, **args):
             "Toggle ribbon menu"
         )
         if add_tabs:
-            window.CtrlShiftM.activated.connect(
+            window.CtrlShiftM.connect(
                 partial(tabwidget.onCurrentWidget, "toggleRibbon")
             )
         else:
-            window.CtrlShiftM.activated.connect(widget.toggleRibbon)
+            window.CtrlShiftM.connect(widget.toggleRibbon)
     except Exception as e: print(e)
     # connect full screen action.
     try:

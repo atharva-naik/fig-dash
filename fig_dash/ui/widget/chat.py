@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QTabWidget, QShortcut
 from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEnginePage
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 
 
 class ZoomFactor:

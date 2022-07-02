@@ -13,7 +13,7 @@ from PyQt5.QtCore import Qt, QSize, QUrl
 from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplication, QLineEdit, QMenu, QAction, QVBoxLayout, QHBoxLayout, QComboBox, QSizePolicy
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 from fig_dash.ui import FigDAppContainer, wrapFigDWindow, styleContextMenu, DashWidgetGroup
 from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap, FigDSystemAppIconMap
 

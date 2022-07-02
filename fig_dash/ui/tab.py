@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QFileIconP
 # fig-dash imports.
 from ..utils import collapseuser
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import Browser, HomePageView
+from fig_dash.ui.webview import Browser, HomePageView
 
 scrollbar_style = '''*::-webkit-scrollbar {
     width: 10px;

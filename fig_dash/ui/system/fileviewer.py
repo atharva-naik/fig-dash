@@ -16,7 +16,7 @@ from pathlib import Path
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebBrowser, DebugWebView
+from fig_dash.ui.webview import DebugWebBrowser, DebugWebView
 # from fig_dash.config import PDFJS_VIEWER_PATH
 from fig_dash.ui import styleContextMenu, FigDMainWindow, DashRibbonMenu
 # PyQt5 imports
@@ -3127,10 +3127,10 @@ class FileViewerWidget(FigDMainWindow):
 
         self.CtrlShiftK = FigDShortcut(QKeySequence("Ctrl+Shift+K"), 
                           self, "Toggle metadata panel visibility")
-        self.CtrlShiftK.activated.connect(self.metaDataPanel.toggle)
+        self.CtrlShiftK.connect(self.metaDataPanel.toggle)
         self.CtrlShiftU = FigDShortcut(QKeySequence("Ctrl+Shift+U"), 
                           self, "Toggle preview pane visibility")
-        self.CtrlShiftU.activated.connect(self.previewPanel.toggle)
+        self.CtrlShiftU.connect(self.previewPanel.toggle)
         # searchbar.
         self.foldersearchbar = FileViewerFolderSearchBar()
         self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -3148,9 +3148,9 @@ class FileViewerWidget(FigDMainWindow):
         # shortcuts.
         self.CtrlShiftB = FigDShortcut(
             QKeySequence("Ctrl+Shift+B"), self,
-            "Toggle bookmarks and quick access bar"
+            "Toggle bookmarks and quick access"
         )
-        self.CtrlShiftB.activated.connect(self.navpane.toggle)
+        self.CtrlShiftB.connect(self.navpane.toggle)
         self.CtrlB = FigDShortcut(
             QKeySequence("Ctrl+B"), self,
             "Bookmark currently opened folder"
@@ -3159,28 +3159,28 @@ class FileViewerWidget(FigDMainWindow):
             QKeySequence.SelectAll, self, 
             "Select all files/folders"
         )
-        self.SelectAll.activated.connect(self.selectAll)
+        self.SelectAll.connect(self.selectAll)
         self.Delete = FigDShortcut(
             QKeySequence.Delete, self,
             "Move selected item to Trash"
         )
-        self.Delete.activated.connect(self.delSelItem)
+        self.Delete.connect(self.delSelItem)
         self.BackSpace = FigDShortcut(
             QKeySequence("Backspace"), self,
             "Go back to parent folder"
         )
-        self.BackSpace.activated.connect(self.openParent)
+        self.BackSpace.connect(self.openParent)
         self.CtrlH = FigDShortcut(
             QKeySequence("Ctrl+H"), self,
             "Toggle hidden files/folders"
         )
-        self.CtrlH.activated.connect(self.toggleHiddenFiles)
+        self.CtrlH.connect(self.toggleHiddenFiles)
         self.CtrlShiftF = FigDShortcut(
             QKeySequence("Ctrl+Shift+F"), self,
             "Open file explorer search bar"
         )
         self.CtrlShiftT = FigDShortcut(QKeySequence("Ctrl+Shift+T"), self, "Toggle terminal visibility")
-        self.CtrlShiftT.activated.connect(self.terminal.toggle)
+        self.CtrlShiftT.connect(self.terminal.toggle)
         # self.SelectAll.setEnabled(False)
     
         # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.devToolsBtn)
@@ -3194,7 +3194,7 @@ class FileViewerWidget(FigDMainWindow):
         # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
         fsbar_wrapper = self.initFolderSearchBar()
-        self.CtrlShiftF.activated.connect(fsbar_wrapper.show)        
+        self.CtrlShiftF.connect(fsbar_wrapper.show)        
         # if args.get("parentless", False):
         #     self.menuArea = self.wrapInScrollArea(self.menu)
         #     self.menuArea.setFixedHeight(130)
@@ -3237,7 +3237,7 @@ class FileViewerWidget(FigDMainWindow):
             QKeySequence("Esc"), self,
             "Unselect selected files/folders"
         )
-        self.EscKey.activated.connect(self.EscHandler)
+        self.EscKey.connect(self.EscHandler)
 
     def initFolderSearchBar(self) -> QWidget:
         fsbar_wrapper = QWidget()
@@ -3875,6 +3875,7 @@ def fileviewer_factory(**args):
     return fileviewer
 
 def fileviewer_window_factory(**args):
+    import pathlib
     from fig_dash.ui import wrapFigDWindow
     from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
     path = args.get("path", os.path.expanduser("~"))
@@ -3885,8 +3886,9 @@ def fileviewer_window_factory(**args):
         "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
     fileviewer = fileviewer_factory(path=path, **widget_args)
+    title = f"File Viewer ({pathlib.Path(path).name})"
     window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700,
-                            accent_color=accent_color, tab_title="Home", 
+                            accent_color=accent_color, tab_title="Home", title=title,
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
                             titlebar_callbacks={
                                 "viewSourceBtn": fileviewer.viewSource,

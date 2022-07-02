@@ -15,7 +15,7 @@ from PIL import Image, ImageCms
 import os, io, re, sys, time, platform
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView, DebugWebBrowser
+from fig_dash.ui.webview import DebugWebView, DebugWebBrowser
 from fig_dash.ui import DashRibbonMenu, DashSimplifiedMenu, FigDMainWidget, FigDAppContainer, FigDNavBar, FigDShortcut, styleContextMenu, styleTextEditMenuIcons, wrapFigDWindow, extract_colors_from_qt_grad, create_css_grad, extractFromAccentColor
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QFont, QImage, QPixmap, QKeySequence, QColor, QFontMetricsF, QPalette, QPainterPath, QRegion, QTransform

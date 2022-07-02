@@ -10,7 +10,7 @@ from typing import *
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 from fig_dash.ui.js.webchannel import QWebChannelJS
 from fig_dash.ui.apps import AppIconMap, AppTitleMap, AccentColorMap, TitleBarAccentColorMap
 from fig_dash.ui import wrapFigDWindow, styleContextMenu, styleWindowStatusBar, FigDAppContainer, FigDShortcut, DashSlider

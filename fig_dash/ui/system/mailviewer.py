@@ -8,7 +8,7 @@ from typing import Union
 from pathlib import Path
 # fig-dash imports.
 from fig_dash import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 # Qt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QColor
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer

@@ -380,7 +380,7 @@ class DashWindow(QMainWindow):
         self.sysutilsbar = SysUtilsBar(self.tabs)
         self.sysutilsbar.hide()
         # page info.
-        from fig_dash.ui.browser import PageInfo
+        from fig_dash.ui.webview import PageInfo
         self.page_info = PageInfo(self.tabs)
         self.page_info.hide()
         # ideas widget.

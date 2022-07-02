@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QToolButton, QLabel, QApplicati
 # fig-dash imports.
 from fig_dash.ui import DashWidgetGroup
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import BrowserMenu
+from fig_dash.ui.webview import BrowserMenu
 from fig_dash.ui.widget.git import DashGitUI
 from fig_dash.ui.widget.jupyter_nb import JupyterNBWidget
 from fig_dash.ui.widget.codemirror import CodeMirrorEditor

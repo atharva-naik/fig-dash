@@ -9,7 +9,7 @@ import pathlib
 from jinja2 import Template
 # fig_dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui.browser import DebugWebView
+from fig_dash.ui.webview import DebugWebView
 from fig_dash.ui.js.require import RequireJS
 # from fig_dash.ui.js.pdf
 # Qt5 imports.

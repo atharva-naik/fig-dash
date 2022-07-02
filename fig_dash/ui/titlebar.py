@@ -4,8 +4,10 @@ from fig_dash import FigDLoad
 FigDLoad("fig_dash::ui::titlebar")
 # titlebar for the main window
 import sys
+import chime
 import jinja2
 from typing import *
+from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
 from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
@@ -793,6 +795,7 @@ class WindowTitleBar(QToolBar):
                  callbacks: dict={}, where: str="back", 
                  ctrl_btns_loc: str="right"):
         super(WindowTitleBar, self).__init__("Titlebar", parent)
+        self._is_silent = True
         self.setStyleSheet(window_title_bar_style.render(
             TITLEBAR_BACKGROUND_URL=FigD.icon("titlebar/texture.png")
         ))
@@ -1014,10 +1017,38 @@ class WindowTitleBar(QToolBar):
 
     def initContextMenu(self) -> QMenu:
         contextMenu = QMenu()
+        if hasattr(self, "window"):
+            contextMenu.addAction(
+                "Minimize", 
+                self.window.showMinimized, 
+            )
+            if self.window.isMaximized():
+                contextMenu.addAction(
+                    "Restore", 
+                    self.window.showNormal, 
+                )
+            else:
+                contextMenu.addAction(
+                    "Maximize", 
+                    self.window.showMaximized, 
+                )
+            contextMenu.addSeparator()
+        contextMenu.addAction("Use system title bar and borders")
         contextMenu.addAction(
             FigD.Icon("tabbar/rename.svg"), "Rename window   ", 
             self.triggerRenameWindow, QKeySequence("Alt+Shift+R")
         )
+        if not self._is_silent:
+            contextMenu.addAction(
+                FigD.Icon("tabbar/mute.svg"), 
+                "Mute move audio cues", 
+                partial(self.setSilent, True)
+            )
+        else:
+            contextMenu.addAction(
+                "Unmute move audio cues", 
+                partial(self.setSilent, False)
+            )
         if hasattr(self, "window") and hasattr(self.window, "tabs"):
             contextMenu.addSeparator()
             tabBar = self.window.tabs.tabBar()
@@ -1031,8 +1062,16 @@ class WindowTitleBar(QToolBar):
                     FigD.Icon("widget/show.svg"), 
                     "Show tabbar", self.showTabBar.emit
                 )
+            contextMenu.addSeparator()
+            contextMenu.addAction(
+                "Close", self.window.close, 
+                QKeySequence.Close,
+            )
 
         return contextMenu
+
+    def setSilent(self, state):
+        self._is_silent = state
 
     def contextMenuEvent(self, event):
         self.contextMenu = self.initContextMenu()
@@ -1245,9 +1284,19 @@ class WindowTitleBar(QToolBar):
         pass
 
     def mousePressEvent(self, event):
-        parent = self.window
-        if parent is None: return
-        parent.oldPos = event.globalPos()
+        if not self._is_silent: 
+            import chime
+            chime.theme("mario")
+            chime.info()
+        if self.window is None: return
+        self.window.oldPos = event.globalPos()
+
+    def mouseReleaseEvent(self, event):
+        if not self._is_silent: 
+            import chime
+            chime.theme("mario")
+            chime.success()
+        super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
         parent = self.window
