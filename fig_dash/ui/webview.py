@@ -1518,6 +1518,69 @@ class DebugWebView(QSplitter):
     def viewSource(self):
         print("trigger viewSource for ui::browser::DebugWebView")
 
+    def emitTabIcon(self, html: str):
+        import requests
+        from bs4 import BeautifulSoup
+        soup = BeautifulSoup(html, features="html.parser")
+        icon_links = soup.findAll("link", **{"rel": "icon"})
+        icon_path, is_svg = None, False
+        qurl = self.browser.url()
+        # base url for the server (scheme+host).
+        url = f"{qurl.scheme()}://{qurl.host()}"
+        
+        # check in icon links for viable URL.
+        for icon in icon_links:
+            icon_path = icon["href"]
+            if icon.get("type")=="image/svg+xml": 
+                is_svg = True
+                break
+        # if no icon path is found make the guess url/favicon.ico
+        if icon_path is None:
+            icon_path = os.path.join(url, "favicon.ico")
+        elif isinstance(icon_path, str):
+            if not icon_path.startswith("http"):
+                if url.endswith("/"): url = url[:-1]
+                icon_path = url+icon_path
+        if icon_path:
+            try:
+                content = requests.get(icon_path)
+                path = "/tmp/lol1_2hjalx_ffl2c."
+                if is_svg: 
+                    path += "svg"
+                    with open(path, "w") as f:
+                        f.write(content.text)
+                else: 
+                    path += "png"
+                    with open(path, "wb") as f:
+                        f.write(content.content)
+                # print(f"icon fetched from url: {icon_path}")
+                icon_path = path
+            except MissingSchema as e:
+                # print(e)
+                icon_path = FigD.icon("browser.svg")
+                # print(f"default icon: {icon_path}")
+            except InvalidSchema as e:
+                # print(e)  
+                icon_path = icon_path.replace("file://","")
+                # print(f"locally sourced icon: {icon_path}")
+        else:
+            icon_path = FigD.icon("browser.svg")
+            # print(f"default icon: {icon_path}")
+        self.changeTabIcon.emit(icon_path)
+        # tabBar = self.tabWidget.tabBar()
+        # animLabel = tabBar.tabButton(self.i, QTabBar.LeftSide)
+        # if animLabel is None: animLabel = QLabel()
+        # print("\x1b[34;1msetting pixmap\x1b[0m")
+        # self.pagePixmap = pageIcon.pixmap(QSize(20,20))
+        # self.pagePixmap.save("DELETE_THIS_BROWSER_PIXMAP.png")
+        # print("pixmap:", animLabel.pixmap())
+        # print("movie:", animLabel.movie())
+        # animLabel.setPixmap(self.pagePixmap)
+    def setIcon(self, tabs, i: int):
+        self.i = i
+        self.tabs = tabs
+        self.page().toHtml(self.iconSetCallback)
+
     def onLoadFinished(self):
         lang: str="en-US"        
         self.loadDevTools()
@@ -1549,10 +1612,7 @@ class DebugWebView(QSplitter):
         # browser.setWordCount()
         
         # fetch page icon and emit changeTabIcon
-        # self.changeTabIcon.emit(
-        #     self.browser.page().icon()
-        # )
-
+        self.browser.page().toHtml(self.emitTabIcon)
         # update scrollbar and selection style.
         # browser.setSelectionStyle()
         # browser.setScrollbar(scrollbar_style)

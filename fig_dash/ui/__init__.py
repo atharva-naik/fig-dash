@@ -10,6 +10,7 @@ from pathlib import Path
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
+from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
 from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QVariant, QPropertyAnimation, QEasingCurve
@@ -37,9 +38,6 @@ class FigDShortcut(QShortcut):
 def smooth_transition(target: QWidget):
     def animated_show(self):
         import copy
-        # geometry = self.rect().translated(
-        #     self.mapToGlobal(QPoint(0, 0))
-        # )
         geometry = self.geometry()
         target_geometry = copy.deepcopy(geometry)
         target_geometry.setHeight(self.prehide_height)
@@ -1177,7 +1175,59 @@ class DashSimplifiedMenu(QWidget):
 
         return drop_shadow
 
-# settings slider.
+# FigD animated toggle.
+class FigDToggle(QWidget):
+    def __init__(self, text: str="", accent_color: str="gray", 
+                 where="back", parent: Union[None, QWidget]=None):
+        super(FigDToggle, self).__init__(parent)
+        from fig_dash.ui.titlebar import extractSliderColor
+        from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
+        
+        self.accent_color = accent_color
+        # horizontal layout.
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.hboxlayout.setSpacing(5)
+        # toggle name.
+        self.label = QLabel()
+        self.label.setStyleSheet("""
+        QLabel {
+            color: #fff;
+            font-size: 18px;
+            background: transparent;
+            font-family: "Be Vietnam Pro";
+        }""")
+        self.label.setText("       "+text)
+        # actual animated toggle widget.
+        self.toggle = AnimatedToggle()
+        checked_color = extractSliderColor(
+            accent_color, 
+            where=where,
+        )
+        self.activated_color = checked_color
+        # auto save toggle button.
+        self.toggle = AnimatedToggle(
+            checked_color=checked_color,
+            pulse_checked_color=checked_color,
+        )
+        # build layout.
+        self.hboxlayout.addWidget(self.label)
+        self.addSeparator()
+        self.hboxlayout.addStretch(1)
+        self.hboxlayout.addWidget(self.toggle, 1)
+        self.hboxlayout.addStretch(1)
+        # set layout.
+        self.setLayout(self.hboxlayout)
+
+    def addSeparator(self):
+        sep = QFrame()
+        sep.setFrameShape(QFrame.VLine)
+        sep.setFrameShadow(QFrame.Sunken)
+        sep.setStyleSheet(f'''background: #484848;''')
+        sep.setLineWidth(1)
+        self.hboxlayout.addWidget(sep)
+
+# settings slider.  
 class FigDSlider(QWidget):
     changed = pyqtSignal(float)
     updatedSlider = pyqtSignal()
@@ -1612,7 +1662,7 @@ class FigDAppSettingsMenu(QMenu):
         # more tools menu.
         self.moreTools = self.addMenu("More tools ...")
         self.addSeparator()
-        self.addAction("Light/dark theme")
+        self.addToggle("Light/dark theme")
         self.addAction("Use system theme")
         self.addSeparator()
         self.notifsMenu = self.addMenu(
@@ -1662,7 +1712,16 @@ class FigDAppSettingsMenu(QMenu):
         return slider
 
     def addToggle(self, text: str=""):
-        pass
+        toggle = FigDToggle(
+            text=text, 
+            accent_color=self.accent_color
+        )
+        # print(f"FigDToggle: {self.accent_color}")
+        widgetAction = QWidgetAction(self)
+        widgetAction.setDefaultWidget(toggle)
+        self.addAction(widgetAction)
+
+        return toggle
 
 # dash widget simplified ribbon menu.
 class DashWidgetSimplifiedRibbonMenu(QWidget):
@@ -2104,6 +2163,7 @@ class FigDTabBar(QTabBar):
 
     def contextMenuEvent(self, event):
         pos = event.pos()
+        print(pos)
         # compute the tab number.
         i = self.getClickedTabIndex(pos)
         self.clicked_tab_index = i
@@ -2159,21 +2219,44 @@ class FigDTabCtrlBtn(QToolButton):
     """tab control buttons."""
     def __init__(self, icon, active_icon=None,
                  size: Tuple[int,int]=(18,18),
-                 parent: Union[QWidget, None]=None):
+                 parent: Union[QWidget, None]=None,
+                 tabwidget: Union[QTabWidget, None]=None):
         super(FigDTabCtrlBtn, self).__init__(parent)
-        self.icon_obj = FigD.Icon(icon)
+        self.tabwidget = tabwidget
+        self.clickedIndex = -1
+        self.icon_path = icon
         if active_icon:
-            self.active_icon_obj = FigD.Icon(active_icon)
-        else: self.active_icon_obj = self.icon_obj
-        self.setIcon(self.icon_obj)
+            self.active_icon_path = active_icon
+        else: self.active_icon_path = self.icon_path
+        self.setIcon(FigD.Icon(self.icon_path))
         self.setIconSize(QSize(*size))
 
+    def connect(self, func):
+        self.func = func
+        self.clicked.connect(self.response)
+
+    def response(self):
+        print(f"response for tab-{self.clickedIndex}")
+        if self.clickedIndex != -1:
+            self.func(self.clickedIndex)
+
+    def mousePressEvent(self, event):
+        # print("mapToGlobal:", self.mapToGlobal(QPoint(0,0)))
+        # print("TabWidget::mapToParent:", self.tabwidget.mapToParent(QPoint(0,0)))
+        # print("TabBar::mapToParent:", self.tabwidget.tabBar().mapToParent(QPoint(0,0)))
+        print(f"mousePressEvent: {event.pos()}")
+        if self.tabwidget:
+            tabbar = self.tabwidget.tabBar()
+            print(f"map mousePress: {tabbar.mapToParent(event.pos())}")
+            # self.clickedIndex = tabbar.getClickedTabIndex(event.pos())
+        super(FigDTabCtrlBtn, self).mousePressEvent(event)
+
     def enterEvent(self, event):
-        self.setIcon(self.active_icon_obj)
+        self.setIcon(FigD.Icon(self.active_icon_path))
         super(FigDTabCtrlBtn, self).enterEvent(event)
 
-    def leaaveEvent(self, event):
-        self.setIcon(self.icon_obj)
+    def leaveEvent(self, event):
+        self.setIcon(FigD.Icon(self.icon_path))
         super(FigDTabCtrlBtn, self).leaveEvent(event)
 
 # FigD tabbar settings button.
@@ -2266,6 +2349,115 @@ class FigDTabSettingsBtn(QWidget):
         )
         self.contextMenu.popup(pos)
 
+FIGD_TABWIDGET_STYLE = """
+QTabWidget {
+    color: #fff;
+    border: none;
+    font-family: 'Be Vietnam Pro';
+    background: transparent;
+}
+QTabWidget::pane {
+    border: none;
+    background: transparent;
+}
+QTabWidget::right-corner {
+    border: none;
+}
+QTabBar {
+    border: none;
+    qproperty-drawBase: 0;
+    background: """+FIGD_TABBAR_BACKGROUND+""";
+}
+QTabBar::close-button {
+    background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+QTabBar::close-button:hover {
+    background: url("/home/atharva/GUI/fig-dash/resources/icons/close-active.png");
+    background-repeat: no-repeat;
+    background-position: center;
+}
+QTabBar::tab {
+    border: none;
+    color: #fff;
+
+    margin-left: 0px;
+    margin-right: 0px;
+
+    padding-top: 4px;
+    padding-left: 9px;
+    padding-right: 5px;
+    padding-bottom: 4px;
+
+    font-size: 17px;
+    font-family: 'Be Vietnam Pro', sans-serif;
+    max-width: 300px;
+    background: rgba(0, 0, 0, 0.8);
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+}
+QTabBar::tab:hover {
+    color: #fff;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    background: rgba(50, 50, 50, 0.8);
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
+}
+QTabBar::tab:selected {
+    color: #eee;
+    border: none;
+    font-weight: bold;
+    background: #323232;
+    
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    background: rgba(50, 50, 50, 0.8);
+    
+    /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
+    
+    padding-top: 4px;
+    padding-left: 9px;
+    padding-right: 5px;
+    padding-bottom: 4px;
+    
+    margin-left: 0px;
+    margin-right: 0px;
+    
+    font-size: 17px;
+    font-weight: bold;
+}"""
+FIGD_TABWIDGET_CTRL_BTN_ACTIVE_STYLE = jinja2.Template(r"""
+QToolButton {
+    color: #fff;
+    font-size: 14px;
+    border-radius: 2px;
+    background: transparent;
+    border: 1px solid transparent;
+}
+QToolTip {
+    color: #fff;
+    border: 0px;
+    background: #000;
+}""")
+FIGD_TABWIDGET_CTRL_BTN_STYLE = jinja2.Template(r"""
+QToolButton {
+    color: #fff;
+    font-size: 14px;
+    border-radius: 2px;
+    background: transparent;
+    border: 1px solid transparent;
+}
+QToolButton:hover {
+    color: #292929;
+    background: {{ background }};
+    border: 1px solid {{ border_color }};
+}
+QToolTip {
+    color: #fff;
+    border: 0px;
+    background: #000;
+}""")
 # tab widget for FigD.
 class FigDTabWidget(QTabWidget):
     changeWindowTitle = pyqtSignal(str)
@@ -2290,100 +2482,20 @@ class FigDTabWidget(QTabWidget):
         self.border_color = extractFromAccentColor(accent_color)
         self.bg_alpha = setAccentColorAlpha(accent_color, alpha=150)
         # set style sheet.
-        self.setStyleSheet("""
-        QTabWidget {
-            color: #fff;
-            border: none;
-            font-family: 'Be Vietnam Pro';
-            background: transparent;
-        }
-        QTabWidget::pane {
-            border: none;
-            background: transparent;
-        }
-        QTabWidget::right-corner {
-            border: none;
-        }
-        QTabBar {
-            border: none;
-            qproperty-drawBase: 0;
-            background: """+FIGD_TABBAR_BACKGROUND+""";
-        }
-        QTabBar::close-button {
-            background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        QTabBar::close-button:hover {
-            background: url("/home/atharva/GUI/fig-dash/resources/icons/close-active.png");
-            background-repeat: no-repeat;
-            background-position: center;
-        }
-        QTabBar::tab {
-            border: none;
-            color: #fff;
-
-            margin-left: 0px;
-            margin-right: 0px;
-
-            padding-top: 4px;
-            padding-left: 9px;
-            padding-right: 5px;
-            padding-bottom: 4px;
-
-            font-size: 17px;
-            font-family: 'Be Vietnam Pro', sans-serif;
-            max-width: 300px;
-            background: rgba(0, 0, 0, 0.8);
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-        }
-        QTabBar::tab:hover {
-            color: #fff;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            background: rgba(50, 50, 50, 0.8);
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 200), stop : 0.3 rgba(191, 54, 54, 220), stop : 0.6 rgba(235, 95, 52, 220), stop: 0.9 rgba(235, 204, 52, 220)); */
-        }
-        QTabBar::tab:selected {
-            color: #eee;
-            border: none;
-            font-weight: bold;
-            background: #323232;
-            
-            border-top-left-radius: 5px;
-            border-top-right-radius: 5px;
-            background: rgba(50, 50, 50, 0.8);
-            
-            /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
-            
-            padding-top: 4px;
-            padding-left: 9px;
-            padding-right: 5px;
-            padding-bottom: 4px;
-            
-            margin-left: 0px;
-            margin-right: 0px;
-            
-            font-size: 17px;
-            font-weight: bold;
-        }""")
         self.resetCornerWidgets()
         self.tab_bar = FigDTabBar(
             accent_color=accent_color,
             tabwidget=self,
         )
         # set stuff.
-        self.tab_bar.setDrawBase(False)
         self.setTabBar(self.tab_bar)
-        self.tab_bar.setDrawBase(False)
-
         self.setMovable(True)
         self.setTabsClosable(True)
         self.setDocumentMode(True)
         self.setTabBarAutoHide(autohide)
         self.setElideMode(Qt.ElideRight)
-        self.setObjectName("FigDTabWidget")
+        self.setObjectName("FigDTabWidget") # set object name.
+        self.setStyleSheet(FIGD_TABWIDGET_STYLE) # set stylesheet.
         self.tab_bar.setGraphicsEffect(drop_shadow)
         self.tab_bar.setDrawBase(False)
         # connect slots to signals.
@@ -2483,8 +2595,28 @@ class FigDTabWidget(QTabWidget):
         self.setTabText(i, title)
 
     def changeCurrentTabIcon(self, icon: str):
+        print(f"\x1b[33;mchanging tab icon: {icon}\x1b[0m")
         i = self.currentIndex() # print("\x1b[31;1mui::__init__::FigDTabWidget.changeCurrentTabIcon:\x1b[0m", icon)
         self.setTabIcon(i, QIcon(icon))
+
+    def wrapWidget(self, widget: QWidget, titlebar: Union[WindowTitleBar, None]=None) -> QWidget:
+        # connects slots to optionally defined widget signals.
+        if hasattr(widget, "changeTabTitle"):
+            print("\x1b[33mconnected to changeTabTitle\x1b[0m")
+            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
+        if hasattr(widget, "changeTabIcon"):
+            print("\x1b[33mconnected to changeTabIcon\x1b[0m")
+            widget.changeTabIcon.connect(self.changeCurrentTabIcon)
+        if hasattr(widget, "changeTabToolTip"):
+            print("\x1b[33mconnected to changeTabToolTip\x1b[0m")
+            widget.changeTabToolTip.connect(self.changeCurrentTabToolTip)
+        if hasattr(widget, "changeWindowTitle") and titlebar:
+            print("\x1b[33mconnected to changeWindowTitle\x1b[0m")
+            widget.changeWindowTitle.connect(titlebar.setTitle)
+        if hasattr(widget, "zoomChanged") and titlebar:
+            widget.zoomChanged.connect(titlebar.zoomSlider.setZoomValue)        
+
+        return widget
 
     def widgetFactory(self) -> QWidget:
         """factory function for intialization of the widget
@@ -2493,16 +2625,10 @@ class FigDTabWidget(QTabWidget):
             raise NotImplementedError("`widget_factory` method not implemented.")
         widget = self.widget_factory(**self.widget_args)
         # connects slots to optionally defined widget signals.
-        if hasattr(widget, "changeTabTitle"):
-            widget.changeTabTitle.connect(self.changeCurrentTabTitle)
-        if hasattr(widget, "changeTabIcon"):
-            widget.changeTabTitle.connect(self.changeCurrentTabIcon)
-        if hasattr(widget, "changeTabToolTip"):
-            widget.changeTabToolTip.connect(self.changeCurrentTabToolTip)
-        if hasattr(widget, "changeWindowTitle") and hasattr(self, "titlebar"):
-            widget.changeWindowTitle.connect(self.titlebar.setTitle)
-        if hasattr(widget, "zoomChanged") and hasattr(self, "titlebar"):
-            widget.zoomChanged.connect(self.titlebar.zoomSlider.setZoomValue)
+        titlebar = None
+        if hasattr(self, "titlebar"):
+            titlebar = self.titlebar
+        widget = self.wrapWidget(widget, titlebar)
 
         return widget 
 
@@ -2519,11 +2645,16 @@ class FigDTabWidget(QTabWidget):
                 self.tab_icon, 
                 self.tab_title,
             )
+        tabCtrlBtns = self.initTabCtrlBtns()
+        pinAndGroup = self.initPinAndGroup()
+        # tab control button close and mute slots.
+        tabCtrlBtns.muteBtn.connect(self.muteTab)
+        tabCtrlBtns.closeBtn.connect(self.tabCloseRequested.emit)
+        self.tabBar().setTabButton(i, QTabBar.LeftSide, pinAndGroup)
+        self.tabBar().setTabButton(i, QTabBar.RightSide, tabCtrlBtns)
         # web page to be returned. (required by createWindow, to create new tab).
-        # NOTE: assumption: 
-        # the webview/browser instance associated with any widget is
-        # contained inside the .browser or .webview attribute
-        # otherwise `None` is returned as the value of the loaded page.
+        # NOTE: the webview/browser instance associated with any widget is contained inside the 
+        # .browser or .webview attribute otherwise `None` is returned as the value of the loaded page.
         page = None
         if hasattr(widget, "webview"):
             page = widget.webview.page()
@@ -2539,6 +2670,9 @@ class FigDTabWidget(QTabWidget):
 
         return page
 
+    def muteTab(self, i: int):
+        print(f"ui::__init__::FigDTabWidget.muteTab({i})")
+
     def openTab(self):
         widget = self.widgetFactory()
         i, page = self.tabFactory(widget)
@@ -2549,6 +2683,61 @@ class FigDTabWidget(QTabWidget):
     def changeCurrentTabToolTip(self, tabToolTip: str):
         i = self.currentIndex()
         self.setTabToolTip(i, tabToolTip)
+
+    def initGroupName(self, color: str="orange",
+                      placeHolder: str="New") -> QLineEdit:
+        groupName = QLineEdit()
+        groupName.setStyleSheet("""
+        QLineEdit {
+            color: #292929;
+            font-size: 17px;
+            background: """+color+""";
+            border-radius: 5px;
+        }""")
+        groupName.setText(placeHolder)
+        groupName.setReadOnly(True)
+        groupName.setFixedHeight(25)
+        groupName.setFixedWidth(40)
+
+        return groupName
+
+    def initPinAndGroup(self) -> QWidget:
+        """create container having group name label and pinned tab button.
+        Returns:
+            QWidget: container with group and pin button.
+        """
+        # create container and it's layout.
+        container = QWidget()
+        container.setSizePolicy(
+            QSizePolicy.Minimum, 
+            QSizePolicy.Minimum,
+        )
+        layout = QHBoxLayout()
+        layout.setSpacing(5)
+        layout.setContentsMargins(0, 0, 0, 0)
+        container.setLayout(layout)
+        # create group and pin button.
+        groupName = self.initGroupName()
+        pinBtn = QToolButton()
+        pinBtn.setIcon(FigD.Icon("tabbar/pin.svg"))
+        pinBtn.setStyleSheet(
+            FIGD_TABWIDGET_CTRL_BTN_STYLE.render(
+                background=self.bg_alpha,
+                border_color=self.border_color,
+            )
+        )
+        pinBtn.hide()
+        groupName.hide()
+        # build layout.
+        layout.addWidget(groupName)
+        layout.addWidget(pinBtn)
+        container.setStyleSheet("""
+        QWidget {
+            color: #fff;
+            background: transparent;
+        }""")
+
+        return container
 
     def initTabCtrlBtns(self) -> QWidget:
         ctrlBtns = QWidget()
@@ -2563,6 +2752,9 @@ class FigDTabWidget(QTabWidget):
             "close-active.png",
             size=(24,24),
         )
+        muteBtn.hide()
+        ctrlBtns.muteBtn = muteBtn
+        ctrlBtns.closeBtn = closeBtn
         ctrlLayout.addWidget(muteBtn)
         ctrlLayout.addWidget(closeBtn)
 
@@ -2571,44 +2763,20 @@ class FigDTabWidget(QTabWidget):
     def initTabCtrlBtn(self, icon, active_icon=None, 
                        size: Tuple[int,int]=(18,18)) -> QToolButton:
         """tab control buttons."""
-        btn = FigDTabCtrlBtn(icon, active_icon, size)
+        btn = FigDTabCtrlBtn(
+            icon, active_icon, size,
+            tabwidget=self,
+        )
         if active_icon:
-            self.setStyleSheet(jinja2.Template('''
-            QToolButton {
-                color: #fff;
-                font-size: 14px;
-                border-radius: 2px;
-                background: transparent;
-                border: 1px solid transparent;
-            }
-            QToolTip {
-                color: #fff;
-                border: 0px;
-                background: #000;
-            }''').render(
+            btn.setStyleSheet(
+                FIGD_TABWIDGET_CTRL_BTN_ACTIVE_STYLE.render(
                     background=self.bg_alpha,
                     border_color=self.border_color,
                 )
             )
         else:
-            self.setStyleSheet(jinja2.Template('''
-            QToolButton {
-                color: #fff;
-                font-size: 14px;
-                border-radius: 2px;
-                background: transparent;
-                border: 1px solid transparent;
-            }
-            QToolButton:hover {
-                color: #292929;
-                background: {{ background }};
-                border: 1px solid {{ border_color }};
-            }
-            QToolTip {
-                color: #fff;
-                border: 0px;
-                background: #000;
-            }''').render(
+            btn.setStyleSheet(
+                FIGD_TABWIDGET_CTRL_BTN_STYLE.render(
                     background=self.bg_alpha,
                     border_color=self.border_color,
                 )
@@ -3414,7 +3582,10 @@ def wrapFigDWindow(widget: QWidget, **args):
         title_widget=args.get("title_widget"), where=_where, 
         ctrl_btns_loc=args.get("ctrl_btns_loc", "right"),
     )
-    settingsMenu = FigDAppSettingsMenu(tabs_enabled=add_tabs)
+    settingsMenu = FigDAppSettingsMenu(
+        tabs_enabled=add_tabs,
+        accent_color=accent_color,
+    )
     titlebar.settingsBtn.setContextMenu(settingsMenu)
     settingsMenu = styleContextMenu(settingsMenu, accent_color, 
                                     padding=5, font_size=18)
@@ -3463,26 +3634,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         tabwidget.changeWindowTitle.connect(titlebar.setTitle)
         titlebar.showTabBar.connect(tabwidget.tabBar().show)
         titlebar.hideTabBar.connect(tabwidget.tabBar().hide)
-        
         # connects slots to optionally defined widget signals.
-        if hasattr(widget, "changeTabTitle"):
-            widget.changeTabTitle.connect(
-                tabwidget.changeCurrentTabTitle
-            )
-        if hasattr(widget, "changeTabIcon"):
-            widget.changeTabTitle.connect(
-                tabwidget.changeCurrentTabIcon
-            )
-        if hasattr(widget, "changeTabToolTip"):
-            widget.changeTabToolTip.connect(
-                tabwidget.changeCurrentTabToolTip
-            )
-        if hasattr(widget, "changeWindowTitle"):
-            widget.changeWindowTitle.connect(titlebar.setTitle)
-        if hasattr(widget, "zoomChanged"):
-            widget.zoomChanged.connect(
-                titlebar.zoomSlider.setZoomValue
-            )
+        widget = tabwidget.wrapWidget(widget, titlebar)
         tabwidget.tabFactory(widget)
         # tabwidget.addTab(widget, QIcon(tab_icon), tab_title)
         layout.addWidget(tabwidget)
