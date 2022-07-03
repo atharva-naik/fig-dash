@@ -22,6 +22,7 @@ class AssetManager:
         self.reset(resource_dir)
         # initialize logger and allow colored logs.
         self.logger = logging.getLogger(__name__)
+        # PyQt5 font databse.
         import coloredlogs
         coloredlogs.install(level="debug", logger=self.logger)
         
@@ -75,6 +76,10 @@ class AssetManager:
     def font(self, path: str) -> str:
         '''return real absolute path'''
         return os.path.join(self.font_dir, path)
+
+    def qtFont(self, name: str, size: int=12):
+        from PyQt5.QtGui import QFontDatabase
+        return QFontDatabase().font(name, "", size)
 
     def asset(self, path: str) -> str:
         '''return absolute path of an asset'''

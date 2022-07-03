@@ -1066,7 +1066,7 @@ class WindowTitleBar(QToolBar):
             contextMenu.addSeparator()
             contextMenu.addAction(
                 "Close", self.window.close, 
-                QKeySequence.Close,
+                QKeySequence("Ctrl+Shift+W"),
             )
 
         return contextMenu

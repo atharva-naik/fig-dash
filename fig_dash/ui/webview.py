@@ -12,6 +12,7 @@ import pathlib
 import argparse
 import subprocess
 from typing import *
+from functools import partial
 from requests.exceptions import MissingSchema, InvalidSchema
 # Qt5 imports.
 from PyQt5.QtPrintSupport import QPrinter, QPrinterInfo, QPrintDialog
@@ -1159,6 +1160,7 @@ class DebugWebBrowser(QWebEngineView):
         )
         self.setPage(custom_page)
         # update settings.
+        self.settings().setFontFamily(QWebEngineSettings.StandardFont, "Noto Sans")
         self.settings().setAttribute(QWebEngineSettings.JavascriptEnabled, True)
         self.settings().setAttribute(QWebEngineSettings.JavascriptCanOpenWindows, True)
         self.settings().setAttribute(QWebEngineSettings.LocalContentCanAccessRemoteUrls, True)
@@ -1261,6 +1263,37 @@ class DebugWebBrowser(QWebEngineView):
             # self.onPrintRequest()
         del self._printer    
 
+    def addCMenuAction(self, key: str, text: str, icon: str="", 
+                       shortcut: QKeySequence=None, add_sep: bool=False) -> QAction:
+        if key not in self.actionMap: return None
+        slot_fn = self.actionMap[key]
+        is_enabled = self.enabledMap[key]
+        base, ext = os.path.splitext(icon)
+        # set disabled icon if it exists and action is disabled.
+        if not is_enabled:
+            if os.path.exists(FigD.icon(base+"_disabled"+ext)):
+                icon = base+"_disabled"+ext
+        if shortcut is None:
+            action = self.contextMenu.addAction(
+                FigD.Icon(icon), 
+                text, slot_fn,
+            )
+        else:
+            action = self.contextMenu.addAction(
+                FigD.Icon(icon), text, 
+                slot_fn, shortcut,
+            )
+        action.setEnabled(is_enabled)
+        if add_sep: self.contextMenu.addSeparator()
+
+        return action
+
+    def invokeInspect(self, trigger):
+        print("\x1b[32minvokeInspect\x1b[0m")
+        if hasattr(self, "webview_ptr"):
+            self.webview_ptr.devTools.show()
+        trigger()
+
     def contextMenuEvent(self, event):
         baseContextMenu = self.page().createStandardContextMenu()
         data = self.page().contextMenuData()
@@ -1269,6 +1302,8 @@ class DebugWebBrowser(QWebEngineView):
         for action in baseContextMenu.actions():
             actionMap[action.text()] = action.trigger
             enabledMap[action.text()] = action.isEnabled()
+        self.actionMap = actionMap
+        self.enabledMap = enabledMap
         # new context menu.
         self.contextMenu = QMenu()
         def blank(): pass
@@ -1278,96 +1313,72 @@ class DebugWebBrowser(QWebEngineView):
         # print(int(data.editFlags()), int(QWebEngineContextMenuData.CanUndo), int(QWebEngineContextMenuData.CanRedo))
         # print(int(QWebEngineContextMenuData.CanRedo | QWebEngineContextMenuData.CanUndo | QWebEngineContextMenuData.CanPaste))
         if data.mediaType() == QWebEngineContextMenuData.MediaTypeNone:
-            if "Undo" in actionMap:
-                undo = self.contextMenu.addAction(
-                    "&Undo", actionMap["Undo"],
-                    QKeySequence.Undo,
-                )
-                undo.setEnabled(enabledMap["Undo"])
-            if "Redo" in actionMap:
-                redo = self.contextMenu.addAction(
-                    "&Redo", actionMap["Redo"],
-                    QKeySequence.Redo,
-                )
-                redo.setEnabled(enabledMap["Redo"])
-                self.contextMenu.addSeparator()
-            if "Cut" in actionMap:
-                cut = self.contextMenu.addAction(
-                    "Cu&t", actionMap["Cut"],
-                    QKeySequence.Cut,
-                )
-                cut.setEnabled(enabledMap["Cut"])
-            if "Copy" in actionMap:
-                copy = self.contextMenu.addAction(
-                    "Copy", actionMap["Copy"],
-                    QKeySequence.Copy,
-                )
-                copy.setEnabled(enabledMap["Copy"])
-            if "Paste" in actionMap:
-                paste = self.contextMenu.addAction(
-                    "&Paste", actionMap["Paste"],
-                    QKeySequence.Paste,
-                )
-                paste.setEnabled(enabledMap["Paste"])
-            if "Paste and match style" in actionMap:
-                pasteAndMatchStyle = self.contextMenu.addAction(
-                    "Paste and match style      ", 
-                    actionMap["Paste and match style"],
-                    QKeySequence("Ctrl+Shift+V"),
-                )
-                pasteAndMatchStyle.setEnabled(enabledMap["Paste and match style"])
-            if "Paste as plain text" in actionMap:
-                self.contextMenu.addAction(
-                    "Paste as plain text", 
-                    actionMap["Paste as plain text"],
-                    QKeySequence("Ctrl+Shift+V"),
-                )
-            if "Select all" in actionMap:
-                selectAll = self.contextMenu.addAction(
-                    "Select all", 
-                    actionMap["Select all"],
-                    QKeySequence.SelectAll,
-                )
-                selectAll.setEnabled(enabledMap["Select all"])
-                self.contextMenu.addSeparator()
-            if "Back" in actionMap:
-                back = self.contextMenu.addAction(
-                    "Back", actionMap["Back"], 
-                    QKeySequence.Back,
-                )
-                back.setEnabled(enabledMap["Back"])
-            if "Forward" in actionMap:
-                forward = self.contextMenu.addAction(
-                    "Forward", actionMap["Forward"], 
-                    QKeySequence.Forward,
-                )
-                forward.setEnabled(enabledMap["Forward"])
-            if "Reload" in actionMap:
-                reload_ = self.contextMenu.addAction(
-                    "Reload", actionMap.get("Reload", blank), 
-                    QKeySequence.Refresh,
-                )
-                reload_.setEnabled(enabledMap["Reload"])
-                self.contextMenu.addSeparator()
-            if "Save page" in actionMap:
-                savePage = self.contextMenu.addAction(
-                    "Save as...", 
-                    actionMap["Save page"],
-                    QKeySequence.Save,
-                )
-                savePage.setEnabled(enabledMap["Save page"])
+            undo = self.addCMenuAction("Undo", "&Undo", "textedit/undo.svg", QKeySequence.Undo)
+            redo = self.addCMenuAction("Redo", "&Redo", "textedit/redo.svg", QKeySequence.Redo)
+            cut = self.addCMenuAction("Cut", "Cu&t", "textedit/cut.svg", QKeySequence.Cut)
+            copy = self.addCMenuAction("Copy", "Copy", "textedit/copy.svg", QKeySequence.Copy)
+            paste = self.addCMenuAction("Paste", "&Paste", "textedit/paste.svg", QKeySequence.Paste)
+            pasteAndMatchStyle = self.addCMenuAction( 
+                "Paste and match style",
+                "Paste and match style      ",
+                shortcut=QKeySequence("Ctrl+Shift+V"),
+            )
+            pasteAsPlainText = self.addCMenuAction(
+                "Paste as plain text",
+                "Paste as plain text      ", 
+                shortcut=QKeySequence("Ctrl+Shift+V"),
+            )
+            selectAll = self.addCMenuAction(
+                "Select all", "Select all", 
+                shortcut=QKeySequence.SelectAll,
+                add_sep=True, 
+            )
+            back = self.addCMenuAction(
+                "Back", "Back", "textedit/back.svg",
+                shortcut=QKeySequence.Back,
+            )
+            forward = self.addCMenuAction(
+                "Forward", "Forward", 
+                "textedit/forward.svg",
+                shortcut=QKeySequence.Forward,
+            )
+            reload_ = self.addCMenuAction(
+                "Reload", "Reload", "textedit/reload.svg", 
+                shortcut=QKeySequence.Refresh, add_sep=True,
+            )
+            savePage = self.addCMenuAction(
+                "Save page", "Save as...", 
+                "titlebar/save.svg", 
+                shortcut=QKeySequence.Save,
+            )
             if not data.isContentEditable():
                 self.contextMenu.addAction(
-                    "Print...", blank, 
+                    FigD.Icon("titlebar/print.svg"),
+                    "Print...", self.onPrintRequest, 
                     QKeySequence.Print,
                 )
-                self.contextMenu.addAction("Cast...", blank)
-                self.contextMenu.addAction("Search images with Google Lens      ")
+                self.contextMenu.addAction(
+                    FigD.Icon("navbar/cast.svg"),
+                    "Cast...", blank
+                )
+                self.contextMenu.addAction(
+                    FigD.Icon("browser/google_lens.png"),
+                    "Search images with Google Lens      ",
+                )
                 self.contextMenu.addSeparator()
-                self.contextMenu.addAction("Send to your devices")
-                self.contextMenu.addAction("Create QR code for this page")
+                self.contextMenu.addAction(
+                    FigD.Icon("tabbar/devices.svg"), 
+                    "Send to your devices"
+                )
+                self.contextMenu.addAction(
+                    FigD.Icon("system/fileviewer/qr.svg"), 
+                    "Create QR code for this page"
+                )
                 self.contextMenu.addSeparator()
-                self.contextMenu.addAction("Translate to English")
+                self.contextMenu.addAction(
+                    FigD.Icon("trans.svg"), 
+                    "Translate to English",
+                )
                 self.contextMenu.addSeparator()
             else:
                 self.spellCheckMenu = self.contextMenu.addMenu("Spell check")
@@ -1392,15 +1403,11 @@ class DebugWebBrowser(QWebEngineView):
                     self.accent_color,
                 )
                 self.contextMenu.addSeparator()
-            if "View page source" in actionMap:
-                self.contextMenu.addAction(
-                    "View page source", 
-                    actionMap["View page source"],
-                    QKeySequence("Ctrl+U"),
-                )
-            self.contextMenu.addAction(
-                "Inspect", blank,
-                QKeySequence("Ctrl+Shift+I"),
+            viewPageSource = self.addCMenuAction(
+                "View page source", 
+                "View page source",
+                "titlebar/source.svg",
+                shortcut=QKeySequence("Ctrl+U"),
             )
         elif data.mediaType() == QWebEngineContextMenuData.MediaTypeImage:
             self.contextMenu.addAction("Open image in new tab") 
@@ -1420,23 +1427,28 @@ class DebugWebBrowser(QWebEngineView):
             )
             copyImageAddress.setEnabled(enabledMap["Copy image address"])
             self.contextMenu.addSeparator()            
-            self.contextMenu.addAction("Create QR code for this image")
+            self.contextMenu.addAction(
+                FigD.Icon("system/fileviewer/qr.svg"), 
+                "Create QR code for this image",
+            )
             self.contextMenu.addAction("Search image with Google Lens      ")
             self.contextMenu.addSeparator()
             self.contextMenu.addAction(
                 "Search Google with this image"
             )
             self.contextMenu.addSeparator()
-            self.contextMenu.addAction(
-                "Inspect", blank,
-                QKeySequence("Ctrl+Shift+I"),
-            )
         else: 
             self.contextMenu = baseContextMenu
+        if "Inspect" in actionMap:
+            self.contextMenu.addAction(
+                FigD.Icon("browser/inspect.svg"), "Inspect", 
+                partial(self.invokeInspect, actionMap["Inspect"]),
+                QKeySequence("Ctrl+Shift+I"),
+            )
         print(actionMap)
         # style context menu.
         self.contextMenu = styleContextMenu(self.contextMenu, self.accent_color)
-        self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
+        # self.contextMenu = styleTextEditMenuIcons(self.contextMenu)
         # show context menu popup with global position based on the event.
         self.contextMenu.popup(event.globalPos())
 
@@ -1482,6 +1494,7 @@ class DevToolsView(QWebEngineView):
 
 # spitter with web browser and dev tools.
 class DebugWebView(QSplitter):
+    showMessage = pyqtSignal(str)
     changeTabIcon = pyqtSignal(str)
     changeTabTitle = pyqtSignal(str)
     changeTabToolTip = pyqtSignal(str)
@@ -1500,6 +1513,7 @@ class DebugWebView(QSplitter):
         # self.devToolsBtn.clicked.connect(self.toggleDevTools)
         # browser.
         self.browser = browser
+        self.browser.webview_ptr = self
         self.browser.urlChanged.connect(self.onUrlChange)
         self.addWidget(self.browser)
         self.addWidget(self.devTools)
@@ -1598,12 +1612,12 @@ class DebugWebView(QSplitter):
         # self.browser.getPageBackground()
 
         # show howered link on statusbar.
-        # browser.page().linkHovered.connect(self.showLinkOnStatusBar)
-
+        self.browser.page().linkHovered.connect(
+            self.emitStatusBarMessage
+        )
         # if browser.isTerminalized():
         #     browser.execTerminalJS()
         # else:
-        
         # change user agent.
         self.browser.changeUserAgent()
 
@@ -1622,6 +1636,9 @@ class DebugWebView(QSplitter):
             "document.body.outerHTML",
             self.emitTabToolTip,
         )
+
+    def emitStatusBarMessage(self, message: str):
+        self.showMessage.emit(message)
 
     def emitTabToolTip(self, html):
         """emit tab tooltip once document.body.outerHTML is constructed."""

@@ -13,7 +13,7 @@ from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
-from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QPoint, QVariant, QPropertyAnimation, QEasingCurve
+from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QRect, QPoint, QVariant, QPropertyAnimation, QEasingCurve
 from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
 
 # blannk function.
@@ -846,7 +846,7 @@ class DashRibbonMenu(QWidget):
         # set layout.
         self.setLayout(self.vboxlayout)
 
-    def createDropShadow(self, accent_color: str, where: str):
+    def createDropShadow(self, accent_color: str, where: str="back"):
         drop_shadow_color = extractFromAccentColor(accent_color, where=where)
         drop_shadow = QGraphicsDropShadowEffect()
         drop_shadow.setColor(QColor(drop_shadow_color))
@@ -1237,7 +1237,7 @@ class FigDSlider(QWidget):
                  maxm: int=100, plus: bool=False, minus: bool=False,
                  accent_color: str="gray", orient: str="horizontal",
                  where: str="back", parent: Union[None, QWidget]=None,
-                 btns_list: List[QToolButton]=[]):
+                 set_status_tip: bool=True, btns_list: List[QToolButton]=[]):
         super(FigDSlider, self).__init__(parent)
         self.accent_color = accent_color
         self.vboxlayout = QVBoxLayout()
@@ -1292,6 +1292,7 @@ class FigDSlider(QWidget):
             self.minusBtn = self.initSliderBoxBtn(
                 text=" -", tip="decrease slider value",
                 accent_color=accent_color, where=where,
+                set_status_tip=set_status_tip,
             )
             self.minusBtn.clicked.connect(self.decrease)
             self.hboxlayout.addWidget(self.minusBtn)
@@ -1300,6 +1301,7 @@ class FigDSlider(QWidget):
             self.plusBtn = self.initSliderBoxBtn(
                 text=" +", tip="increase slider value",
                 accent_color=accent_color, where=where,
+                set_status_tip=set_status_tip,
             )
             self.plusBtn.clicked.connect(self.increase)
             self.hboxlayout.addWidget(self.plusBtn)
@@ -1391,13 +1393,15 @@ class FigDSlider(QWidget):
         self.setSliderColor(self.accent_color)
 
     def initSliderBoxBtn(self, text: str="", icon=None, tip: str="a tip",
-                         accent_color: str="gray", where: str="back"):
+                         accent_color: str="gray", where: str="back", 
+                         set_status_tip: bool=True):
         btn = QToolButton()
         if icon: 
             btn.setIcon(FigD.Icon(icon))
         else: btn.setText(text)
         btn.setToolTip(tip)
-        btn.setStatusTip(tip)
+        if set_status_tip:
+            btn.setStatusTip(tip)
         # extract border color from the accent color.
         borderColor = extractFromAccentColor(accent_color, where=where)
         # set style sheet.
@@ -1466,8 +1470,7 @@ class FigDZoomSlider(FigDSlider):
     def convertValue(self, value: int) -> float:
         value = max(min(value, 25), 0)
         value /= 250
-        if hasattr(self, "window_ptr"):
-            self.window_ptr.setWindowZoom(value)
+        if hasattr(self, "window_ptr"): pass
 
         return value
 
@@ -1738,6 +1741,9 @@ class FigDAppContainer(QApplication):
         super(FigDAppContainer, self).__init__(*args, **kwargs)
         QFontDatabase.addApplicationFont(
             FigD.font("BeVietnamPro-Regular.ttf")
+        )
+        QFontDatabase.addApplicationFont(
+            FigD.font("NotoSans-Medium.ttf")
         )
         self.active_window_ptr = None
         self._has_tray_icon = False
@@ -2236,20 +2242,31 @@ class FigDTabCtrlBtn(QToolButton):
         self.clicked.connect(self.response)
 
     def response(self):
-        print(f"response for tab-{self.clickedIndex}")
-        if self.clickedIndex != -1:
-            self.func(self.clickedIndex)
+        clickedIndex = self.getTabIndex()
+        print(f"response for tab-{clickedIndex}")
+        if clickedIndex != -1:
+            self.func(clickedIndex)
 
-    def mousePressEvent(self, event):
-        # print("mapToGlobal:", self.mapToGlobal(QPoint(0,0)))
-        # print("TabWidget::mapToParent:", self.tabwidget.mapToParent(QPoint(0,0)))
-        # print("TabBar::mapToParent:", self.tabwidget.tabBar().mapToParent(QPoint(0,0)))
-        print(f"mousePressEvent: {event.pos()}")
-        if self.tabwidget:
-            tabbar = self.tabwidget.tabBar()
-            print(f"map mousePress: {tabbar.mapToParent(event.pos())}")
-            # self.clickedIndex = tabbar.getClickedTabIndex(event.pos())
-        super(FigDTabCtrlBtn, self).mousePressEvent(event)
+    def getTabIndex(self) -> int:
+        """compute tab number of clicked tab.
+        Returns:
+            int: index of the clicked tab.
+        """
+        if self.tabwidget is None: return -1
+        topLeft = self.parent().mapToParent(
+            self.rect().topLeft()
+        )
+        w = self.rect().width()
+        h = self.rect().height()
+        transRect = QRect(topLeft.x(), topLeft.y(), w, h)
+        # print("ctrlBtnRect:", transRect)
+        tabBar = self.tabwidget.tabBar()
+        for i in range(tabBar.count()):
+            print("tabBarRect:", tabBar.tabRect(i))
+            if tabBar.tabRect(i).contains(transRect): 
+                return i
+
+        return -1
 
     def enterEvent(self, event):
         self.setIcon(FigD.Icon(self.active_icon_path))
@@ -2460,6 +2477,7 @@ QToolTip {
 }""")
 # tab widget for FigD.
 class FigDTabWidget(QTabWidget):
+    showMessage = pyqtSignal(str)
     changeWindowTitle = pyqtSignal(str)
     def __init__(self, widget_factory=None, window_factory=None, 
                  parent: Union[None, QWidget]=None, tab_icon: str="",
@@ -2614,9 +2632,16 @@ class FigDTabWidget(QTabWidget):
             print("\x1b[33mconnected to changeWindowTitle\x1b[0m")
             widget.changeWindowTitle.connect(titlebar.setTitle)
         if hasattr(widget, "zoomChanged") and titlebar:
-            widget.zoomChanged.connect(titlebar.zoomSlider.setZoomValue)        
+            widget.zoomChanged.connect(titlebar.zoomSlider.setZoomValue)
+        if hasattr(widget, "showMessage"):
+            print("\x1b[33mconnected to showMessage\x1b[0m")
+            widget.showMessage.connect(self.emitStatusBarMessage)
 
         return widget
+
+    def emitStatusBarMessage(self, msg: str):
+        """forward any messages recieved from the widget to the window."""
+        self.showMessage.emit(msg)
 
     def widgetFactory(self) -> QWidget:
         """factory function for intialization of the widget
@@ -3118,7 +3143,7 @@ class FigDNavBar(QWidget):
             self.createDropShadow(accent_color)
         )
 
-    def createDropShadow(self, accent_color: str, where: str):
+    def createDropShadow(self, accent_color: str, where: str="back"):
         drop_shadow_color = extractFromAccentColor(accent_color, where=where)
         drop_shadow = QGraphicsDropShadowEffect()
         drop_shadow.setColor(QColor(drop_shadow_color))
@@ -3350,6 +3375,8 @@ class FigDWindow(QMainWindow):
         self.FnF11.connect(self.toggleFullScreen)
         self.titlebar = None
         self.shortcuts_pane = self.createShortcutsPane()
+        if hasattr(widget, "showMessage"):
+            widget.showMessage.connect(self.statusBar().showMessage)
 
     def toggleFullScreen(self):
         if self.isFullScreen():
@@ -3496,6 +3523,66 @@ def create_css_grad(colors: List[str], angle: int=90) -> str:
 
     return css_grad
 
+FIGD_CENTRAL_WINDOW_STYLE = r"""
+QMainWindow#FigDWinUI {
+    border-radius: 20px;
+    background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 1), stop : 0.143 rgba(22, 22, 22, 1), stop : 0.286 rgba(27, 27, 27, 1), stop : 0.429 rgba(32, 32, 32, 1), stop : 0.571 rgba(37, 37, 37, 1), stop : 0.714 rgba(41, 41, 41, 1), stop : 0.857 rgba(46, 46, 46, 1), stop : 1.0 rgba(51, 51, 51, 1));
+}
+QScrollBar:vertical {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0);
+}
+QScrollBar:horizontal {
+    border: 0px solid #999999;
+    width: 12px;
+    margin: 0px 0px 0px 0px;
+    background-color: rgba(255, 255, 255, 0);
+}
+/* QScrollBar:vertical:hover {
+    background-color: rgba(255, 253, 184, 0.3);
+} */
+QScrollBar::handle:vertical {
+    min-height: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    /* background-color: transparent; */
+    background-color: rgba(255, 255, 255, 0.2);
+}
+QScrollBar::handle:horizontal {
+    min-width: 0px;
+    border: 0px solid red;
+    border-radius: 0px;
+    /* background-color: transparent; */
+    background-color: rgba(255, 255, 255, 0.2);
+}
+QScrollBar::handle:vertical:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::handle:horizontal:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+}
+QScrollBar::add-line:horizontal {
+    width: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:horizontal {
+    width: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}
+QScrollBar::add-line:vertical {
+    height: 0px;
+    subcontrol-position: bottom;
+    subcontrol-origin: margin;
+}
+QScrollBar::sub-line:vertical {
+    height: 0 px;
+    subcontrol-position: top;
+    subcontrol-origin: margin;
+}"""
 FIGD_CENTRAL_WIDGET_STYLE = r"""
 QWidget#FigDUI {
     border-radius: 20px;
@@ -3557,9 +3644,6 @@ QScrollBar::sub-line:vertical {
     subcontrol-origin: margin;
 }"""
 def wrapFigDWindow(widget: QWidget, **args):
-    QFontDatabase.addApplicationFont(
-        FigD.font("BeVietnamPro-Regular.ttf")
-    )
     # arguments.
     icon = args.get("icon")
     title = args.get("title", "")
@@ -3612,14 +3696,21 @@ def wrapFigDWindow(widget: QWidget, **args):
         else: pass # print(f"widget/window of type `{type(widget)}` doesnt't have `{api_func}` in its API")
     # if show_titlebar is false then hide titlebar.
     if not show_titlebar: titlebar.hide()
+    centralWindow = QMainWindow()
+    centralWindow.setObjectName("FigDWinUI")
+    centralWindow.setStyleSheet(FIGD_CENTRAL_WINDOW_STYLE)
+    # centralWindow.statusBar().showMessage("STATUS BAR")
     centralWidget = QWidget()
     centralWidget.setObjectName("FigDUI")
     centralWidget.setStyleSheet(FIGD_CENTRAL_WIDGET_STYLE)
+    
     layout = QVBoxLayout()
     layout.setSpacing(0)
-    layout.setContentsMargins(5, 5, 5, 5)
+    layout.setContentsMargins(8, 2, 8, 2)
+
+    centralWindow.addToolBar(Qt.TopToolBarArea, titlebar)
     # build layout.
-    layout.addWidget(titlebar)
+    # layout.addWidget(titlebar)
     if add_tabs:
         tabwidget = FigDTabWidget(
             tab_title=tab_title, tab_icon=tab_icon,
@@ -3651,8 +3742,8 @@ def wrapFigDWindow(widget: QWidget, **args):
         layout.addWidget(widget.statusbar)
     except Exception as e: print(e)
     centralWidget.setLayout(layout)
-
-    window = FigDWindow(widget=centralWidget, **args)
+    centralWindow.setCentralWidget(centralWidget)
+    window = FigDWindow(widget=centralWindow, **args)
     window.appName = app_name
     window.find_function = find_function
     window.bookmark_manager = bookmark_manager
@@ -3662,6 +3753,11 @@ def wrapFigDWindow(widget: QWidget, **args):
         window.tabs = tabwidget
         tabwidget.CtrlShiftW.connect(window.close)
     window.setWindowOpacity(1)
+    # # set drop shadow.
+    # dropShadow = QGraphicsDropShadowEffect()
+    # dropShadow.setOffset(0, 0)
+    # dropShadow.setBlurRadius(15)
+    # window.setGraphicsEffect(dropShadow)
     window.connectTitleBar(titlebar)
     window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
                                     "Rename the current window")
@@ -3722,6 +3818,10 @@ def wrapFigDWindow(widget: QWidget, **args):
     # try: app.appendTitleBar(titlebar)
     # except Exception as e: print(e)
     # reposition window
+    window = prepStatusBar(
+        window, accent_color=accent_color,
+        where=_where,
+    )
     window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()
     x = (screen_rect.width()-width) // 2
@@ -3730,14 +3830,47 @@ def wrapFigDWindow(widget: QWidget, **args):
     window.move(x, y)
 
     return window
+# def styleWindowStatusBar(window: QMainWindow, widget: Union[QWidget, None]=None, 
+#                          accent_color: Union[str, None]=None, where: str="back",
+#                          apply_style_sheet: bool=True, font_color: str="#fff") -> QMainWindow:
+#     """Shifts a windows statusbar from the transparent QMainWindow to the window object.
+#     Args:
+#         window (QMainWindow): A QMainWindow or FigDWindow object.
+#         windget (QWidget, optional): The widget wrapped around in the FigDWindow. Defaults to None.
+#         accent_color (str, optional): Accent color of the window.
+#         apply_style_sheet (bool, optional): Whether statusBar style sheet should be updated. Defaults to True.
+#         widget
+#         font_color (str, optional): Color of the statusbar font. Defaults to "#fff".
+#     Returns:
+#         QMainWindow: returns rearranged FigDWindow/QMainWindow object.
+#     """
+#     assert isinstance(window, QMainWindow), f"window object is of type `{type(window)}`. Expecting QMainWindow type object instead."
+#     statusBar = window.statusBar()
+#     window.statusbar = statusBar
+#     window.centralWidget().layout().addWidget(window.statusbar, 0, Qt.AlignCenter)
+#     # if the wrapped widget has a "statusbar" attribute then add it to statusbar.
+#     if widget is not None and hasattr(widget, "statusbar"):
+#         window.statusbar.addWidget(widget.statusbar)
+#     if apply_style_sheet:
+#         if accent_color:
+#             fontColor = extractFromAccentColor(accent_color, where=where)
+#         else: fontColor = font_color
+#         window.statusbar.setStyleSheet("""
+#         QStatusBar {
+#             color: """+fontColor+""";
+#             font-size: 17px;
+#             font-family: "Be Vietnam Pro";
+#             background: transparent;
+#         }""")
 
-def styleWindowStatusBar(window: QMainWindow, widget: Union[QWidget, None]=None, 
-                         accent_color: Union[str, None]=None, where: str="back",
-                         apply_style_sheet: bool=True, font_color: str="#fff") -> QMainWindow:
-    """Shifts a windows statusbar from the transparent QMainWindow to the window object.
+#     return window
+# prepare status bar: style it, add zoom controls etc.
+def prepStatusBar(window: QMainWindow, accent_color: Union[str, None]=None, 
+                  where: str="back", apply_style_sheet: bool=True, 
+                  font_color: str="#fff") -> QMainWindow:
+    """style the centralWindow.
     Args:
         window (QMainWindow): A QMainWindow or FigDWindow object.
-        windget (QWidget, optional): The widget wrapped around in the FigDWindow. Defaults to None.
         accent_color (str, optional): Accent color of the window.
         apply_style_sheet (bool, optional): Whether statusBar style sheet should be updated. Defaults to True.
         widget
@@ -3745,190 +3878,54 @@ def styleWindowStatusBar(window: QMainWindow, widget: Union[QWidget, None]=None,
     Returns:
         QMainWindow: returns rearranged FigDWindow/QMainWindow object.
     """
-    assert isinstance(window, QMainWindow), f"window object is of type `{type(window)}`. Expecting QMainWindow type object instead."
-    statusBar = window.statusBar()
-    window.statusbar = statusBar
-    window.centralWidget().layout().addWidget(window.statusbar, 0, Qt.AlignCenter)
-    # if the wrapped widget has a "statusbar" attribute then add it to statusbar.
-    if widget is not None and hasattr(widget, "statusbar"):
-        window.statusbar.addWidget(widget.statusbar)
+    WindowErrorMsg = f"""window object is of type `{type(window)}`. 
+Expecting QMainWindow type object instead."""
+    CentralWidgetErrorMsg = f"""centralWidget object is of type `{type(window.centralWidget())}`. 
+Expecting QMainWindow type object instead."""
+    assert isinstance(window, QMainWindow), WindowErrorMsg
+    assert isinstance(window.centralWidget(), QMainWindow), CentralWidgetErrorMsg
+    statusBar = window.centralWidget().statusBar()
     if apply_style_sheet:
         if accent_color:
-            fontColor = extractFromAccentColor(accent_color, where=where)
+            fontColor = extractFromAccentColor(
+                bg=accent_color, 
+                where=where,
+            )
         else: fontColor = font_color
-        window.statusbar.setStyleSheet("""
+        statusBar.setStyleSheet("""
         QStatusBar {
             color: """+fontColor+""";
             font-size: 17px;
             font-family: "Be Vietnam Pro";
             background: transparent;
         }""")
+    from fig_dash.ui.titlebar import FullScreenBtn
+    fullscreenBtn = FullScreenBtn(
+        fs_icon="titlebar/fullscreen.svg", 
+        efs_icon="titlebar/exit_fullscreen.svg", 
+        style="r", background=accent_color,
+    )
+    window.fullscreenBtn = fullscreenBtn
+    zoomControls = FigDZoomSlider(
+        text="Zoom", value=100, plus=True, minus=True, 
+        minm=25, maxm=250, btns_list=[fullscreenBtn],
+        set_status_tip=False, accent_color=accent_color,
+    )
+    zoomControls.hboxlayout.setSpacing(0)
+    zoomControls.label.setStyleSheet("""
+    QLabel {
+        color: #fff;
+        font-size: 16px;
+        background: transparent;
+        font-family: "Be Vietnam Pro";
+    }""")
+    zoomControls.plusBtn.setIcon(FigD.Icon("widget/zoom_in.png"))
+    zoomControls.minusBtn.setIcon(FigD.Icon("widget/zoom_out.png"))
+    zoomControls.readout.setFixedWidth(40)
+    zoomControls.slider.setFixedWidth(65)
+    zoomControls.connectWindow(window)
+    zoomControls.setFixedHeight(30)
+    window.zoomControls = zoomControls
+    statusBar.addWidget(zoomControls)
 
     return window
-# class FigDWindowSettingsMenu(QMainWindow):
-#     clicked = pyqtSignal(int) 
-#     def __init__(self, parent: Union[None, QWidget]=None, 
-#                  supports_bookmarks: bool=False,  
-#                  supports_find: bool=False,
-#                  accent_color: str="gray"):
-#         super(FigDWindowSettingsMenu, self).__init__(parent)
-#         self.accent_color = accent_color
-#         self.separators = []
-#         self.toggles = []
-#         self.sliders = []
-#         self.btns = []
-#         self.__icon_size = QSize(25, 25)
-#         # container scroll area.
-#         # self.scroll = self.initScrollArea()
-#         # menu object.
-#         self.menu = QWidget()
-#         self.menu.setObjectName("FigDWindowSettingsMenu")
-#         # menu vertical lauyout.
-#         self.vboxlayout = QVBoxLayout()
-#         self.vboxlayout.setContentsMargins(10, 10, 10, 10)
-#         self.vboxlayout.setSpacing(0)
-#         # make the window transparent.
-#         self.setAttribute(Qt.WA_TranslucentBackground)
-#         self.setWindowFlags(Qt.Popup) 
-#         self.addButton("New tab", shortcut="Ctrl+T")
-#         self.addButton("New window", shortcut="Ctrl+N")
-#         self.addButton("New Private window", shortcut="Ctrl+Shift+N")
-#         self.addSeparator()
-#         self.addButton("History", icon="textedit/history.svg")
-#         self.addButton("Downloads", icon="navbar/download.svg", shortcut="Ctrl+J")
-#         if supports_bookmarks:
-#             self.addButton("Bookmarks")
-#         self.addSeparator()
-#         self.opacitySlider = self.addSlider("Opacity", class_=FigDOpacitySlider, 
-#                                             value=100, plus=True, minus=True)
-#         self.addSeparator()
-#         self.addButton("Cast...", icon="navbar/cast.svg")
-#         if supports_find:
-#             self.addButton("Find in page")
-#         self.addButton("More tools")
-#         self.addSeparator()
-#         self.addButton("Light/dark theme")
-#         self.addButton("Use system theme")
-#         self.addSeparator()
-#         # self.addButton("Mute notifications", shortcut="Alt+Shift+M")
-#         # self.addButton("Manage notifications")
-#         self.notifsMenu = QMenu()
-#         self.notifsMenu.addAction("Mute", blank, QKeySequence("Alt+Shift+M"))
-#         self.notifsMenu.addAction("Manage", blank)
-#         self.addSubMenu(
-#             "Notifications", 
-#             menu=self.notifsMenu,
-#             icon="menu/notifications.svg"
-#         )
-#         self.addSeparator()
-#         self.addButton("Manage permissions", icon="navbar/permissions.svg")
-#         self.addButton("More settings ...", icon="navbar/more_settings.svg")
-#         self.addButton("Help", icon="help.svg")
-#         self.addSeparator()
-#         self.addButton("Exit")
-#         self.vboxlayout.addStretch(1)
-#         self.menu.setLayout(self.vboxlayout)
-#         # set menu to scroll area.
-#         # self.scroll.setWidget(self.menu)
-#         self.setCentralWidget(self.menu)
-
-#     def initScrollArea(self) -> QScrollArea:
-#         scroll = QScrollArea()
-#         scroll.setWidgetResizable(True)
-#         scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-#         scroll.setStyleSheet(DASH_WIDGET_SCROLL_AREA.render())
-#         scroll.setAttribute(Qt.WA_TranslucentBackground)
-
-#         return scroll
-
-#     def connectWindow(self, window: QMainWindow):
-#         self.__window_ptr = window
-#         opacity = self.__window_ptr.windowOpacity()
-#         self.opacitySlider.connectWindow(self.__window_ptr)
-
-#     def signalBtnClick(self, i: int):
-#         self.clicked.emit(i)
-#         self.hide()
-
-#     def setIconSize(self, size: QSize):
-#         self.__icon_size = size
-
-#     def addSlider(self, text: str="", class_=None, **kwargs):
-#         if class_:
-#             slider = class_(text=text, **kwargs)
-#         else:
-#             slider = FigDSlider(text=text, **kwargs)
-#         self.sliders.append(slider)
-#         self.vboxlayout.addWidget(slider)
-        
-#         return slider
-
-#     def addToggle(self, text: str=""):
-#         pass
-
-#     def addButton(self, text: str, icon: str="", tip="", 
-#                   shortcut: Union[str, None]=None):
-#         btn = FigDMenuButton(text=text, icon=icon, 
-#                              tip=tip, shortcut=shortcut, 
-#                              accent_color=self.accent_color)
-#         btn._btn.clicked.connect(partial( 
-#             self.signalBtnClick, 
-#             len(self.btns),
-#         ))
-#         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-#         self.vboxlayout.addWidget(btn)
-#         self.btns.append(btn)
-
-#         return btn
-
-#     def addSubMenu(self, *args, menu: Union[QMenu, None]=None, 
-#                    **kwargs) -> Union[QToolButton, QMenu]:
-#         btn = self.addButton(*args, **kwargs)
-#         btn.setContextMenu(menu)
-
-#         return btn, menu
-
-#     def addWidget(self, *args, **kwargs):
-#         self.vboxlayout.addWidget(*args, **kwargs)
-
-#     def addSeparator(self):
-#         sep = QFrame()
-#         sep.setFrameShape(QFrame.HLine)
-#         sep.setFrameShadow(QFrame.Sunken)
-#         sep.setStyleSheet(f'''background: #292929; margin: 5px;''')
-#         sep.setLineWidth(1) # sep.setMaximumWidth(110)
-#         self.separators.append(sep)
-#         self.vboxlayout.addWidget(sep)
-
-#     def setAccentColor(self, accent_color: str, where: str="back"):
-#         self.accent_color = accent_color
-#         self.menu.setStyleSheet("""
-#         QWidget#FigDWindowSettingsMenu {
-#             background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-#             color: #fff;
-#             padding: 10px;
-#             border-radius: 15px;
-#             font-size: 18px;
-#             font-family: "Be Vietnam Pro";
-#         }""")
-#         for btn in self.btns:
-#             btn.setAccentColor(accent_color)
-#         for slider in self.sliders:
-#             slider.setAccentColor(
-#                 accent_color, 
-#                 where=where,
-#             )
-#         """
-#         QMenu#FigDMenu::item {
-#             padding: {{ PADDING }}px;
-#         }
-#         QMenu#FigDMenu::item:selected {
-#             color: #292929; 
-#             border-radius: 5px;
-#             background-color: {{ ACCENT_COLOR }}; 
-#         }
-#         QMenu#FigDMenu:separator {
-#             background: #292929;
-#         }
-#         """
