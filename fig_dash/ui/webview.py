@@ -1309,15 +1309,33 @@ class DebugWebBrowser(QWebEngineView):
         def blank(): pass
         print(f"""\x1b[34;1mdata: {data.mediaType()}\x1b[0m""")
         editFlags = EditFlagsDict(data.editFlags())
-        print(editFlags)
-        # print(int(data.editFlags()), int(QWebEngineContextMenuData.CanUndo), int(QWebEngineContextMenuData.CanRedo))
-        # print(int(QWebEngineContextMenuData.CanRedo | QWebEngineContextMenuData.CanUndo | QWebEngineContextMenuData.CanPaste))
+        # print(editFlags)
         if data.mediaType() == QWebEngineContextMenuData.MediaTypeNone:
             undo = self.addCMenuAction("Undo", "&Undo", "textedit/undo.svg", QKeySequence.Undo)
             redo = self.addCMenuAction("Redo", "&Redo", "textedit/redo.svg", QKeySequence.Redo)
             cut = self.addCMenuAction("Cut", "Cu&t", "textedit/cut.svg", QKeySequence.Cut)
             copy = self.addCMenuAction("Copy", "Copy", "textedit/copy.svg", QKeySequence.Copy)
             paste = self.addCMenuAction("Paste", "&Paste", "textedit/paste.svg", QKeySequence.Paste)
+            openLinkInNewTab = self.addCMenuAction(
+                "Open link in new tab", 
+                "Open link in new tab",
+            )
+            openLinkInNewWindow = self.addCMenuAction(
+                "Open link in new window", 
+                "Open link in new window",
+            )
+            openLinkInNewIncogWin = self.addCMenuAction(
+                "Open link in new window", 
+                "Open link in incognito window", add_sep=True,
+            )
+            saveLink = self.addCMenuAction(
+                "Save link", 
+                "Save link as...", 
+            )
+            copyLinkAddress = self.addCMenuAction(
+                "Copy link address", 
+                "Copy link address", add_sep=True,
+            )
             pasteAndMatchStyle = self.addCMenuAction( 
                 "Paste and match style",
                 "Paste and match style      ",
@@ -1590,6 +1608,9 @@ class DebugWebView(QSplitter):
         # print("pixmap:", animLabel.pixmap())
         # print("movie:", animLabel.movie())
         # animLabel.setPixmap(self.pagePixmap)
+    def changeZoom(self, value: float):
+        self.browser.setZoomFactor(value/100)
+
     def setIcon(self, tabs, i: int):
         self.i = i
         self.tabs = tabs
@@ -1944,7 +1965,7 @@ def debug_webview_window_factory(**args):
         "url": args.get("url", "https://www.google.com"),
 	}
     webview = debug_webview_factory(**widget_args)
-    tab_title = f"Welcome {getpass.getuser()}!"
+    tab_title = f"Welcome {getpass.getuser()}"
     tab_icon = FigD.icon("browser.svg")
     window = wrapFigDWindow(
 		webview, title="Debug Webview", icon=icon, size=icon_size, autohide=False,

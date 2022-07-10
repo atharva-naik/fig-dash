@@ -210,11 +210,12 @@ main .boxes div {
 }
 
 main .boxes.green div.selected img{
-    filter: sepia(100%) saturate(300%) brightness(70%) hue-rotate(180deg) blur(1px);
+    filter: sepia(100%) saturate(300%) brightness(70%) hue-rotate(180deg) blur(1px) drop-shadow(0px 0px 5px #a1deff);
 }
 main .boxes.green div.selected span{
     color: #292929;
     border-radius: 4px;
+    box-shadow: 0px 0px 10px 3px #a1deff;
     background-color: rgba(82, 157, 199, 150);
 }
 
@@ -426,6 +427,21 @@ const filesSelection = new SelectionArea({
 });'''
 
 FileViewerCustomJS = r'''
+// check if element is in viewport.
+function elementInView(el) {
+    var rect = el.getBoundingClientRect();
+    return (
+        rect.top >= 0 &&
+        rect.left >= 0 &&
+        rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && /* or $(window).height() */
+        rect.right <= (window.innerWidth || document.documentElement.clientWidth) /* or $(window).width() */
+    );
+}
+function ensureInView(el) {
+    if (elementInView(el) == false) {
+        el.scrollIntoView();
+    }
+}
 // create file item.
 function itemDrag(event) {
     console.log(event.target.id);

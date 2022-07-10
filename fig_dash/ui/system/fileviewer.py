@@ -231,15 +231,17 @@ class FileViewerThumbnailer(QObject):
         self.finished.emit()
         
 # statusbar for file viewer.
-class FileViewerStatus(QWidget):
+class FileViewerStatus(QScrollArea):
     def __init__(self, parent: Union[None, QWidget]=None, 
                  webview: Union[DebugWebBrowser, None]=None):
         super(FileViewerStatus, self).__init__(parent)    
         self.webview = webview
         # horizontal layout.
+        self.widget = QWidget()
         self.hboxlayout = QHBoxLayout()
         self.hboxlayout.setContentsMargins(0, 0, 0, 0)
         self.hboxlayout.setSpacing(5)
+        self.widget.setLayout(self.hboxlayout)
         # thumbnailer workers and threads.
         self.selected = self.initBtn(icon="file.svg", text=" selected: None") # name of seelcted item.
         self.num_items = self.initBtn(icon="item.png", text="(contains 0 items)") # number of items in selected item 
@@ -265,9 +267,8 @@ class FileViewerStatus(QWidget):
         self.hboxlayout.addWidget(self.symlink)
         self.hboxlayout.addWidget(self.shortcut)
         # set layout and style
-        self.setLayout(self.hboxlayout)
-        self.setObjectName("FileViewerStatus")
-        self.setStyleSheet('''
+        self.widget.setObjectName("FileViewerStatus")
+        self.widget.setStyleSheet('''
         QWidget#FileViewerStatus {
             color: #fff;
             border: 0px;
@@ -282,7 +283,16 @@ class FileViewerStatus(QWidget):
             font-size: 16px;
             background: transparent;
         }''')
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.setWidget(self.widget)
+        self.setWidgetResizable(True)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setStyleSheet("""
+        QScrollArea {
+            border: 0px;
+            background: transparent;
+        }""")
 
     def __str__(self):
         return "\x1b[34mui::system::fileviewer::FileViewerStatus\x1b[0m"
@@ -2394,7 +2404,7 @@ class FileViewerFolderBar(QScrollArea):
         )
         self.upBtn = self.initFolderNavBtn(
             icon="up.svg",
-            tip="go forward (tied to webview.forward)",
+            tip="go up a folder",
         )
         self.upBtn.setFixedHeight(24)
         self.backBtn.setFixedHeight(24)
@@ -3136,6 +3146,8 @@ class FileViewerWidget(FigDMainWindow):
         self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # statusbar.
         self.statusbar = FileViewerStatus(self, self.webview)
+        self.statusbar.setFixedHeight(20)
+        self.statusbar.hide()
         # clipboard access.
         self.clipboard = QApplication.clipboard()
         # terminal.
@@ -3146,6 +3158,26 @@ class FileViewerWidget(FigDMainWindow):
         # browserBtn = self.menu.opengroup.browserBtn
         # browserBtn.clicked.connect(self.openFileInWebView)
         # shortcuts.
+        self.MoveSelUp = FigDShortcut(
+            QKeySequence.MoveToPreviousLine, 
+            self, "Select item above",
+        )
+        self.MoveSelUp.connect(self.moveSelectionUp)
+        self.MoveSelDown = FigDShortcut(
+            QKeySequence.MoveToNextLine, 
+            self, "Select item below"
+        )
+        self.MoveSelDown.connect(self.moveSelectionDown)
+        self.MoveSelLeft = FigDShortcut(
+            QKeySequence.MoveToPreviousChar, 
+            self, "Select item on left"
+        )
+        self.MoveSelLeft.connect(self.moveSelectionLeft)
+        self.MoveSelRight = FigDShortcut(
+            QKeySequence.MoveToNextChar, 
+            self, "Select item on right"
+        )
+        self.MoveSelRight.connect(self.moveSelectionRight)
         self.CtrlShiftB = FigDShortcut(
             QKeySequence("Ctrl+Shift+B"), self,
             "Toggle bookmarks and quick access"
@@ -3155,6 +3187,11 @@ class FileViewerWidget(FigDMainWindow):
             QKeySequence("Ctrl+B"), self,
             "Bookmark currently opened folder"
         )
+        self.OpenItem = FigDShortcut(
+            QKeySequence.InsertParagraphSeparator, 
+            self, "Enter selected folder/file",
+        )
+        self.OpenItem.connect(self.openSelected)
         self.SelectAll = FigDShortcut(
             QKeySequence.SelectAll, self, 
             "Select all files/folders"
@@ -3201,20 +3238,15 @@ class FileViewerWidget(FigDMainWindow):
         #     self.layout.insertWidget(0, self.menuArea)
         # else:
         #     self.layout.insertWidget(0, self.menu)
-        
-        # menu area.
-        # self.menuArea = wrapInScrollArea(self.menu)
-        # self.menuArea.setFixedHeight(130)
-        # self.menuArea.hide()
         # vertical splitter: webview splitter + terminal.
         self.vsplitter = QSplitter(Qt.Vertical)
         self.vsplitter.addWidget(self.debug_webview)
         self.vsplitter.addWidget(self.terminal)
         # build central widget.
+        self.layout.insertWidget(0, self.statusbar, 0)
         self.layout.insertWidget(0, self.vsplitter, 0)
         self.layout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
         self.layout.insertWidget(0, self.folderbar, 0)
-        # self.layout.insertWidget(0, self.menuArea)
         self.layout.insertWidget(0, self.menu)
         # key press search bar.
         self.keypress_search = FileViewerKeyPressSearch()
@@ -3238,6 +3270,50 @@ class FileViewerWidget(FigDMainWindow):
             "Unselect selected files/folders"
         )
         self.EscKey.connect(self.EscHandler)
+
+    def moveSelectionUp(self):
+        self.browser.page().runJavaScript("""
+        var selItems = document.getElementsByClassName("selected file_item");
+        var id = selItems[selItems.length-1].id;
+        var numItemsInRow = Math.floor(window.innerWidth/130);
+        var itemSelPtr = document.getElementById(id);
+        for (var i=0; i<numItemsInRow; i++) {
+            itemSelPtr = itemSelPtr.previousSibling;
+        }
+        id = itemSelPtr.id;
+        clearSelectedItems();
+        selectItemById(id);
+        ensureInView(document.getElementById(id));""")
+
+    def moveSelectionDown(self):
+        self.browser.page().runJavaScript("""
+        var selItems = document.getElementsByClassName("selected file_item");
+        var id = selItems[selItems.length-1].id;
+        var numItemsInRow = Math.floor(window.innerWidth/130);
+        var itemSelPtr = document.getElementById(id);
+        for (var i=0; i<numItemsInRow; i++) {
+            itemSelPtr = itemSelPtr.nextSibling;
+        }
+        id = itemSelPtr.id;
+        clearSelectedItems();
+        selectItemById(id);
+        ensureInView(document.getElementById(id));""")
+
+    def moveSelectionLeft(self):
+        self.browser.page().runJavaScript("""
+        var selItems = document.getElementsByClassName("selected file_item");
+        var id = selItems[selItems.length-1].previousSibling.id;
+        clearSelectedItems();
+        selectItemById(id);
+        ensureInView(document.getElementById(id));""")
+
+    def moveSelectionRight(self):
+        self.browser.page().runJavaScript("""
+        var selItems = document.getElementsByClassName("selected file_item");
+        var id = selItems[selItems.length-1].nextSibling.id;
+        clearSelectedItems();
+        selectItemById(id);
+        ensureInView(document.getElementById(id));""")
 
     def getWindowTitle(self):
         return f"File Viewer ({Path(self.folder).name})"
@@ -3300,6 +3376,11 @@ class FileViewerWidget(FigDMainWindow):
     def openParent(self):
         path = str(self.folder.parent)
         self.open(path)
+
+    def openSelected(self):
+        print(f"openSelected({self.selected_item})")
+        if self.selected_item:
+            self.open(self.selected_item)
 
     def reOpen(self):
         path = str(self.folder)
@@ -3785,7 +3866,7 @@ selItemSpan.style.webkitLineClamp = 10;""").render(ID=item)
         except (TypeError, ValueError) as e:
             print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
             # fail silently.
-        super(FileViewerWidget, self).keyPressEvent(event)
+        return super(FileViewerWidget, self).keyPressEvent(event)
 
     def onUrlChange(self):
         self.selected_item = None
@@ -3890,16 +3971,14 @@ def fileviewer_window_factory(**args):
     }
     fileviewer = fileviewer_factory(path=path, **widget_args)
     title = f"File Viewer ({Path(path).name})"
-    window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700,
-                            accent_color=accent_color, tab_title="Home", title=title,
+    window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700, title=title,
+                            accent_color=accent_color, font_color="#69bfee", tab_title="Home",
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
                             titlebar_callbacks={
                                 "viewSourceBtn": fileviewer.viewSource,
                             }, widget_factory=fileviewer_factory, widget_args=widget_args,
                             window_args=args, window_factory=fileviewer_window_factory,
                             find_function=fileviewer.browser.reactToCtrlF)
-    from fig_dash.ui import styleWindowStatusBar
-    window = styleWindowStatusBar(window, widget=fileviewer)
     
     return window
 
@@ -3917,40 +3996,27 @@ def test_fileviewer():
     window.show()
     app.exec()
     # fileviewer.saveScreenshot("fileviewer.html")
-def launch_fileviewer(app, path: Union[str, None]=None):
+def launch_fileviewer(app, **args):
     from fig_dash.ui import wrapFigDWindow
     from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
+    path = args.get("path", os.path.expanduser("~"))
     # get accent color & icon.
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
-    fileviewer = FileViewerWidget(
-        background="/home/atharva/Pictures/Wallpapers/3339083.jpg",
-        font_color="#fff", parentless=True, accent_color=accent_color
-    )
-    # open path.
-    if path is not None: 
-        fileviewer.open(path)
-    else: fileviewer.open("~")
-
-    window = wrapFigDWindow(fileviewer, accent_color=accent_color, 
-                            icon=icon, width=800, height=600, 
-                            name="fileviewer")
-    spacer1 = QWidget()
-    spacer1.setStyleSheet("background: transparent")
-    spacer1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    spacer2 = QWidget()
-    spacer2.setStyleSheet("background: transparent")
-    spacer2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-    window.statusBar().addWidget(spacer1)
-    window.statusBar().addWidget(fileviewer.statusbar)
-    window.statusBar().addWidget(spacer2)
-    window.statusBar().setStyleSheet("""
-    QStatusBar {
-        color: #4293d5;
-        border-radius: 20px;
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-    }""")
+    widget_args = {
+        "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
+        "font_color": "#fff", "parentless": True, "accent_color": accent_color,
+    }
+    fileviewer = fileviewer_factory(path=path, **widget_args)
+    title = f"File Viewer ({Path(path).name})"
+    window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700,
+                            accent_color=accent_color, tab_title="Home", title=title,
+                            tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
+                            titlebar_callbacks={
+                                "viewSourceBtn": fileviewer.viewSource,
+                            }, widget_factory=fileviewer_factory, widget_args=widget_args,
+                            window_args=args, window_factory=fileviewer_window_factory,
+                            find_function=fileviewer.browser.reactToCtrlF)
     window.show()
 
 

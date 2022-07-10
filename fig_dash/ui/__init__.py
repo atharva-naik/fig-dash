@@ -1467,10 +1467,33 @@ class FigDOpacitySlider(FigDSlider):
 
 # zoom slider
 class FigDZoomSlider(FigDSlider):
+    zoomChanged = pyqtSignal(float)
+    def __init__(self, *args, **kwargs):
+        super(FigDZoomSlider, self).__init__(*args, **kwargs)
+        self.slider.sliderReleased.connect(self.emitZoomChanged)
+        self.displayChanged.connect(self.emitZoomChanged2)
+
+    def setValueOnTabChange(self, value: int):
+        self.convertedValue = self.convertValue(value)
+        self.readout.setText(str(self.convertedValue))
+        self.slider.setValue(self.convertedValue)
+
+    def emitZoomChanged2(self):
+        value = self.slider.value()
+        self.convertedValue = self.convertValue(value)        
+        self.zoomChanged.emit(value)
+
+    def emitZoomChanged(self):
+        value = self.slider.value()
+        self.convertedValue = self.convertValue(value)
+        self.changed.emit(self.convertedValue)
+        self.readout.setText(str(value))
+        self.displayChanged.emit(value)
+        self.updatedSlider.emit()
+        self.zoomChanged.emit(value)
+
     def convertValue(self, value: int) -> float:
-        value = max(min(value, 25), 0)
-        value /= 250
-        if hasattr(self, "window_ptr"): pass
+        value = min(max(value, 25), 250)
 
         return value
 
@@ -1966,12 +1989,12 @@ class FigDTabControls(QWidget):
         # move, rename, duplicate, pin, share.
         self.hboxlayout.addStretch()
         self.hboxlayout.addStretch()
-        self.addBtn(FigD.Icon("tabbar/reload.svg"), tip="Reload")
-        self.addBtn(FigD.Icon("tabbar/rename.svg"), tip="Rename")
-        self.addBtn(FigD.Icon("tabbar/move.svg"), tip="Move")
-        self.addBtn(FigD.Icon("tabbar/duplicate.png"), tip="Duplicate")
-        self.addBtn(FigD.Icon("tabbar/pin.svg"), tip="Pin")
-        self.addBtn(FigD.Icon("tabbar/share.svg"), tip="Share")
+        self.reloadBtn = self.addBtn(FigD.Icon("tabbar/reload.svg"), tip="Reload")
+        self.renameBtn = self.addBtn(FigD.Icon("tabbar/rename.svg"), tip="Rename")
+        self.moveBtn = self.addBtn(FigD.Icon("tabbar/move.svg"), tip="Move to new window")
+        self.duplicateBtn = self.addBtn(FigD.Icon("tabbar/duplicate.png"), tip="Duplicate")
+        self.pinBtn = self.addBtn(FigD.Icon("tabbar/pin.svg"), tip="Pin")
+        self.shareBtn = self.addBtn(FigD.Icon("tabbar/share.svg"), tip="Share")
         # set layout.
         self.setLayout(self.hboxlayout)
 
@@ -2044,6 +2067,12 @@ class FigDTabBar(QTabBar):
         tabControls = FigDTabControls(
             accent_color=self.accent_color
         )
+        self.reloadBtn = tabControls.reloadBtn
+        self.renameBtn = tabControls.renameBtn
+        self.moveBtn = tabControls.moveBtn
+        self.duplicateBtn = tabControls.duplicateBtn
+        self.pinBtn = tabControls.pinBtn
+        self.shareBtn = tabControls.shareBtn
         # create widget action.
         widgetAction = QWidgetAction(menu)
         widgetAction.setDefaultWidget(tabControls)
@@ -2243,23 +2272,28 @@ class FigDTabCtrlBtn(QToolButton):
 
     def response(self):
         clickedIndex = self.getTabIndex()
+        print(self.tabwidget.tabBar().tabData(clickedIndex))
         print(f"response for tab-{clickedIndex}")
         if clickedIndex != -1:
             self.func(clickedIndex)
 
     def getTabIndex(self) -> int:
-        """compute tab number of clicked tab.
+        """compute index of the tab the control button is attached to.
         Returns:
-            int: index of the clicked tab.
+            int: index of tab the control button belongs to.
         """
         if self.tabwidget is None: return -1
+        # map top left corner to coordinate space of FigDTabBar
+        # parent of TabCtrlBtn is tabButton.
+        # map to parent on tabButton maps to it's parent which is FigDTabBar.
         topLeft = self.parent().mapToParent(
             self.rect().topLeft()
         )
         w = self.rect().width()
         h = self.rect().height()
+        # create translated rectangle (coordinate space of FigDTabBar) of control button.
         transRect = QRect(topLeft.x(), topLeft.y(), w, h)
-        # print("ctrlBtnRect:", transRect)
+        # get index of tab to which control button belongs to.
         tabBar = self.tabwidget.tabBar()
         for i in range(tabBar.count()):
             print("tabBarRect:", tabBar.tabRect(i))
@@ -2366,7 +2400,7 @@ class FigDTabSettingsBtn(QWidget):
         )
         self.contextMenu.popup(pos)
 
-FIGD_TABWIDGET_STYLE = """
+FIGD_TABWIDGET_STYLE = r"""
 QTabWidget {
     color: #fff;
     border: none;
@@ -2383,7 +2417,7 @@ QTabWidget::right-corner {
 QTabBar {
     border: none;
     qproperty-drawBase: 0;
-    background: """+FIGD_TABBAR_BACKGROUND+""";
+    background: """+FIGD_TABBAR_BACKGROUND+r""";
 }
 QTabBar::close-button {
     background: url("/home/atharva/GUI/fig-dash/resources/icons/close.png");
@@ -2425,11 +2459,10 @@ QTabBar::tab:selected {
     color: #eee;
     border: none;
     font-weight: bold;
-    background: #323232;
     
     border-top-left-radius: 5px;
     border-top-right-radius: 5px;
-    background: rgba(50, 50, 50, 0.8);
+    background: rgba(80, 80, 80, 0.8);
     
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     
@@ -2477,6 +2510,7 @@ QToolTip {
 }""")
 # tab widget for FigD.
 class FigDTabWidget(QTabWidget):
+    zoomChanged = pyqtSignal(int)
     showMessage = pyqtSignal(str)
     changeWindowTitle = pyqtSignal(str)
     def __init__(self, widget_factory=None, window_factory=None, 
@@ -2592,6 +2626,16 @@ class FigDTabWidget(QTabWidget):
         if hasattr(widget, "getWindowTitle"):
             windowTitle = widget.getWindowTitle()
             self.changeWindowTitle.emit(windowTitle)
+        if hasattr(widget, "browser") and hasattr(widget.browser, "zoomFactor"):
+            print("switched tab has zoom:", int(100*widget.browser.zoomFactor()))
+            self.zoomChanged.emit(
+                int(100*widget.browser.zoomFactor())
+            )
+        elif hasattr(widget, "webview") and hasattr(widget.webview, "zoomFactor"):
+            print("switched tab has zoom:", int(100*widget.webview.zoomFactor()))
+            self.zoomChanged.emit(
+                int(100*widget.webview.zoomFactor())
+            )
         # if hasattr(widget, "signalZoom"):
         #     widget.signalZoom()
     def connectTitleBar(self, titlebar):
@@ -2677,6 +2721,16 @@ class FigDTabWidget(QTabWidget):
         tabCtrlBtns.closeBtn.connect(self.tabCloseRequested.emit)
         self.tabBar().setTabButton(i, QTabBar.LeftSide, pinAndGroup)
         self.tabBar().setTabButton(i, QTabBar.RightSide, tabCtrlBtns)
+        self.tabBar().setTabData(i, QVariant({
+            "muted": False,
+            "pinned": False,
+            "creationIndex": i,
+            "lastIndex": i, 
+            "lastText": self.tab_title, 
+            "lastIcon": self.tab_icon,
+            "isGroupHead": False, 
+            "groupName": None,
+        }))
         # web page to be returned. (required by createWindow, to create new tab).
         # NOTE: the webview/browser instance associated with any widget is contained inside the 
         # .browser or .webview attribute otherwise `None` is returned as the value of the loaded page.
@@ -3185,7 +3239,7 @@ class FigDMainWidget(QWidget):
     """
     FigDMainWidget is a regular QWidget with an API for additional tasks:
     1) ribbon menu management: toggling, simplification etc.
-    2) 
+    2) changeZoom function for adapting to zoom changes.
     """
     # show regular ribbon menu.
     def showMenu(self):
@@ -3255,12 +3309,16 @@ class FigDMainWidget(QWidget):
         if self.isRibbonVisible():
             self.hideRibbon()
         else: self.showRibbon()
+
+    def changeZoom(self, value):
+        print(f"setting zoom to {value}")
 
 # FigD main window object.
 class FigDMainWindow(QMainWindow):
     """
     FigDMainWindow is a regular QMainWindow with an API for additional tasks:
     1) ribbon menu management: toggling, simplification etc.
+    2) changeZoom function for adapting to zoom changes.
     """
     # show regular ribbon menu.
     def showMenu(self):
@@ -3330,6 +3388,9 @@ class FigDMainWindow(QMainWindow):
         if self.isRibbonVisible():
             self.hideRibbon()
         else: self.showRibbon()
+
+    def changeZoom(self, value):
+        print(f"setting zoom to {value}")
 
 # shortcut description label
 class FigDShortcutDescription(QLabel):
@@ -3650,6 +3711,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     width = args.get("width", 960)
     height = args.get("height", 800)
     _where = args.get("where", "front")
+    font_color = args.get("font_color")
     add_tabs = args.get("add_tabs", True)
     autohide = args.get("autohide", True)
     animated = args.get("animated", False)
@@ -3706,7 +3768,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     
     layout = QVBoxLayout()
     layout.setSpacing(0)
-    layout.setContentsMargins(8, 2, 8, 2)
+    layout.setContentsMargins(8, 2, 8, 0)
 
     centralWindow.addToolBar(Qt.TopToolBarArea, titlebar)
     # build layout.
@@ -3753,28 +3815,30 @@ def wrapFigDWindow(widget: QWidget, **args):
         window.tabs = tabwidget
         tabwidget.CtrlShiftW.connect(window.close)
     window.setWindowOpacity(1)
-    # # set drop shadow.
-    # dropShadow = QGraphicsDropShadowEffect()
-    # dropShadow.setOffset(0, 0)
-    # dropShadow.setBlurRadius(15)
-    # window.setGraphicsEffect(dropShadow)
+
     window.connectTitleBar(titlebar)
     window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
                                     "Rename the current window")
     window.AltShiftR.connect(titlebar.triggerRenameWindow)
     settingsMenu.connectWindow(window)
     if add_tabs: window.tabs = tabwidget
-    # changeZoom function may not exist.
-    try:
-        zoomSlider = titlebar.zoomSlider
-        # react to change in zoom acc. to the slider/label.
-        if add_tabs:
-            zoomSlider.zoomChanged.connect(tabwidget.changeZoom)
-        else:
-            zoomSlider.zoomChanged.connect(widget.changeZoom)
-    except Exception as e: print(e)
+    window = prepStatusBar(
+        window, accent_color=accent_color, 
+        font_color=font_color, where=_where,
+    )
+    zoomSlider = window.zoomControls
+    # react to change in zoom acc. to the slider/label.
+    if add_tabs:
+        zoomSlider.zoomChanged.connect(tabwidget.changeZoom)
+    elif hasattr(widget, "changeZoom"):
+        zoomSlider.zoomChanged.connect(widget.changeZoom)
+    if add_tabs:
+        tabwidget.zoomChanged.connect(
+            zoomSlider.setValueOnTabChange
+        )
     # menu many not exist.
-    try:
+
+    if hasattr(widget, "toggleRibbon"):
         window.CtrlShiftM = FigDShortcut(
             QKeySequence("Ctrl+Shift+M"), window,
             "Toggle ribbon menu"
@@ -3783,22 +3847,16 @@ def wrapFigDWindow(widget: QWidget, **args):
             window.CtrlShiftM.connect(
                 partial(tabwidget.onCurrentWidget, "toggleRibbon")
             )
-        else:
-            window.CtrlShiftM.connect(widget.toggleRibbon)
-    except Exception as e: print(e)
+        else: window.CtrlShiftM.connect(widget.toggleRibbon)
     # connect full screen action.
     try:
-        # full screen action.
-        fullscreen_action = titlebar.maximizeBtn.fullscreen
-        # connect full screen action to show full screen
-        fullscreen_action.triggered.connect(window.showFullScreen)
+        fa = titlebar.maximizeBtn.fullscreen # full screen action.
+        fa.triggered.connect(window.showFullScreen) # show full screen om trigger.
     except Exception as e: print(e)
     # connect exit full screen action.
     try:
-        # exit full screen action.
-        exit_fullscreen_action = titlebar.maximizeBtn.exit_fullscreen
-        # connect exit full screen action to show normal.
-        exit_fullscreen_action.triggered.connect(window.showNormal)
+        efa = titlebar.maximizeBtn.exit_fullscreen # exit full screen action.
+        efa.triggered.connect(window.showNormal) # show normal on trigger.
     except Exception as e: print(e)
     # style application tooltips
     app = QApplication.instance()
@@ -3818,10 +3876,6 @@ def wrapFigDWindow(widget: QWidget, **args):
     # try: app.appendTitleBar(titlebar)
     # except Exception as e: print(e)
     # reposition window
-    window = prepStatusBar(
-        window, accent_color=accent_color,
-        where=_where,
-    )
     window.setGeometry(100, 100, width, height)
     screen_rect = app.desktop().screenGeometry()
     x = (screen_rect.width()-width) // 2
@@ -3867,7 +3921,7 @@ def wrapFigDWindow(widget: QWidget, **args):
 # prepare status bar: style it, add zoom controls etc.
 def prepStatusBar(window: QMainWindow, accent_color: Union[str, None]=None, 
                   where: str="back", apply_style_sheet: bool=True, 
-                  font_color: str="#fff") -> QMainWindow:
+                  font_color: Union[str, None]=None) -> QMainWindow:
     """style the centralWindow.
     Args:
         window (QMainWindow): A QMainWindow or FigDWindow object.
@@ -3886,15 +3940,14 @@ Expecting QMainWindow type object instead."""
     assert isinstance(window.centralWidget(), QMainWindow), CentralWidgetErrorMsg
     statusBar = window.centralWidget().statusBar()
     if apply_style_sheet:
-        if accent_color:
-            fontColor = extractFromAccentColor(
+        if font_color is None:
+            font_color = extractFromAccentColor(
                 bg=accent_color, 
                 where=where,
             )
-        else: fontColor = font_color
         statusBar.setStyleSheet("""
         QStatusBar {
-            color: """+fontColor+""";
+            color: """+font_color+""";
             font-size: 17px;
             font-family: "Be Vietnam Pro";
             background: transparent;
@@ -3922,9 +3975,8 @@ Expecting QMainWindow type object instead."""
     zoomControls.plusBtn.setIcon(FigD.Icon("widget/zoom_in.png"))
     zoomControls.minusBtn.setIcon(FigD.Icon("widget/zoom_out.png"))
     zoomControls.readout.setFixedWidth(40)
-    zoomControls.slider.setFixedWidth(65)
     zoomControls.connectWindow(window)
-    zoomControls.setFixedHeight(30)
+    zoomControls.setFixedHeight(35)
     window.zoomControls = zoomControls
     statusBar.addWidget(zoomControls)
 
