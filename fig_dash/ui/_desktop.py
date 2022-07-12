@@ -3,12 +3,11 @@
 print("fig_dash::ui::desktop")
 import os
 import time
-from turtle import back
 import jinja2
 import shutil
+import argparse
 import datetime
 from typing import *
-from pysondb import db
 from pathlib import Path
 from functools import partial
 # fig-dash imports.
@@ -870,18 +869,33 @@ class FigDesktopWindow(QMainWindow):
     def keyPressEvent(self, event):
         return super(FigDesktopWindow, self).keyPressEvent(event)
 
+# parse comman-dline agruments.
+def get_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser('FigD: A "fake" virtual desktop')
+    parser.add_argument("-b", "--background", type=str,
+                        default=FigD.wallpaper("cutefish/wallpaper-9.jpg"),
+                        help="path or url to background image for desktop")
+    args = parser.parse_args()
+
+    return args
+
 # test desktop.
 def test_desktop():
     import sys
     from fig_dash.ui import FigDAppContainer, wrapFigDWindow
     FigD("/home/atharva/GUI/fig-dash/resources")
     app = FigDAppContainer(sys.argv)
+    args = get_args()
     desktop = FigDesktopWindow(
-        background=FigD.wallpaper("pixabay/balloon.jpg")
+        background=args.background,
+        # background="https://c.tenor.com/W7taBCgPxCIAAAAC/wallpaper.gif"
+        # background=FigD.wallpaper("cutefish/wallpaper-9.jpg")
+        # background="https://wallpaperaccess.com/full/2641074.gif"
+        # "https://preview.redd.it/0bb6dqsiab451.gif?s=b0c65596a54a30708da26669da6e79abf3be1680"
     )
     figd_window = wrapFigDWindow(desktop, size=(25,25), icon="fig.svg", 
-                                 title="Desktop", width=1600, height=1000, 
-                                 add_tabs=False, app_name="Desktop")
+                                 title="Desktop", app_name="Fig Desktop",
+                                 add_tabs=False, width=1600, height=1000)
     figd_window.showFullScreen()
     app.exec()
 
