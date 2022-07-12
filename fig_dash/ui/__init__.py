@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from turtle import bgcolor
 from fig_dash import FigDLoad
 FigDLoad("fig_dash::ui::__init__")
 
@@ -12,11 +13,11 @@ from functools import partial
 from fig_dash.assets import FigD
 from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
-from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence
+from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence, QRegion
 from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QRect, QPoint, QVariant, QPropertyAnimation, QEasingCurve
-from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QSizePolicy, QCompleter
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSizePolicy, QCompleter
 
-# blannk function.
+# blank function.
 def blank(*args, **kwargs): print("fig_dash::ui::__init__::blank :", args, kwargs)
 class FigDShortcut(QShortcut):
     def __init__(self, keyseq: QKeySequence, 
@@ -209,6 +210,82 @@ TEXT_EDIT_CONTEXT_MENU_MAP = {
         FigD.icon("textedit/delete_disabled.svg")
     ),
 }
+# blur effect class.
+class BlurEffect(QGraphicsBlurEffect):
+    shouldEnable = True
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.watched = []
+
+    def watchWidget(self, widget):
+        widget.installEventFilter(self)
+        self.watched.append(widget)
+
+    def unwatchWidget(self, widget):
+        if widget in self.watched:
+            self.watched.remove(widget)
+            self.update()
+
+    def setEnabled(self, enabled):
+        # in case you want to manually disable the effect, keep track of
+        # the selected behavior
+        self.shouldEnable = enabled
+        super().setEnabled(enabled)
+
+    def draw(self, qp):
+        print(f"drawing blur for {qp} with radius: {self.blurRadius()}")
+        rects = []
+        for widget in self.watched:
+            if widget.isVisible():
+                rect = widget.rect()
+                if rect.isNull():
+                    continue
+                # map the widget geometry to the window
+                rect.translate(
+                    widget.mapTo(widget.window(), QPoint()))
+                rects.append(rect)
+            if not self.isEnabled() and self.shouldEnable:
+                super().setEnabled(True)
+        if not rects:
+            # no valid rect to be used, disable the effect if we should
+            if not self.shouldEnable:
+                super().setEnabled(False)
+            # otherwise, keep drawing the source with the effect applied
+            # to the whole area of the widget
+            else:
+                self.drawSource(qp)
+        else:
+            qp.save()
+            # create a region that includes all rects
+            rectRegion = QRegion()
+            for rect in rects:
+               rectRegion |= QRegion(rect) 
+            # clip the effect painting to the region
+            qp.setClipRegion(rectRegion)
+            # call the default implementation, which will draw the effect
+            super().draw(qp)
+            # get the full region that should be painted
+            fullRegion = QRegion(qp.viewport())
+            # and subtract the effect rectangle used before
+            fullRegion -= rectRegion
+            qp.setClipRegion(fullRegion)
+            # draw the *source*, which has no effect applied
+            self.drawSource(qp)
+            qp.restore()
+
+    def eventFilter(self, source, event):
+        # update the effect whenever a widget changes its geometry or
+        # becomes visible
+        if event.type() in (QEvent.Resize, QEvent.Move, 
+            QEvent.Show) and source.isVisible():
+                super().setEnabled(True)
+                self.update()
+        # if a widget is going to be deleted, remove it from the list
+        # of watched list; this is **VERY** important
+        elif event.type() == QEvent.DeferredDelete:
+            self.unwatchWidget(source)
+        return super().eventFilter(source, event)
+
 def setAccentColorAlpha(bg, alpha: int=150):
     if bg == "transparent": return bg
     qt_grad_elem = bg.split("stop")[0].strip()
@@ -239,6 +316,24 @@ def extractFromAccentColor(bg, where="back"):
 
     return extractedColor
 
+def accentColorFromBackground(bgImagePath: str):
+    import extcolors
+    colors, pixel_count = extcolors.extract_from_path(bgImagePath)
+    accentColor: str = "qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1,"
+    sortedColors = sorted(colors, key=lambda x: x[1], reverse=True)
+    cum_count, normColors = 0, []
+    for rgb, count in sortedColors:
+        cum_count += count
+        normColors.append((rgb, cum_count/pixel_count))
+    colorList: list = [c[0] for c in normColors]
+    stopsList: list = [c[1] for c in normColors]
+    for color, stop in zip(colorList, stopsList):
+        accentColor += f" stop : {stop:.3f} rgb{color},"
+    accentColor = accentColor[:-1]
+    accentColor += ")" # print(accentColor)
+    
+    return accentColor
+
 def styleTextEditMenuIcons(menu):
     """substitute TextEdit/LineEdit icons for consistent styling."""
     for action in menu.actions():
@@ -258,40 +353,65 @@ def styleTextEditMenuIcons(menu):
 
     return menu
 
-def styleContextMenu(menu, accent_color: str="yellow", padding: int=5, 
-                     font_size: int=18, icon_size: int=24):
+def styleContextMenu(menu, accent_color: str="rgb(255,255,255)", 
+                     icon_size: int=24, margin: int=10, padding: int=5,
+                     opacity: float=0.7, font_size: int=18):
     menu.setAttribute(Qt.WA_TranslucentBackground)
+    menu.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
     menu.setObjectName("FigDMenu")
-    menu.setStyleSheet(jinja2.Template("""
+    border_color = extractFromAccentColor(accent_color)
+    styleSheet = jinja2.Template("""
     QMenu#FigDMenu {
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-    	color: #fff;
-    	padding: 10px;
-    	border-radius: 15px;
+        /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, {{ OPACITY }}), stop : 0.143 rgba(22, 22, 22, {{ OPACITY }}), stop : 0.286 rgba(27, 27, 27, {{ OPACITY }}), stop : 0.429 rgba(32, 32, 32, {{ OPACITY }}), stop : 0.571 rgba(37, 37, 37, {{ OPACITY }}), stop : 0.714 rgba(41, 41, 41, {{ OPACITY }}), stop : 0.857 rgba(46, 46, 46, {{ OPACITY }}), stop : 1.0 rgba(51, 51, 51, {{ OPACITY }})); */
+        background: rgba(0, 0, 0, {{ OPACITY }});
+        background-image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/NoiseGaussBlur(5).png);
+        color: #fff;
+    	padding: {{ MARGIN }}px;
         font-size: {{ FONT_SIZE }}px;
         font-family: "Be Vietnam Pro";
         border: none;
+        border-radius: 15px;
+    }
+    QMenu#FigDMenu:right-arrow {
+        image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/chevron.svg);
+    }
+    QMenu#FigDMenu::right-arrow:selected {
+        image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/chevron_hover.svg);
     }
     QMenu#FigDMenu::item {
         background: transparent;
         padding: {{ PADDING }}px;
+        /* border: 1px solid transparent; */
     }
     QMenu#FigDMenu::item:selected {
     	color: #292929; 
         border-radius: 5px;
-    	background-color: {{ ACCENT_COLOR }}; 
+        /* border: 1px solid {{ BORDER_COLOR }}; */
+    	background-color: {{ ACCENT_COLOR_WITH_ALPHA }}; 
     }
     QMenu#FigDMenu:separator {
     	background: #484848;
     }""").render(
-        ACCENT_COLOR=accent_color, FONT_SIZE=font_size, 
-        PADDING=padding, ICON_SIZE=icon_size,
-    ))
+        FONT_SIZE=font_size, PADDING=padding, 
+        ICON_SIZE=icon_size, OPACITY=opacity,
+        ACCENT_COLOR_WITH_ALPHA=accent_color,
+        BORDER_COLOR=border_color, MARGIN=margin,
+    )
+    menu.setStyleSheet(styleSheet)
+    # create shadow with color derived from accent color.
+    # shadowColor = QColor(extractFromAccentColor(accent_color))
+    shadow = QGraphicsDropShadowEffect()
+    # shadow.setColor(Qt.white)
+    shadow.setColor(QColor("#fff"))
+    shadow.setBlurRadius(5)
+    shadow.setOffset(0, 0)
+    # set shadow graphics effect.
+    menu.setGraphicsEffect(shadow)
+
     palette = menu.palette()
     palette.setColor(QPalette.Base, QColor(48,48,48))
     palette.setColor(QPalette.Text, QColor(125,125,125))
     palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-    # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
     palette.setColor(QPalette.Window, QColor(255,255,255))
     palette.setColor(QPalette.Highlight, QColor(235,95,52))
     menu.setPalette(palette)
@@ -337,8 +457,8 @@ class DashSlider(QWidget):
 				# display icon.
 				self.icon = QLabel()
 				self.icon.setPixmap(
-						FigD.Icon(icon).pixmap(
-								QSize(*icon_size)
+                    FigD.Icon(icon).pixmap(
+                        QSize(*icon_size)
 				))
 				# hboxwidget.
 				self.hboxwidget = QWidget()
@@ -1177,7 +1297,8 @@ class DashSimplifiedMenu(QWidget):
 
 # FigD animated toggle.
 class FigDToggle(QWidget):
-    def __init__(self, text: str="", accent_color: str="gray", 
+    def __init__(self, text: str="", state1: str="on", 
+                 state2: str="off", accent_color: str="gray", 
                  where="back", parent: Union[None, QWidget]=None):
         super(FigDToggle, self).__init__(parent)
         from fig_dash.ui.titlebar import extractSliderColor
@@ -1189,15 +1310,22 @@ class FigDToggle(QWidget):
         self.hboxlayout.setContentsMargins(0, 0, 0, 0)
         self.hboxlayout.setSpacing(5)
         # toggle name.
-        self.label = QLabel()
-        self.label.setStyleSheet("""
+        label_stylesheet = """
         QLabel {
             color: #fff;
             font-size: 18px;
             background: transparent;
             font-family: "Be Vietnam Pro";
-        }""")
+        }"""
+        self.label = QLabel()
+        self.label.setStyleSheet(label_stylesheet)
         self.label.setText("       "+text)
+        self.state1 = QLabel()
+        self.state1.setStyleSheet(label_stylesheet)
+        self.state1.setText(state1)
+        self.state2 = QLabel()
+        self.state2.setStyleSheet(label_stylesheet)
+        self.state2.setText(state2)
         # actual animated toggle widget.
         self.toggle = AnimatedToggle()
         checked_color = extractSliderColor(
@@ -1214,7 +1342,9 @@ class FigDToggle(QWidget):
         self.hboxlayout.addWidget(self.label)
         self.addSeparator()
         self.hboxlayout.addStretch(1)
+        self.hboxlayout.addWidget(self.state1)
         self.hboxlayout.addWidget(self.toggle, 1)
+        self.hboxlayout.addWidget(self.state2)
         self.hboxlayout.addStretch(1)
         # set layout.
         self.setLayout(self.hboxlayout)
@@ -1227,6 +1357,30 @@ class FigDToggle(QWidget):
         sep.setLineWidth(1)
         self.hboxlayout.addWidget(sep)
 
+# slider style.
+FIGD_SLIDER_STYLE = jinja2.Template(r"""
+QSlider {
+    margin: 5px 0px;
+}
+QSlider::groove:horizontal {
+    height: 2px; /* the groove expands to the size of the slider by default. by giving it a height, it has a fixed size */
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+}
+QSlider::sub-page:horizontal {
+    background: {{ SLIDER_COLOR }};
+}
+QSlider::add-page:horizontal {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #B1B1B1, stop:1 #c4c4c4);
+}
+QSlider::handle:horizontal {
+    border: 1px solid #929292;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #292929, stop:1 #484848);
+    width: 14px;
+    margin: -7px 1px; /* handle is placed by default on the contents rect of the groove. Expand outside the groove */
+    border-radius: 8px;
+}""")
+# margin = (2*border + width - grooveHeight)/2
+# borderRadius = (width + 2*border)/2
 # settings slider.  
 class FigDSlider(QWidget):
     changed = pyqtSignal(float)
@@ -1282,6 +1436,16 @@ class FigDSlider(QWidget):
         self.readout.setFixedWidth(50)
         self.readout.setText(str(value))
         self.readout.setAlignment(Qt.AlignLeft)
+        self.readout.setStyleSheet("""
+        QLineEdit {
+            padding: 0px;
+            color: #929292;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 2px;
+            selection-color: #292929;
+            selection-background-color: """+self.accent_color+""";
+        }""")
         # build horizontal layout (slider+readout)
         self.addSeparator()
         self.hboxlayout.addWidget(
@@ -1290,7 +1454,7 @@ class FigDSlider(QWidget):
         )
         if minus:
             self.minusBtn = self.initSliderBoxBtn(
-                text=" -", tip="decrease slider value",
+                icon="widget/minus.svg", tip="decrease slider value",
                 accent_color=accent_color, where=where,
                 set_status_tip=set_status_tip,
             )
@@ -1299,7 +1463,7 @@ class FigDSlider(QWidget):
         self.hboxlayout.addWidget(self.slider)
         if plus:
             self.plusBtn = self.initSliderBoxBtn(
-                text=" +", tip="increase slider value",
+                icon="widget/plus.svg", tip="increase slider value",
                 accent_color=accent_color, where=where,
                 set_status_tip=set_status_tip,
             )
@@ -1318,6 +1482,13 @@ class FigDSlider(QWidget):
         self.convertedValue = self.convertValue(value)
         self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         self.setSliderColor(self.accent_color)
+        sliderColor = extractFromAccentColor(accent_color)
+        print(f"sliderColor({sliderColor})")
+        self.slider.setStyleSheet(
+            FIGD_SLIDER_STYLE.render(
+                SLIDER_COLOR=sliderColor,
+            )
+        )
 
     def addSeparator(self):
         sep = QFrame()
@@ -1358,27 +1529,38 @@ class FigDSlider(QWidget):
         self.accent_color = accent_color
         # extract border color from the accent color.
         borderColor = extractFromAccentColor(
-            accent_color, where=where
+            accent_color, 
+            where=where,
         )
-        stylesheet = """
+        # stylesheet = """
+        # QToolButton {
+        #     font-size: 30px;
+        #     border-radius: 2px;
+        #     background: transparent;
+        # }
+        # QToolButton:hover {
+        #     color: #292929;
+        #     background: rgba(255, 255, 255, 0.5);
+        #     /* background: """+accent_color+"""; */
+        #     /* border: 1px solid """+borderColor+"""; */
+        # }"""
+        stylesheet = '''
         QToolButton {
-            font-size: 30px;
-            border-radius: 2px;
-            background: transparent;
+            padding: 4px;
+            border-radius: 5px; 
+            font-family: Helvetica;
         }
         QToolButton:hover {
-            color: #292929;
-            background: """+accent_color+""";
-            /* border: 1px solid """+borderColor+"""; */
-        }"""
+            background: rgba(255, 255, 255, 0.5);
+        }'''
         self.readout.setStyleSheet("""
         QLineEdit {
-            color: #fff;
             padding: 0px;
+            color: #929292;
             font-size: 16px;
             font-weight: bold;
-            background: #484848;
             border-radius: 2px;
+            background: #484848;
             selection-color: #292929;
             selection-background-color: """+self.accent_color+""";
         }""")
@@ -1402,20 +1584,18 @@ class FigDSlider(QWidget):
         btn.setToolTip(tip)
         if set_status_tip:
             btn.setStatusTip(tip)
-        # extract border color from the accent color.
-        borderColor = extractFromAccentColor(accent_color, where=where)
+        btn.setIconSize(QSize(14,14))
         # set style sheet.
-        btn.setStyleSheet("""
+        stylesheet = '''
         QToolButton {
-            font-size: 20px;
-            border-radius: 2px;
-            background: transparent;
+            padding: 4px;
+            border-radius: 5px; 
+            font-family: Helvetica;
         }
         QToolButton:hover {
-            color: #292929;
-            background: """+accent_color+""";
-            /* border: 1px solid """+borderColor+"""; */
-        }""")
+            background: rgba(255, 255, 255, 0.5);
+        }'''
+        btn.setStyleSheet(stylesheet)
 
         return btn
 
@@ -1665,7 +1845,8 @@ class FigDAppSettingsMenu(QMenu):
         self.addSeparator()
         self.opacitySlider = self.addSlider(
             "Opacity", class_=FigDOpacitySlider, 
-            value=100, plus=True, minus=True
+            value=100, plus=True, minus=True,
+            accent_color=accent_color,
         )
         self.fullscreenBtn = FullScreenBtn(
             fs_icon="titlebar/fullscreen.svg", 
@@ -1674,8 +1855,9 @@ class FigDAppSettingsMenu(QMenu):
         )
         self.zoomSlider = self.addSlider(
             "Zoom     ", class_=FigDZoomSlider, 
-            value=100, plus=True, minus=True, minm=25, 
+            value=135, plus=True, minus=True, minm=25, 
             maxm=250, btns_list=[self.fullscreenBtn],
+            accent_color=accent_color,
         )
         # self.opacitySlider.setFixedWidth(320)
         self.addSeparator()
@@ -1688,7 +1870,7 @@ class FigDAppSettingsMenu(QMenu):
         # more tools menu.
         self.moreTools = self.addMenu("More tools ...")
         self.addSeparator()
-        self.addToggle("Light/dark theme")
+        self.addToggle("Change theme", state1="Light", state2="Dark")
         self.addAction("Use system theme")
         self.addSeparator()
         self.notifsMenu = self.addMenu(
@@ -1716,8 +1898,7 @@ class FigDAppSettingsMenu(QMenu):
 
     def connectWindow(self, window: QMainWindow):
         self.__window_ptr = window
-        if window.bookmark_manager:
-            pass
+        if window.bookmark_manager: pass
         if window.find_function:
             self.findInPage.setVisible(True)
             self.findInPage.triggered.connect(
@@ -1737,10 +1918,13 @@ class FigDAppSettingsMenu(QMenu):
         
         return slider
 
-    def addToggle(self, text: str=""):
+    def addToggle(self, text: str="", 
+                  state1: str="on", 
+                  state2: str="off"):
         toggle = FigDToggle(
-            text=text, 
-            accent_color=self.accent_color
+            text=text, state1=state1, 
+            accent_color=self.accent_color,
+            state2=state2,
         )
         # print(f"FigDToggle: {self.accent_color}")
         widgetAction = QWidgetAction(self)
@@ -1833,7 +2017,7 @@ class FigDAppContainer(QApplication):
         if window: window.show()
 
     def notify(self, obj, event):
-        if isinstance(obj, FigDWindow):
+        if isinstance(obj, FigDWindow) or (isinstance(obj, QMainWindow) and hasattr(obj, "deactivate") and hasattr(obj, "activate")):
             if event.type() == QEvent.WindowDeactivate:
                 obj.titlebar.deactivate()
             if event.type() == QEvent.WindowActivate:
@@ -2460,12 +2644,14 @@ QTabBar::tab:selected {
     border: none;
     font-weight: bold;
     
-    border-top-left-radius: 5px;
-    border-top-right-radius: 5px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
     background: rgba(80, 80, 80, 0.8);
+    background-image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/NoiseGaussBlur(5).png);
     
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #e4852c, stop : 0.143 #e4822d, stop : 0.286 #e4802f, stop : 0.429 #e47d30, stop : 0.571 #e47b32, stop : 0.714 #e47833, stop : 0.857 #e47635, stop : 1.0 #e47336); background: qlineargradient(x1 : 0, y1 : 0, x2 : 0.5, y2 : 1, stop : 0.1 rgba(161, 31, 83, 220), stop : 0.3 rgba(191, 54, 54, 220), stop: 0.9 rgba(235, 95, 52, 220)); */
     
+
     padding-top: 4px;
     padding-left: 9px;
     padding-right: 5px;
@@ -3439,6 +3625,24 @@ class FigDWindow(QMainWindow):
         if hasattr(widget, "showMessage"):
             widget.showMessage.connect(self.statusBar().showMessage)
 
+    def showNormal(self):
+        if self.titlebar: self.titlebar.show()
+        if hasattr(self, "fullscreenBtn"):
+            self.fullscreenBtn.setIcon(
+                self.fullscreenBtn.fs_icon
+            )
+            self.fullscreenBtn.is_fullscreen = False
+        super(FigDWindow, self).showNormal()
+
+    def showFullScreen(self):
+        if self.titlebar: self.titlebar.hide()
+        if hasattr(self, "fullscreenBtn"):
+            self.fullscreenBtn.setIcon(
+                self.fullscreenBtn.efs_icon
+            )
+            self.fullscreenBtn.is_fullscreen = True
+        super(FigDWindow, self).showFullScreen()
+
     def toggleFullScreen(self):
         if self.isFullScreen():
             self.showNormal()
@@ -3588,6 +3792,7 @@ FIGD_CENTRAL_WINDOW_STYLE = r"""
 QMainWindow#FigDWinUI {
     border-radius: 20px;
     background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 1), stop : 0.143 rgba(22, 22, 22, 1), stop : 0.286 rgba(27, 27, 27, 1), stop : 0.429 rgba(32, 32, 32, 1), stop : 0.571 rgba(37, 37, 37, 1), stop : 0.714 rgba(41, 41, 41, 1), stop : 0.857 rgba(46, 46, 46, 1), stop : 1.0 rgba(51, 51, 51, 1));
+    /* background-image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/NoiseGaussBlur(5).png); */
 }
 QScrollBar:vertical {
     border: 0px solid #999999;
@@ -3717,7 +3922,7 @@ def wrapFigDWindow(widget: QWidget, **args):
     animated = args.get("animated", False)
     app_name = args.get("app_name", "Unknown")
     show_titlebar = args.get("titlebar", True)
-    accent_color = args.get("accent_color", "red")
+    accent_color = args.get("accent_color", "white")
     find_function = args.get("find_function")
     bookmark_manager = args.get("bookmark_manager")
     titlebar_callbacks = args.get("titlebar_callbacks", {})
@@ -3939,6 +4144,7 @@ Expecting QMainWindow type object instead."""
     assert isinstance(window, QMainWindow), WindowErrorMsg
     assert isinstance(window.centralWidget(), QMainWindow), CentralWidgetErrorMsg
     statusBar = window.centralWidget().statusBar()
+    statusBar.setSizeGripEnabled(False)
     if apply_style_sheet:
         if font_color is None:
             font_color = extractFromAccentColor(
@@ -3960,11 +4166,11 @@ Expecting QMainWindow type object instead."""
     )
     window.fullscreenBtn = fullscreenBtn
     zoomControls = FigDZoomSlider(
-        text="Zoom", value=100, plus=True, minus=True, 
+        text=" ", value=135, plus=True, minus=True, 
         minm=25, maxm=250, btns_list=[fullscreenBtn],
         set_status_tip=False, accent_color=accent_color,
     )
-    zoomControls.hboxlayout.setSpacing(0)
+    # zoomControls.hboxlayout.setSpacing(0)
     zoomControls.label.setStyleSheet("""
     QLabel {
         color: #fff;
@@ -3972,12 +4178,12 @@ Expecting QMainWindow type object instead."""
         background: transparent;
         font-family: "Be Vietnam Pro";
     }""")
-    zoomControls.plusBtn.setIcon(FigD.Icon("widget/zoom_in.png"))
-    zoomControls.minusBtn.setIcon(FigD.Icon("widget/zoom_out.png"))
+    # zoomControls.plusBtn.setIcon(FigD.Icon("widget/zoom_in.png"))
+    # zoomControls.minusBtn.setIcon(FigD.Icon("widget/zoom_out.png"))
     zoomControls.readout.setFixedWidth(40)
     zoomControls.connectWindow(window)
     zoomControls.setFixedHeight(35)
     window.zoomControls = zoomControls
-    statusBar.addWidget(zoomControls)
+    statusBar.addPermanentWidget(zoomControls)
 
     return window

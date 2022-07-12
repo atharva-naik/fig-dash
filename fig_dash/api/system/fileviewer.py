@@ -388,7 +388,7 @@ class FileViewerBackend:
         """open a file/folder location."""
         from fig_dash.utils import collapseuser
         from fig_dash.ui.js.webchannel import QWebChannelJS
-        from fig_dash.ui.js.fileviewer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
+        from fig_dash.ui.js.filexplorer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
         # expand user.
         folder = os.path.expanduser(folder) 
         # call xdg-open if a file is clicked instead of a folder.

@@ -39,7 +39,7 @@ body {
 }
 
 body {
-    color: {{ FONT_COLOR }};
+    color: #fff;
     font-family: 'Noto Sans', cursive;
     background-color: rgb(72,72,72);
     background-color: linear-gradient(-45deg, rgba(72,72,72,1) 30%, rgba(41,41,41,1) 60%);
@@ -140,7 +140,7 @@ footer {
 
 main {
     width: 100%;
-    backdrop-filter: blur(2px) brightness(50%);
+    backdrop-filter: {{ FILEVIEWER_BACKDROP_FILTER }};
     /* max-width: 50em; */
     /* margin: 1.5em auto; */
     /* padding-bottom: 10rem; */
@@ -159,7 +159,6 @@ main .boxes {
     display: flex;
     flex-wrap: wrap;
     justify-content: left;
-    border: 2px solid rgba(66, 68, 90, 0.075);
     border-radius: 0.15em;
     padding: 1em 0;
     user-select: none;
@@ -210,13 +209,17 @@ main .boxes div {
 }
 
 main .boxes.green div.selected img{
-    filter: sepia(100%) saturate(300%) brightness(70%) hue-rotate(180deg) blur(1px) drop-shadow(0px 0px 5px #a1deff);
+    filter: sepia(100%) saturate(300%) brightness(120%) hue-rotate(180deg) drop-shadow(0px 0px 5px #a1deff);
+}
+main .boxes.green div img:hover{
+    filter: sepia(100%) saturate(300%) brightness(120%) hue-rotate(180deg) drop-shadow(0px 0px 5px #a1deff);
 }
 main .boxes.green div.selected span{
     color: #292929;
     border-radius: 4px;
     box-shadow: 0px 0px 10px 3px #a1deff;
     background-color: rgba(82, 157, 199, 150);
+    backdrop-filter: brightness(120%);
 }
 
 .slider {
@@ -247,11 +250,6 @@ background: radial-gradient(circle, rgba(238,238,238,1) 21%, rgba(187,187,187,1)
 main .boxes.blue div.selected {
     background: hsl(150, 80%, 65%);
     border: 2px solid rgba(0, 0, 0, 0.075);
-}
-
-img {
-    display block;
-    mix-blend-mode: multiply;
 }
 
 main .boxes.red div.selected {
@@ -650,19 +648,13 @@ FileViewerHtml = jinja2.Template(r'''
         <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
         <meta http-equiv="X-UA-Compatible" content="ie=edge">
         <meta charset="UTF-8">
-
         <!-- Chrome, Firefox OS and Opera -->
         <meta name="theme-color" content="#57D5E3"/>
-
         <!-- Windows Phone -->
         <meta name="msapplication-navbutton-color" content="#57D5E3"/>
-
         <!-- iOS Safari -->
         <meta name="apple-mobile-web-app-status-bar-style" content="#57D5E3"/>
-
-
         <title>{{ FOLDER }}</title>
-
         <!-- CSS / JS -->
         <style>{{ FILEVIEWER_CSS }}</style>
     </head>
@@ -722,3 +714,15 @@ FileViewerHtml = jinja2.Template(r'''
         </footer>
     </body>
 </html>''')
+
+FileViewerEmbedHtml = jinja2.Template(r'''
+<main>
+    <section class="demo">
+        <section id="orchard" class="boxes green"></section>
+    </section>
+</main>
+<script>{{ WEBCHANNEL_JS }}</script>
+<script>{{ FIG_DESKTOP_NOTIF_JS }}</script>
+<script>{{ FIG_FILE_MANAGER_JS }}</script>
+<script>{{ FILEVIEWER_CJS }}</script>
+<script type="module">{{ FILEVIEWER_MJS }}</script>''')

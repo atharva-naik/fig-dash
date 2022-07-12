@@ -1145,7 +1145,7 @@ class EditFlagsDict:
 class DebugWebBrowser(QWebEngineView):
     zoomChanged = pyqtSignal(float)
     def __init__(self, accent_color: str="green",
-                 zoomFactor: float=1.25, 
+                 zoomFactor: float=1.35, 
                  parent: Union[QWidget, None]=None):
         super(DebugWebBrowser, self).__init__(parent)
         self.accent_color = accent_color
@@ -1172,7 +1172,7 @@ class DebugWebBrowser(QWebEngineView):
         self.settings().setAttribute(QWebEngineSettings.PdfViewerEnabled, True)
         # current zoom factor and webview.
         self.currentZoomFactor = zoomFactor
-        zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+        zoomFactors = [0.25, 0.33, 0.5, 0.67, 0.75, 1, 1.1, 1.25, 1.35, 1.5, 1.75, 2, 2.25, 2.5, 3, 4, 5]
         self.zoomFactors = [ZoomFactor(zf) for zf in zoomFactors]
         # shortcuts.
         self.Esc = QShortcut(QKeySequence("Esc"), self)

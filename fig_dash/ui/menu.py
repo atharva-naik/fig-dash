@@ -17,7 +17,7 @@ from fig_dash.ui.webview import BrowserMenu
 from fig_dash.ui.widget.git import DashGitUI
 from fig_dash.ui.widget.jupyter_nb import JupyterNBWidget
 from fig_dash.ui.widget.codemirror import CodeMirrorEditor
-from fig_dash.ui.system.fileviewer import FileViewerWidget
+from fig_dash.ui.system.filexplorer import FileViewerWidget
 
 
 menu_background = "qlineargradient(x1 : 0, y1 : 1, x2 : 0, y2 : 0, stop : 0.0 rgba(17, 17, 17, 0.7), stop : 0.143 rgba(22, 22, 22, 0.7), stop : 0.286 rgba(27, 27, 27, 0.7), stop : 0.429 rgba(32, 32, 32, 0.7), stop : 0.571 rgba(37, 37, 37, 0.7), stop : 0.714 rgba(41, 41, 41, 0.7), stop : 0.857 rgba(46, 46, 46, 0.7), stop : 1.0 rgba(51, 51, 51, 0.7));" 

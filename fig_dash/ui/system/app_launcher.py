@@ -15,7 +15,7 @@ from fig_dash.ui import DashWidgetGroup, FigDAppContainer, styleContextMenu, wra
 from fig_dash.ui.widget.weather import launch_weather
 from fig_dash.ui.system.terminal import launch_terminal
 from fig_dash.ui.system.clipboard import launch_clipboard
-from fig_dash.ui.system.fileviewer import launch_fileviewer
+from fig_dash.ui.system.filexplorer import launch_fileviewer
 from fig_dash.ui.widget.codemirror import launch_codemirror
 from fig_dash.ui.system.imageviewer import launch_imageviewer
 # PyQt5 imports.

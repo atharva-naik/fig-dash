@@ -73,6 +73,11 @@ class AssetManager:
         '''return real absolute path'''
         return os.path.join(self.icon_dir, path)
 
+    def iconUrl(self, path: str) -> str:
+        '''return real absolute path'''
+        from PyQt5.QtCore import QUrl
+        return QUrl.fromLocalFile(os.path.join(self.icon_dir, path)).toString()
+
     def font(self, path: str) -> str:
         '''return real absolute path'''
         return os.path.join(self.font_dir, path)

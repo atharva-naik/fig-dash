@@ -41,9 +41,9 @@ if platform.system() == "Linux":
 else:
     FILE_VIEWER_TRASH_PATH = None
 FILE_VIEWER_CACHE_PATH = os.path.expanduser("~/.cache/fig_dash/fileviewer/thumbnails")
-class EventHandler(QObject):
+class FileViewerEventHandler(QObject):
     def __init__(self, fileviewer):
-        super(EventHandler, self).__init__()
+        super(FileViewerEventHandler, self).__init__()
         self.fileviewer = fileviewer
 
     @pyqtSlot(str)
@@ -2339,17 +2339,16 @@ class FileViewerFolderBar(QScrollArea):
                  parent: Union[None, QWidget]=None):
         super(FileViewerFolderBar, self).__init__(parent)
         self.accent_color = accent_color
-        self.layout = QHBoxLayout()
-        self.layout.setContentsMargins(10, 0, 10, 0)
-        self.layout.setSpacing(5)
+        self.hboxlayout = QHBoxLayout()
+        self.hboxlayout.setContentsMargins(10, 0, 10, 0)
+        self.hboxlayout.setSpacing(5)
         # wrapper widget.
         self.wrapper = QWidget()
         self.wrapper.setStyleSheet("background: transparent; border: 0px;")
-        self.wrapper.setLayout(self.layout)
         # path stored in the folder bar.
         self.path = ""
         # set layout for the wrapper.
-        self.wrapper.setLayout(self.layout)
+        self.wrapper.setLayout(self.hboxlayout)
         self.setObjectName("FileViewerFolderBar")
         self.selectedIndex = 0 
         self.folderBtns = []
@@ -2444,12 +2443,12 @@ class FileViewerFolderBar(QScrollArea):
         widget = QWidget() # widget.setAttribute(Qt.WA_TranslucentBackground)
         widget.setStyleSheet("background: transparent;") # widget.setStyleSheet("background: red;")
         widget.setFixedWidth(10)
-        self.layout.insertWidget(0, widget)
+        self.hboxlayout.insertWidget(0, widget)
 
     def clear(self):
         '''clear all the folder buttons on the folder bar.'''
         for i in reversed(range(len(self))): # print(i)
-            item = self.layout.itemAt(i)
+            item = self.hboxlayout.itemAt(i)
             if item is not None:
                 item.widget().setParent(None)
             else: pass
@@ -2487,17 +2486,17 @@ class FileViewerFolderBar(QScrollArea):
         self.selectedIndex = len(items)-1
         for name, path in items:
             btn = self.initFolderBtn(name, path)
-            self.layout.insertWidget(0, btn)
+            self.hboxlayout.insertWidget(0, btn)
             self.folderBtns.append(btn)
         
         self.folderBtns = self.folderBtns[::-1]
         self.folderBtns[-1].select()
-        self.layout.addStretch(1)
+        self.hboxlayout.addStretch(1)
         self.addSpacer()
-        self.layout.insertWidget(0, self.reloadBtn)
-        self.layout.insertWidget(0, self.upBtn)
-        self.layout.insertWidget(0, self.forwardBtn)
-        self.layout.insertWidget(0, self.backBtn)
+        self.hboxlayout.insertWidget(0, self.reloadBtn)
+        self.hboxlayout.insertWidget(0, self.upBtn)
+        self.hboxlayout.insertWidget(0, self.forwardBtn)
+        self.hboxlayout.insertWidget(0, self.backBtn)
 
     def connectWidget(self, widget):
         self.widget = widget
@@ -3085,9 +3084,9 @@ class FileViewerWidget(FigDMainWindow):
             extract_colors_from_qt_grad(accent_color)
         )
         # create main layout.
-        self.layout = QVBoxLayout()
-        self.layout.setContentsMargins(0, 0, 0, 0)
-        self.layout.setSpacing(0)
+        self.vboxlayout = QVBoxLayout()
+        self.vboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.vboxlayout.setSpacing(0)
         # webview for rendering file and folder items.
         self.debug_webview = FileViewerWebView(accent_color=accent_color)
         self.webview = self.debug_webview.browser
@@ -3106,14 +3105,13 @@ class FileViewerWidget(FigDMainWindow):
         self.file_watcher = QFileSystemWatcher()
         self.icon_provider = QFileIconProvider()
         self.mime_database = QMimeDatabase()
-        self.showItemContextMenu = False
         self.loaded_file_items = []
         self.selected_item = None
         self.hidden_visible = False
         self.file_watcher.directoryChanged.connect(self.reOpen)
         # handle click events (using click handler)
         self.channel = QWebChannel()
-        self.eventHandler = EventHandler(fileviewer=self)
+        self.eventHandler = FileViewerEventHandler(fileviewer=self)
         self.channel.registerObject("eventHandler", self.eventHandler)
         self.systemHandler = SystemHandler()
         self.systemHandler.connectChannel(self.channel)
@@ -3145,9 +3143,8 @@ class FileViewerWidget(FigDMainWindow):
         self.foldersearchbar = FileViewerFolderSearchBar()
         self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # statusbar.
-        self.statusbar = FileViewerStatus(self, self.webview)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.hide()
+        self.status = FileViewerStatus(self, self.webview)
+        self.status.setFixedHeight(20)
         # clipboard access.
         self.clipboard = QApplication.clipboard()
         # terminal.
@@ -3216,7 +3213,10 @@ class FileViewerWidget(FigDMainWindow):
             QKeySequence("Ctrl+Shift+F"), self,
             "Open file explorer search bar"
         )
-        self.CtrlShiftT = FigDShortcut(QKeySequence("Ctrl+Shift+T"), self, "Toggle terminal visibility")
+        self.CtrlShiftT = FigDShortcut(
+            QKeySequence("Alt+T"), self, 
+            "Toggle terminal visibility"
+        )
         self.CtrlShiftT.connect(self.terminal.toggle)
         # self.SelectAll.setEnabled(False)
     
@@ -3227,27 +3227,19 @@ class FileViewerWidget(FigDMainWindow):
         self.debug_webview.addWidget(self.metaDataPanel)
         self.debug_webview.setSizes([200, 600, 200, 200, 200])
         self.debug_webview.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # self.menu.viewgroup.arrangeGroup.layout.insertWidget(1, self.webview.pyDevToolsBtn)
-        # self.layout.addWidget(self.webview.devToolsBtn)
         # add widgets to layout.
         fsbar_wrapper = self.initFolderSearchBar()
         self.CtrlShiftF.connect(fsbar_wrapper.show)        
-        # if args.get("parentless", False):
-        #     self.menuArea = self.wrapInScrollArea(self.menu)
-        #     self.menuArea.setFixedHeight(130)
-        #     self.layout.insertWidget(0, self.menuArea)
-        # else:
-        #     self.layout.insertWidget(0, self.menu)
         # vertical splitter: webview splitter + terminal.
         self.vsplitter = QSplitter(Qt.Vertical)
         self.vsplitter.addWidget(self.debug_webview)
         self.vsplitter.addWidget(self.terminal)
         # build central widget.
-        self.layout.insertWidget(0, self.statusbar, 0)
-        self.layout.insertWidget(0, self.vsplitter, 0)
-        self.layout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
-        self.layout.insertWidget(0, self.folderbar, 0)
-        self.layout.insertWidget(0, self.menu)
+        self.vboxlayout.insertWidget(0, self.status, 0)
+        self.vboxlayout.insertWidget(0, self.vsplitter, 0)
+        self.vboxlayout.insertWidget(0, fsbar_wrapper, 0, Qt.AlignCenter)
+        self.vboxlayout.insertWidget(0, self.folderbar, 0)
+        self.vboxlayout.insertWidget(0, self.menu)
         # key press search bar.
         self.keypress_search = FileViewerKeyPressSearch()
         self.keypress_search.connectWidget(self)
@@ -3255,7 +3247,7 @@ class FileViewerWidget(FigDMainWindow):
         # central widget.
         self.central_widget = QWidget()
         self.central_widget.setStyleSheet('''background: transparent; border: 0px; color: #fff;''')        
-        self.central_widget.setLayout(self.layout)
+        self.central_widget.setLayout(self.vboxlayout)
         # set central widget.
         self.setCentralWidget(self.central_widget)
         self.webview.urlChanged.connect(self.onUrlChange)
@@ -3577,9 +3569,8 @@ class FileViewerWidget(FigDMainWindow):
     #     """)
     #     # print(f"thumbnail for {path} @ {thumb_path}")
     def open(self, folder: str="~"):
-        from fig_dash.utils import collapseuser
         from fig_dash.ui.js.webchannel import QWebChannelJS
-        from fig_dash.ui.js.fileviewer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
+        from fig_dash.ui.js.filexplorer import FileViewerHtml, FileViewerStyle, FileViewerCustomJS, FileViewerMJS, ViSelectJS
         '''open a file/folder location.'''
         try: # print(self.dash_window)
             i = self.dash_window.tabs.currentIndex()
@@ -3626,7 +3617,7 @@ class FileViewerWidget(FigDMainWindow):
             if value == False: continue
             hidden_count += 1
         # get number of items, folder, files and hidden
-        self.statusbar.updateBreakdown(
+        self.status.updateBreakdown(
             files=file_count, hidden=hidden_count,
             items=len(self.listed_filenames),
             folders=folder_count,
@@ -3746,6 +3737,7 @@ class FileViewerWidget(FigDMainWindow):
             "FILEVIEWER_PATHS": full_paths,
             "FILEVIEWER_ITEMS": format_listed(listed),
             "FILEVIEWER_MIMETYPES": mimetypes_list,
+            "FILEVIEWER_BACKDROP_FILTER": "blur(2px) brightness(50%)",
             "BACKGROUND_IMAGE": self.background_image,
             "HIDDEN_FLAG_LIST": hidden_flag_list,
             "NUM_ITEMS": len(listed),
@@ -3844,7 +3836,7 @@ selItemSpan.style.webkitLineClamp = 10;""").render(ID=item)
         meta_change_time = file_info.metadataChangeTime().toPyDateTime()
         # print(last_read, last_modified, group, owner, 
         #       meta_change_time, permissions)
-        self.statusbar.updateSelected(
+        self.status.updateSelected(
             shortcut=shortcut, symbolic=symbolic,
             items=items, name=name, icon=icon, 
             size=size, permissions=permissions,
@@ -3966,7 +3958,8 @@ def fileviewer_window_factory(**args):
     icon = FigDSystemAppIconMap["fileviewer"]
     accent_color = FigDAccentColorMap["fileviewer"]
     widget_args = {
-        "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
+        # "background": os.path.expanduser("~/GUI/fig-dash/resources/icons/textedit/NoiseGaussBlur(5).png"),
+        "background": FigD.wallpaper("unsplash/johannes-plenio-unsplash.jpg"),
         "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
     fileviewer = fileviewer_factory(path=path, **widget_args)
@@ -3995,31 +3988,8 @@ def test_fileviewer():
     window = fileviewer_window_factory(path=path)
     window.show()
     app.exec()
-    # fileviewer.saveScreenshot("fileviewer.html")
-def launch_fileviewer(app, **args):
-    from fig_dash.ui import wrapFigDWindow
-    from fig_dash.theme import FigDAccentColorMap, FigDSystemAppIconMap
-    path = args.get("path", os.path.expanduser("~"))
-    # get accent color & icon.
-    icon = FigDSystemAppIconMap["fileviewer"]
-    accent_color = FigDAccentColorMap["fileviewer"]
-    widget_args = {
-        "background": os.path.expanduser("~/Pictures/Wallpapers/3339083.jpg"),
-        "font_color": "#fff", "parentless": True, "accent_color": accent_color,
-    }
-    fileviewer = fileviewer_factory(path=path, **widget_args)
-    title = f"File Viewer ({Path(path).name})"
-    window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700,
-                            accent_color=accent_color, tab_title="Home", title=title,
-                            tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
-                            titlebar_callbacks={
-                                "viewSourceBtn": fileviewer.viewSource,
-                            }, widget_factory=fileviewer_factory, widget_args=widget_args,
-                            window_args=args, window_factory=fileviewer_window_factory,
-                            find_function=fileviewer.browser.reactToCtrlF)
-    window.show()
 
-
+# main function.
 if __name__ == '__main__':
     test_fileviewer()
 #a33817 (dark) #323150

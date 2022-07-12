@@ -15,7 +15,7 @@ from fig_dash.ui.widget.boolean_toggle import AnimatedToggle
 # PyQt5 imports
 from PyQt5.QtGui import QIcon, QImage, QPixmap, QKeySequence, QColor, QPalette, QPainter
 from PyQt5.QtCore import Qt, QSize, QPoint, QTimer, QStringListModel, pyqtSignal
-from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea, QInputDialog
+from PyQt5.QtWidgets import QSlider, QWidget, QMenu, QAction, QApplication, QLabel, QLineEdit, QToolBar, QToolButton, QMainWindow, QShortcut, QSizePolicy, QHBoxLayout, QCompleter, QVBoxLayout, QScrollArea, QInputDialog, QGraphicsDropShadowEffect
 # title_bar_style = '''
 # QToolBar {
 #     margin: 0px; 
@@ -160,51 +160,74 @@ def extractSliderColor(bg, where="back"):
         sliderColor = "white" 
 
     return sliderColor
-
-def styleContextMenu(menu, accent_color: str="yellow", padding: int=5, 
-                     font_size: int=18, icon_size: int=24):
-    menu.setAttribute(Qt.WA_TranslucentBackground)
-    menu.setObjectName("FigDMenu")
-    menu.setStyleSheet(jinja2.Template("""
-    QMenu#FigDMenu {
-        background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, 0.9), stop : 0.143 rgba(22, 22, 22, 0.9), stop : 0.286 rgba(27, 27, 27, 0.9), stop : 0.429 rgba(32, 32, 32, 0.9), stop : 0.571 rgba(37, 37, 37, 0.9), stop : 0.714 rgba(41, 41, 41, 0.9), stop : 0.857 rgba(46, 46, 46, 0.9), stop : 1.0 rgba(51, 51, 51, 0.9));
-    	color: #fff;
-    	padding: 10px;
-        icon-size: {{ ICON_SIZE }}px; 
-    	border-radius: 15px;
-        font-size: {{ FONT_SIZE }}px;
-        font-family: "Be Vietnam Pro";
-    }
-    QMenu#FigDMenu::item {
-        padding: {{ PADDING }}px;
-    }
-    QMenu#FigDMenu::item:selected {
-    	color: #292929; 
-        border-radius: 5px;
-    	background-color: {{ ACCENT_COLOR }}; 
-    }
-    QMenu#FigDMenu:separator {
-    	background: #292929;
-    }""").render(
-        ACCENT_COLOR=accent_color, FONT_SIZE=font_size, 
-        PADDING=padding, ICON_SIZE=icon_size,
-    ))
-    palette = menu.palette()
-    palette.setColor(QPalette.Base, QColor(48,48,48))
-    palette.setColor(QPalette.Text, QColor(125,125,125))
-    palette.setColor(QPalette.ButtonText, QColor(255,255,255))
-    # palette.setColor(QPalette.PlaceholderText, QColor(125,125,125))
-    palette.setColor(QPalette.Window, QColor(255,255,255))
-    palette.setColor(QPalette.Highlight, QColor(235,95,52))
-    menu.setPalette(palette)
-
-    return menu
-
+    
 def resize_text(text, length=10):
     return (text+" "*(length-len(text)))[:length]
 
 def rotate_text(text, step=0):
     return text[-step:]+text[:-step]
+
+def styleContextMenu(menu, accent_color: str="rgb(255,255,255)", 
+                     icon_size: int=24, opacity: float=0.7,
+                     padding: int=5, font_size: int=18):
+    menu.setAttribute(Qt.WA_TranslucentBackground)
+    menu.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+    menu.setObjectName("FigDMenu")
+    styleSheet = jinja2.Template("""
+    QMenu#FigDMenu {
+        /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 rgba(17, 17, 17, {{ OPACITY }}), stop : 0.143 rgba(22, 22, 22, {{ OPACITY }}), stop : 0.286 rgba(27, 27, 27, {{ OPACITY }}), stop : 0.429 rgba(32, 32, 32, {{ OPACITY }}), stop : 0.571 rgba(37, 37, 37, {{ OPACITY }}), stop : 0.714 rgba(41, 41, 41, {{ OPACITY }}), stop : 0.857 rgba(46, 46, 46, {{ OPACITY }}), stop : 1.0 rgba(51, 51, 51, {{ OPACITY }})); */
+        background: rgba(0, 0, 0, {{ OPACITY }});
+        background-image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/NoiseGaussBlur(5).png);
+        color: #fff;
+    	padding: 10px;
+        font-size: {{ FONT_SIZE }}px;
+        font-family: "Be Vietnam Pro";
+        border: none;
+        border-radius: 15px;
+    }
+    QMenu#FigDMenu:right-arrow {
+        image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/chevron.svg);
+    }
+    QMenu#FigDMenu::right-arrow:selected {
+        image: url(/home/atharva/GUI/fig-dash/resources/icons/textedit/chevron_hover.svg);
+    }
+    QMenu#FigDMenu::item {
+        background: transparent;
+        padding: {{ PADDING }}px;
+        /* border: 1px solid transparent; */
+    }
+    QMenu#FigDMenu::item:selected {
+    	color: #292929; 
+        border-radius: 5px;
+    	background-color: {{ ACCENT_COLOR_WITH_ALPHA }}; 
+    }
+    QMenu#FigDMenu:separator {
+    	background: #484848;
+    }""").render(
+        FONT_SIZE=font_size, PADDING=padding, 
+        ICON_SIZE=icon_size, OPACITY=opacity,
+        ACCENT_COLOR_WITH_ALPHA=accent_color,
+    )
+    menu.setStyleSheet(styleSheet)
+    # create shadow with color derived from accent color.
+    # shadowColor = QColor(extractFromAccentColor(accent_color))
+    shadow = QGraphicsDropShadowEffect()
+    # shadow.setColor(Qt.white)
+    shadow.setColor(QColor("#fff"))
+    shadow.setBlurRadius(5)
+    shadow.setOffset(0, 0)
+    # set shadow graphics effect.
+    menu.setGraphicsEffect(shadow)
+
+    palette = menu.palette()
+    palette.setColor(QPalette.Base, QColor(48,48,48))
+    palette.setColor(QPalette.Text, QColor(125,125,125))
+    palette.setColor(QPalette.ButtonText, QColor(255,255,255))
+    palette.setColor(QPalette.Window, QColor(255,255,255))
+    palette.setColor(QPalette.Highlight, QColor(235,95,52))
+    menu.setPalette(palette)
+
+    return menu
 
 class TitleBarAnimatedLabel(QLabel):
     def __init__(self, parent: Union[QWidget, None]=None):
@@ -403,7 +426,7 @@ class TitleBarCloseBtn(QToolButton):
 # title bar button that shows menu if it is clicked.
 class TitleBarClickMenuBtn(QToolButton):
     def __init__(self, menu: QWidget=None, tip: str="a tip", icon: str="",
-                 parent: Union[None, QWidget]=None, accent_color: str="red", 
+                 parent: Union[None, QWidget]=None, accent_color: str="white", 
                  icon_size: Tuple[int,int]=(22,22), stylesheet: str=""):
         super(TitleBarClickMenuBtn, self).__init__(parent)
         self.accent_color = accent_color
@@ -864,6 +887,7 @@ class WindowTitleBar(QToolBar):
             efs_icon="titlebar/exit_fullscreen.svg", 
             style="r", background=background,
         )
+        self.fullscreenBtn.hide()
         self.ribbonCollapseBtn = TitleBarRibbonCollapseBtn(
             callback=callbacks.get("ribbonCollapseBtn"),
             accent_color=background,
