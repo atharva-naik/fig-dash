@@ -1109,9 +1109,16 @@ class ImageViewerMetaDataPanel(QWidget):
 				p = prf.profile
 				colorspace = f"{p.xcolor_space}"
 				colorprofile = p.profile_description
-				if p.icc_measurement_condition is None: p.icc_measurement_condition = {}
+				if p.icc_measurement_condition is None: 
+					icc_measurement_condition = {}
+				else: 
+					icc_measurement_condition = p.icc_measurement_condition
+				try:
+					creation_date = p.creation_date
+				except ValueError:
+					creation_date = "Date not available"
 				if p.clut is None: p.clut = {}
-				measurement_condition = "<br>"+"<br>".join([f"{k}: {v}" for k,v in p.icc_measurement_condition.items()])
+				measurement_condition = "<br>"+"<br>".join([f"{k}: {v}" for k,v in icc_measurement_condition.items()])
 				clut = "<br>"+"<br>".join([f"{k}: {', '.join([str(i) for i in v])}" for k,v in p.clut.items()])
 
 				MISC_INFO = f"""
@@ -1139,7 +1146,7 @@ class ImageViewerMetaDataPanel(QWidget):
 					<!-- <b>Id:</b> {p.profile_id} <br> -->
 					<b>Description:</b> {p.profile_description} <br>
 					<b>Version:</b> {p.version} <br>
-					<b>Creation Date:</b> {p.creation_date} <br>
+					<b>Creation Date:</b> {creation_date} <br>
 					<b>Copyright:</b> {p.copyright} <br>
 					<b>Manufacturer:</b> {p.manufacturer} <br>
 					<b>Technology:</b> {p.technology} <br>
@@ -1278,6 +1285,10 @@ class ImageViewerBrowser(DebugWebBrowser):
         self.imageviewer = imageviewer
         self.accent_color = "yellow" 
         self.shortcut_mapper = {}
+        self.widget = None
+
+    def connectWidget(self, widget: QWidget):
+        self.widget = widget
 
     def setAccentColor(self, accent_color):
         self.accent_color = accent_color
@@ -1435,6 +1446,27 @@ class ImageViewerBrowser(DebugWebBrowser):
 			FigD.Icon("system/imageviewer/flip_vertical.svg"), 
 			"Vertical", lambda: self.page().runJavaScript(flipVJS)
 		)
+        if self.widget:
+            # show javascript based toolbar.
+            showJSToolBar = menu.addAction(
+			    "Show more tools", 
+			    partial(
+					self.widget.setJSToolBarVisible,
+					not(self.widget.isJSToolBarVisible()),
+				),
+		    ) 
+            showJSToolBar.setCheckable(True)
+            showJSToolBar.setChecked(self.widget.isJSToolBarVisible())
+            # show navigation pane.
+            showNavPane = menu.addAction(
+			    "Show navigation pane", 
+			    partial(
+					self.widget.setNavBarVisible,
+					not(self.widget.isNavBarVisible()),
+				),
+		    ) 
+            showNavPane.setCheckable(True)
+            showNavPane.setChecked(self.widget.isNavBarVisible())
 
         return menu
 
@@ -1491,6 +1523,7 @@ class ImageViewerWidget(FigDMainWidget):
         self.save_ptr = None
         self.__auto_save = False
         self._image_search_mode = False
+        self._is_js_navbar_visible = args.get("show_navbar", False)
         self._is_js_toolbar_visible = args.get("add_js_toolbar", False)
 		# arguments.
         print(args.keys())
@@ -1515,6 +1548,7 @@ class ImageViewerWidget(FigDMainWidget):
         # build layout.
         self.debug_webview = ImageViewerWebView(imageviewer=self)
         self.browser = self.debug_webview.browser
+        self.browser.connectWidget(self)
         self.browser.CtrlC = FigDShortcut(QKeySequence.Copy, self.browser, "Copy image to clipboard")
         self.browser.CtrlC.activated.connect(self.copyImageToClipboard)
         self.file_watcher.fileChanged.connect(self.browser.reload)
@@ -1564,12 +1598,23 @@ class ImageViewerWidget(FigDMainWidget):
         self._is_js_toolbar_visible = value
         if value: self.showJSToolBar()
         else: self.hideJSToolBar()
+	
+    def setNavBarVisible(self, value: bool):
+        self._is_js_navbar_visible = value
+        if value: self.showNavBar()
+        else: self.hideNavBar()
 
     def toggleJSToolBar(self):
         if self.isJSToolBarVisible():
             self.setJSToolBarVisible(False)
         else: 
             self.setJSToolBarVisible(True)
+
+    def toggleNavBar(self):
+        if self.isNavBarVisible():
+            self.setNavBarVisible(False)
+        else: 
+            self.setNavBarVisible(True)
 
     def toggleImageSearchMode(self):
         if self.isImageSearchMode():
@@ -1578,10 +1623,24 @@ class ImageViewerWidget(FigDMainWidget):
             self.setImageSearchMode(True)
 
     def showJSToolBar(self):
-        self.page().runJavaScript("document.getElementsByClassName('viewer-toolbar')[0].style.display=''")
+        self.browser.page().runJavaScript(
+			"document.getElementsByClassName('viewer-toolbar')[0].style.display=''"
+		)
 
     def hideJSToolBar(self):
-        self.page().runJavaScript("document.getElementsByClassName('viewer-toolbar')[0].style.display='none'")
+        self.browser.page().runJavaScript(
+			"document.getElementsByClassName('viewer-toolbar')[0].style.display='none'"
+		)
+
+    def showNavBar(self):
+        self.browser.page().runJavaScript(
+			"document.getElementsByClassName('viewer-navbar')[0].style.display=''"
+		)
+
+    def hideNavBar(self):
+        self.browser.page().runJavaScript(
+			"document.getElementsByClassName('viewer-navbar')[0].style.display='none'"
+		)
 
     def changeZoom(self, zoomValue: float):
         self.browser.setZoomFactor(zoomValue/100)
@@ -1754,6 +1813,9 @@ class ImageViewerWidget(FigDMainWidget):
     def isJSToolBarVisible(self):
         return self._is_js_toolbar_visible
 
+    def isNavBarVisible(self):
+        return self._is_js_navbar_visible
+
     def openWebPage(self, url: Union[QUrl, str]):
         if isinstance(url, QUrl):
             url = url.toString()
@@ -1789,7 +1851,8 @@ class ImageViewerWidget(FigDMainWidget):
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": url,
             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS.render(
-				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"'
+				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"',
+				SHOW_NAVBAR='' if self.isNavBarVisible() else 'style="display: none;"',
 			),
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": False,
@@ -1837,7 +1900,8 @@ class ImageViewerWidget(FigDMainWidget):
             "FILEPATH_URL": url,
             "FILENAME_WITHOUT_EXT": filename_without_ext,
             "VIEWER_JS_PLUGIN_JS": ViewerJSPluginJS.render(
-				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"'
+				SHOW_JS_TOOLBAR='' if self.isJSToolBarVisible() else 'style="display: none;"',
+				SHOW_NAVBAR='' if self.isNavBarVisible() else 'style="display: none;"',
 			),
             "VIEWER_JS_PLUGIN_CSS": ViewerJSPluginCSS,
             "PATH_IS_FOLDER": isdir,
@@ -1892,6 +1956,7 @@ def imageviewer_factory(**args):
     css_grad = args.get("accent_color", 'yellow')
     openpath = args.get("openpath", FigD.icon("system/imageviewer/lenna.png"))
     accent_color = args.get("accent_color", 'yellow')
+    show_navbar = args.get("show_navbar", False)
     add_js_toolbar = args.get("add_js_toolbar", False)
     s = time.time()
     menu = ImageViewerMenu(accent_color=accent_color)
@@ -1902,8 +1967,10 @@ def imageviewer_factory(**args):
     s = time.time()
     imageviewer = ImageViewerWidget(
 		css_grad=css_grad, 
+		show_navbar=show_navbar,
 		accent_color=accent_color,
 		add_js_toolbar=add_js_toolbar,
+		
 	)
     print(f"ImageViewerWidget created in: {time.time()-s}")
     s = time.time()
@@ -1930,6 +1997,7 @@ def imageviewer_window_factory(**args):
 		"css_grad": create_css_grad(extract_colors_from_qt_grad(accent_color)),
 		"openpath": openpath,
 		"accent_color": accent_color,
+        "show_navbar": args.get("show_navbar", False),
         "add_js_toolbar": args.get("add_js_toolbar", False),
 	}
     imageviewer = imageviewer_factory(**widget_args)
@@ -1953,6 +2021,7 @@ def parse_imageviewer_args():
 	parser = argparse.ArgumentParser("system imageviewer application for Fig Dashboard")
 	parser.add_argument("-p", "--path", type=str, help="path to opened image", 
 						default=FigD.icon("system/imageviewer/lenna.png"))
+	parser.add_argument("-n", "--show_navbar", action="store_true", help="show navbar.")
 	parser.add_argument("-jt", "--add_js_toolbar", action="store_true", 
 						help="add javascript based toolbar to imageviewer web view.")
 
@@ -1964,10 +2033,7 @@ def test_imageviewer():
     args = parse_imageviewer_args()
     # openpath = "~/Pictures/atharva.jpg"
 	# openpath = "~/GUI/FigUI/FigUI/FigTerminal/static/terminal.svg"
-    window = imageviewer_window_factory(
-		openpath=args.path, 
-		add_js_toolbar=args.add_js_toolbar,
-	)
+    window = imageviewer_window_factory(**vars(args))
     window.show()
     app.exec()
 

@@ -64,7 +64,7 @@ AUTO_SAVE_ICON_TEMPLATE = jinja2.Template(r"""<svg xmlns="http://www.w3.org/2000
 <path class="a" d="M10,0h.043a.5.5,0,0,1,.353.146L13.854,3.6A.5.5,0,0,1,14,3.957V4H10Z" />
 </svg>""") 
 title_bar_default_bg = """qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #c24e2b, stop : 0.143 #c7502c, stop : 0.286 #cc522d, stop : 0.429 #d0542e, stop : 0.571 #d55630, stop : 0.714 #da5831, stop : 0.857 #df5a32, stop : 1.0 #e45c33)"""
-title_bar_style = jinja2.Template('''
+title_bar_style = jinja2.Template(r"""
 QToolBar {
     margin: 0px; 
     border: 0px; 
@@ -77,13 +77,14 @@ QToolBar {
     /* background: qlineargradient(x1 : 0, y1 : 0, x2 : 0, y2 : 1, stop : 0.0 #6e6e6e, stop : 0.8 #4a4a4a, stop : 1.0 #292929); */    
     border-top-left-radius: 10px;
     border-top-right-radius: 10px;
-}
-''')
+}""")
 title_btn_style = '''
 QToolButton {
+    color: #fff;
     padding: 4px;
-    border-radius: 5px; 
-    font-family: Helvetica;
+    border-radius: 5px;
+    font-size: 16px;
+    font-family: 'Be Vietnam Pro', sans-serif; 
 }
 QToolButton:hover {
     background: rgba(255, 255, 255, 0.5);
@@ -810,6 +811,132 @@ class TitleBarInputDialog(QInputDialog):
         self.setStyleSheet("""
         background: #292929;""")
 
+# Titlebar quick access toolbar.
+class TitleBarQuickAccess(QWidget):
+    def __init__(self, accent_color: str="white", 
+                 parent: Union[None, QWidget]=None):
+        super(TitleBarQuickAccess, self).__init__(parent)
+        self.accent_color = accent_color
+        self.hboxlayout = QHBoxLayout()
+        self.setLayout(self.hboxlayout)
+        self.hboxlayout.setSpacing(2)
+        self.hboxlayout.setContentsMargins(0, 0, 0, 0)
+        self.setStyleSheet(r"""
+        QWidget {
+            color: #fff;
+            font-size: 16px;
+            background: transparent;
+        }
+        QToolButton {
+            color: #fff;
+            border: 0px;
+            padding: 0px;
+            font-size: 16px;
+            font-family: 'Be Vietnam Pro', sans-serif; 
+        }
+        QToolButton:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }""")
+        self.customizeBtn = QToolButton()
+        self.hboxlayout.addWidget(self.customizeBtn)
+        self.customizeBtn.clicked.connect(
+            self.showCustomizeMenu
+        )
+        self.customizeMenu = QMenu()
+        self.customizeMenu.setWindowFlags(Qt.Popup)
+        self.customizeMenu = styleContextMenu(
+            self.customizeMenu,
+            self.accent_color,
+        )
+        self.toggle_actions = []
+        self.btns = {}
+        undoBtn = QToolButton()
+        redoBtn = QToolButton()
+        undoBtn.setIcon(FigD.Icon("textedit/undo.svg"))
+        redoBtn.setIcon(FigD.Icon("textedit/redo.svg"))
+        self.addBtn("Undo", undoBtn)
+        self.addBtn("Redo", redoBtn)
+
+    def btn(self, name: str):
+        return self.btns[name]
+
+    def showCustomizeMenu(self):
+        self.customizeMenu.show()
+
+    def toggleBtn(self, i: int):
+        self.toggle_actions[i].setCheckable(
+            not(self.toggle_actions[i].isCheckable())
+        )
+
+    def showBtn(self, i: int):
+        self.toggle_actions[i].setCheckable(True)
+
+    def hideBtn(self, i: int):
+        self.toggle_actions[i].setCheckable(False)
+
+    def addBtn(self, name: str, btn: QToolButton):
+        self.btns[name] = btn
+        self.hboxlayout.insertWidget(
+            self.hboxlayout.count()-1, 
+            btn, 0, Qt.AlignVCenter,
+        )
+        toggleBtn = self.customizeMenu.addAction(name)
+        toggleBtn.setCheckable(True)
+        toggleBtn.setChecked(True)
+        self.toggle_actions.append(toggleBtn)
+
+# Titlebar main window/app menu button.
+class TitleBarMenuBtn(QToolButton):
+    def __init__(self, parent: Union[None, QWidget]=None):
+        super(TitleBarMenuBtn, self).__init__(parent)
+        self.setText("Menu")
+        self.setIcon(FigD.Icon("titlebar/menu.svg"))
+        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.setStyleSheet(title_btn_style)
+        self.clicked.connect(self.onClickEvent)
+
+    def onClickEvent(self):
+        self.popupWidget = QWidget()
+        self.popupWidget.setWindowFlags(Qt.Popup)
+        pos = self.mapToGlobal(QPoint(0, 0))
+        self.popupWidget.move(pos)
+        self.popupWidget.show()
+# Titlebar main menu dropdown button.
+# Shows a context menu where each item is a way to open a secondary menu.
+class TitleBarMenuDropdownBtn(QToolButton):
+    def __init__(self, accent_color: str="white", 
+                 parent: Union[None, QWidget]=None):
+        super(TitleBarMenuDropdownBtn, self).__init__(parent)
+        self.menus = {}
+        self.accent_color = accent_color
+        self.setText("▾")
+        # self.setIcon(FigD.Icon("titlebar/dropdown.svg"))
+        self.setStyleSheet(title_btn_style)
+        self.clicked.connect(self.onClickEvent)
+
+    def clear(self):
+        self.menus = {}
+
+    def addMenu(self, text: str, menu: QMenu):
+        self.menus[text] = menu
+
+    def onClickEvent(self):
+        self.contextMenu = QMenu()
+        self.contextMenu = styleContextMenu(
+            self.contextMenu,
+            self.accent_color, 
+        )
+        for text, menu in self.menus.items():
+            subMenu = self.contextMenu.addMenu(text)
+            for action in menu.actions():
+                subMenuAction = subMenu.addAction(
+                    action.icon(), action.text(),
+                    action.trigger, action.shortcut(),
+                )
+                subMenuAction.setEnabled(action.isEnabled())
+        pos = self.mapToGlobal(QPoint(0, 0))
+        self.contextMenu.popup(pos)
+
 # Titlebar for FigDWindow
 class WindowTitleBar(QToolBar):
     showTabBar = pyqtSignal()
@@ -925,7 +1052,10 @@ class WindowTitleBar(QToolBar):
         palette.setColor(QPalette.Window, QColor(0, 0, 0, 0))
         palette.setColor(QPalette.Button, QColor(sliderHandleColor))
         palette.setColor(QPalette.Highlight, QColor(255, 255, 255))
-        
+        # menu button and dropdown.
+        self.menuBtn = TitleBarMenuBtn()
+        self.menuDropdownBtn = TitleBarMenuDropdownBtn()
+
         self.zoomSlider.setPalette(palette)# self.zoomSlider.setAutoFillBackground(True)
         self.zoomLabel.setMaximumWidth(35)
         # auto save toggle button.
@@ -940,7 +1070,7 @@ class WindowTitleBar(QToolBar):
         self.autoSaveBlank = self.initBlank(10)
         # auto save toggle icon.
         self.autoSaveIcon = QToolButton()
-        self.autoSaveIcon.setText(" Autosave")
+        self.autoSaveIcon.setText("")
         self.autoSaveIcon.setToolTip("Auto save changes to currently opened file")
         self.autoSaveIcon.setStatusTip("Auto save changes to currently opened file")
         self.autoSaveIcon.setIcon(FigD.Icon("titlebar/autosave.svg"))
@@ -975,9 +1105,9 @@ class WindowTitleBar(QToolBar):
         # control button/window icon
         if ctrl_btns_loc == "left":
             self.addWidget(self.closeBtn)
-            self.addWidget(self.initBlank(3))
+            self.addWidget(self.initBlank(2))
             self.addWidget(self.minimizeBtn)
-            self.addWidget(self.initBlank(3))
+            self.addWidget(self.initBlank(2))
             self.addWidget(self.maximizeBtn)
         else:
             self.addWidget(self.windowIcon)
@@ -990,37 +1120,36 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.saveSourceBtn)
         self.addWidget(self.devToolsBtn)
         self.addWidget(self.findBtn)
-        self.addWidget(self.printBtn)
-        # zoom functions.
-        self.addWidget(self.zoomOutBtn)
-        self.addWidget(self.zoomLabel)
-        self.addWidget(zoomSliderWrapper)
-        self.addWidget(self.zoomInBtn)
+        self.addWidget(self.printBtn)        
         # accent color customization & shortcuts.
-        self.addWidget(self.initBlank(10))
+        self.addWidget(self.menuBtn)
+        self.addWidget(self.menuDropdownBtn)
+        # quick access toolbar.
+        self.quick_access_toolbar = TitleBarQuickAccess()
+        self.addWidget(self.quick_access_toolbar)
         self.addWidget(self.accentColorBtn)
         self.addWidget(self.shortcutsBtn)
-        self.addWidget(self.initBlank(10))
         # title of application and settings
         self.addWidget(self.title)
-        self.addWidget(self.initBlank(10))
         # app settings, ribbon controls, fullscreen.
         self.addWidget(self.settingsBtn)
         self.addWidget(self.ribbonCollapseBtn)
-        self.addWidget(self.fullscreenBtn)
-        self.addWidget(self.initBlank())
+        self.addWidget(self.initBlank(10))
         # control button/window icon
         if ctrl_btns_loc == "left":
             self.addWidget(self.windowIcon)
         else:
             self.addWidget(self.minimizeBtn)
-            self.addWidget(self.initBlank(3))
+            self.addWidget(self.initBlank(2))
             self.addWidget(self.maximizeBtn)
-            self.addWidget(self.initBlank(3))
+            self.addWidget(self.initBlank(2))
             self.addWidget(self.closeBtn)
         self.addWidget(self.initBlank(10))
         # set maximum height.
         self.setMaximumHeight(30)
+
+    def quickAccess(self) -> TitleBarQuickAccess:
+        return self.quick_access_toolbar
 
     def increaseZoom(self):
         try: 
