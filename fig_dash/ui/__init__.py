@@ -15,7 +15,7 @@ from fig_dash.ui.titlebar import WindowTitleBar
 # PyQt5 imports
 from PyQt5.QtGui import QFontDatabase, QColor, QPalette, QIcon, QKeySequence, QRegion
 from PyQt5.QtCore import Qt, QUrl, QSize, QEvent, pyqtSignal, QStringListModel, QRect, QPoint, QVariant, QPropertyAnimation, QEasingCurve
-from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSizePolicy, QCompleter
+from PyQt5.QtWidgets import QApplication, QMenu, QFrame, QAction, QWidget, QWidgetAction, QMainWindow, QTabBar, QTabWidget, QLabel, QToolButton, QVBoxLayout, QHBoxLayout, QGridLayout, QSystemTrayIcon, QScrollArea, QShortcut, QSlider, QLineEdit, QGraphicsDropShadowEffect, QGraphicsBlurEffect, QSizePolicy, QCompleter, QStyle, QProxyStyle
 
 # blank function.
 def blank(*args, **kwargs): print("fig_dash::ui::__init__::blank :", args, kwargs)
@@ -353,6 +353,23 @@ def styleTextEditMenuIcons(menu):
 
     return menu
 
+# proxy style for context menu.
+class FigDMenuProxyStyle(QProxyStyle):
+    def drawControl(self, element, option, painter, widget=None):
+        shortcut = ""
+        if element == QStyle.CE_MenuItem:
+            vals = option.text.split("\t")
+            if len(vals) == 2:
+                text, shortcut = vals
+                option.text = text
+        super(FigDMenuProxyStyle, self).drawControl(element, option, painter, widget)
+        if shortcut:
+            margin = 10 # QStyleHelper::dpiScaled(5)
+            self.proxy().drawItemText(painter, option.rect.adjusted(margin, 0, -margin, 0), 
+                Qt.AlignRight | Qt.AlignVCenter,
+                option.palette, option.state & QStyle.State_Enabled, 
+                shortcut, QPalette.Text)
+
 def styleContextMenu(menu, accent_color: str="rgb(255,255,255)", 
                      icon_size: int=24, margin: int=10, padding: int=5,
                      opacity: float=0.7, font_size: int=18):
@@ -417,6 +434,14 @@ def styleContextMenu(menu, accent_color: str="rgb(255,255,255)",
     menu.setPalette(palette)
 
     return menu
+
+# fig style menu with right side text alignment.
+class FigDMenu(QMenu):
+    def __init__(self, *args, **kwargs):
+        super(FigDMenu, self).__init__(*args, **kwargs)
+        # style context menu using proxy style. 
+        self._proxy = FigDMenuProxyStyle(self.style())
+        self.setStyle(self._proxy)
 
 # dash slider (has a label to directly enter values).
 class DashSlider(QWidget):
@@ -3608,11 +3633,17 @@ class FigDWindow(QMainWindow):
         super(FigDWindow, self).__init__()
         title = args.get("title", "FigD wrapped widget")
         winIcon = args.get("icon", "system/clipboard/window_icon.png")
+        
+        self._use_system_titlebar = False
+        self._always_on_top = args.get("always_on_top", True)
+
         self.__win_icon_size = args.get("size", (30,30))
         self.setWindowTitle(title)
         self.setWindowIcon(FigD.Icon(winIcon))
         self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        if self._always_on_top:
+            self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        else: self.setWindowFlags(Qt.FramelessWindowHint)
         self.setCentralWidget(widget)
         self.installEventFilter(self)
         self.FnF11 = FigDShortcut(
@@ -3624,6 +3655,38 @@ class FigDWindow(QMainWindow):
         self.shortcuts_pane = self.createShortcutsPane()
         if hasattr(widget, "showMessage"):
             widget.showMessage.connect(self.statusBar().showMessage)
+
+    def toggleUseSystemTitleBar(self):
+        if self._use_system_titlebar:
+            # turn off system titlebar.
+            if self._always_on_top:
+                self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+            else:
+                self.setWindowFlags(Qt.FramelessWindowHint)
+        else:
+            # turn on system titlebar.
+            if self._always_on_top:
+                self.setWindowFlags(Qt.WindowStaysOnTopHint)
+            else:
+                self.setWindowFlags(Qt.WindowFlags())
+        self._use_system_titlebar = not(self._use_system_titlebar)
+        self.show()
+
+    def toggleAlwaysOnTop(self):
+        if self._always_on_top:
+            # turn off window stays on top.
+            if self._use_system_titlebar:
+                self.setWindowFlags(Qt.WindowFlags())
+            else:
+                self.setWindowFlags(Qt.FramelessWindowHint)
+        else:
+            # turn on window stays on top.
+            if self._use_system_titlebar:
+                self.setWindowFlags(Qt.WindowStaysOnTopHint)
+            else:
+                self.setWindowFlags(Qt.WindowStaysOnTopHint | Qt.FramelessWindowHint)
+        self._always_on_top = not(self._always_on_top)
+        self.show()
 
     def showNormal(self):
         if self.titlebar: self.titlebar.show()
@@ -4020,10 +4083,9 @@ def wrapFigDWindow(widget: QWidget, **args):
         window.tabs = tabwidget
         tabwidget.CtrlShiftW.connect(window.close)
     window.setWindowOpacity(1)
-
     window.connectTitleBar(titlebar)
-    window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), window, 
-                                    "Rename the current window")
+    window.AltShiftR = FigDShortcut(QKeySequence("Alt+Shift+R"), 
+                                    window, "Rename current window")
     window.AltShiftR.connect(titlebar.triggerRenameWindow)
     settingsMenu.connectWindow(window)
     if add_tabs: window.tabs = tabwidget

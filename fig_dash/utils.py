@@ -79,6 +79,14 @@ def secs_to_hms(secs):
     
     return (hrs, mins, secs)
 
+def secs_to_htime(secs):
+    if secs < 0: return (0, 0, 0)
+    hrs = secs // 3600
+    mins = (secs % 3600) // 60
+    secs = secs - 3600*hrs - 60*mins
+
+    return (hrs, mins, secs)
+
 def QFetchIcon(url: str, is_svg=True):
     import requests
     from PyQt5.QtGui import QIcon

@@ -75,24 +75,32 @@ body {
 .menu-bar .left .menus {
 	height: 100%;
 	display: flex;
+  user-select: none;
 	align-items: center;
 	margin-left: 15px;
-	color: rgba(255, 255, 255, 0.95);
+  color: rgba(255, 255, 255, 0.95);
+  /* #f5a742 */
 	font-size: 12px;
   font-family: Be Vietnam Pro;
 }
 
+.menu-bar .left .menus:hover {
+  color: #ff9100;
+}
+
 .menu-bar .left .active {
 	font-weight: bold;
-	color: #fff !important;
+  color: #ff9100;
+	/* color: #fff !important; */
 }
 
 .menu-bar .right {
 	display: flex;
-	align-items: center;
-	justify-content: space-evenly;
+  justify-content: flex-end; /* NOTE: vvv imp: https://www.geeksforgeeks.org/how-to-right-align-flex-item */
+	/* align-items: right;
+	justify-content: space-evenly; */
 	width: 500px;
-	margin-right: 20px;
+	margin-right: 0px;
 }
 
 .menu-bar .right .vol {
@@ -107,16 +115,36 @@ body {
 	align-items: center;
 	justify-content: center;
 	color: #fff;
-  font-size: 14px;
+  font-size: 13px;
   vertical-align: middle;
 }
 
 .menu-bar .right .menu-ico {
 	height: 100%;
-	width: 10px;
+	width: 20px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
+  margin-right: 2px;
+  margin-left: 2px;
+}
+
+.menu-bar .right .menu-battery {
+	height: 100%;
+	width: auto;
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+  vertical-align: middle;
+}
+
+.menu-bar .right .menu-volume {
+	height: 100%;
+	width: auto;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+  margin-right: 5px;
 }
 
 .menu-bar .right .menu-ico .control-center {
@@ -201,6 +229,7 @@ body {
 
 .dock .dock-container li {
 	list-style: none;
+  user-select: none;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -360,7 +389,8 @@ DesktopHtml = jinja2.Template(r"""
     <body>
       <div class="menu-bar acrylic">
         <div class="left">
-          <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Apple_logo_white.svg/1010px-Apple_logo_white.svg.png" class="apple-logo" alt="">
+          <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/31/Apple_logo_white.svg/1010px-Apple_logo_white.svg.png" class="apple-logo" alt=""> -->
+          <img src="{{ DESKTOP_LOGO }}" class="apple-logo" alt="">
           <span class="menus active">Finder</span>
           <span class="menus">File</span>
           <span class="menus">Edit</span>
@@ -371,24 +401,6 @@ DesktopHtml = jinja2.Template(r"""
         </div>
         <div class="right">
           <div class="menu-ico">
-            <i class="fas fa-wifi"></i>
-          </div>      
-          <div class="menu-ico">
-            <i class="fab fa-bluetooth-b"></i>
-          </div>
-          <div class="menu-ico">
-            <i class="fas fa-battery-half"></i>
-          </div>
-          <div class="menu-ico">
-            <span id="battery_level" style="font-size: 13px; vertical-align: middle; margin-top: 7px;">100</span>
-          </div>
-          <div class="menu-ico">
-            <img src="https://freepngimg.com/download/united_states/76187-sound-information-united-business-states-address-email.png" alt="" class="vol">
-          </div>
-          <div class="menu-ico">
-            <span id="battery_level" style="font-size: 13px; vertical-align: middle; margin-top: 7px;">100</span>
-          </div>
-          <div class="menu-ico">
             <i class="fas fa-search"></i>
           </div>
           <div class="menu-ico" onclick="triggerClipboard(this)">
@@ -398,11 +410,24 @@ DesktopHtml = jinja2.Template(r"""
             <img src="https://eshop.macsales.com/blog/wp-content/uploads/2021/03/control-center-icon.png" alt="" class="control-center">
           </div>
           <div class="menu-ico">
-            <img src="https://upload.wikimedia.org/wikipedia/en/8/8e/AppleSiriIcon2017.png" alt="" class="siri">
+            <img src="{{ DESKTOP_WIFI_ICON }}" style="height: 18px;"></img>
+          </div>      
+          <div class="menu-ico">
+            <i class="fab fa-bluetooth-b"></i>
           </div>
-      
+          <div class="menu-battery">
+            <img id="batteryIcon" src="{{ DESKTOP_BATTERY_ICON }}" style="transform: rotate(90deg);" alt="battery indicator" class="battery">
+            <span id="battery_level" style="user-select: none; font-size: 13px; vertical-align: middle; margin-left: 3px; margin-top: 7px;">12:00, 100%</span>
+          </div>
+          <div class="menu-volume">
+            <img src="https://freepngimg.com/download/united_states/76187-sound-information-united-business-states-address-email.png" alt="" class="vol">
+            <span id="volume_level" style="user-select: none; font-size: 13px; vertical-align: middle; margin-left: 8px; margin-top: 7px;">100%</span>
+          </div>
+          <!-- <div class="menu-ico">
+            <img src="https://upload.wikimedia.org/wikipedia/en/8/8e/AppleSiriIcon2017.png" alt="" class="siri">
+          </div> -->
           <div id="desktop-datetime" class="menu-time">
-            <img id="calendar" style="height: 18px; margin-top: 3px; margin-bottom: 3px; margin-right: 5px;" src="{{ DESKTOP_CALENDAR_ICON }}"/><span id="date" style="vertical-align: middle; margin-top: 7px;"></span>&nbsp;&nbsp;<img id="timeOfDay" style="margin-bottom: 2px; margin-right: 5px;" src="{{ DESKTOP_CLOCK_TIME_OF_DAY }}" height="18"/><span id="time" style="vertical-align: middle; margin-top: 7px; float: left; width: 80px;"></span>
+            <img id="calendar" style="height: 18px; user-select: none; margin-top: 3px; margin-bottom: 3px; margin-right: 5px;" src="{{ DESKTOP_CALENDAR_ICON }}"/><span id="date" style="user-select: none; vertical-align: middle; margin-top: 7px;"></span>&nbsp;&nbsp;<img id="timeOfDay" style="margin-top: 3px; margin-bottom: 3px; margin-right: 5px; height: 18px; user-select: none;"  src="{{ DESKTOP_CLOCK_TIME_OF_DAY }}" height="18"/><span id="time" style="user-select: none; vertical-align: middle; margin-top: 7px; float: right; width: 80px;"></span>
           </div>
         </div>
       </div>

@@ -1058,7 +1058,22 @@ class WindowTitleBar(QToolBar):
                     self.window.showMaximized, 
                 )
             contextMenu.addSeparator()
-        contextMenu.addAction("Use system title bar and borders")
+            if hasattr(self.window, "toggleUseSystemTitleBar"):
+                useSystemTitleBar = contextMenu.addAction(
+                    "Use system title bar and borders", 
+                    self.window.toggleUseSystemTitleBar,
+                )
+                useSystemTitleBar.setCheckable(True)
+                useSystemTitleBar.setChecked(
+                    self.window._use_system_titlebar
+                )
+            if hasattr(self.window, "toggleAlwaysOnTop"):
+                alwaysOnTop = contextMenu.addAction(
+                    "Always On Top", 
+                    self.window.toggleAlwaysOnTop,
+                )
+                alwaysOnTop.setCheckable(True)
+                alwaysOnTop.setChecked(self.window._always_on_top)
         contextMenu.addAction(
             FigD.Icon("tabbar/rename.svg"), "Rename window   ", 
             self.triggerRenameWindow, QKeySequence("Alt+Shift+R")
@@ -1245,6 +1260,15 @@ class WindowTitleBar(QToolBar):
             spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
 
         return spacer
+
+    def useSystemTitleBar(self):
+        if hasattr(self, "window") and self.window:
+            flags = self.window.windowFlags()
+            if self._using_system_titlebar:
+                self.window.setWindowFlags(flags & ~Qt.FramelessWindowHint)
+            else: self.window.setWindowFlags(flags & Qt.FramelessWindowHint)
+            self.window.show()
+        self._using_system_titlebar = not(self._using_system_titlebar)
 
     def connectWindow(self, window):
         self.window = window

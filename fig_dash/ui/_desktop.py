@@ -12,7 +12,7 @@ from pathlib import Path
 from functools import partial
 # fig-dash imports.
 from fig_dash.assets import FigD
-from fig_dash.ui import styleContextMenu
+from fig_dash.ui import styleContextMenu, FigDMenu
 from fig_dash.ui.webview import DebugWebView
 from fig_dash.ui.system.filexplorer import FILE_VIEWER_TRASH_PATH, FILE_VIEWER_CACHE_PATH, blank, FileViewerThumbnailer, FileViewerEventHandler, FileViewerKeyPressSearch, FileViewerBrowser
 # PyQt5 imports 
@@ -23,6 +23,7 @@ from PyQt5.QtCore import Qt, QSize, QPoint, QObject, QTimer, QFile, QFileInfo, Q
 from PyQt5.QtWidgets import QMenu, QWidget, QWidgetAction, QMainWindow, QShortcut, QApplication, QStackedWidget, QFileIconProvider
 
 # default desktop background URL.
+DESKTOP_STEP_SIZE = "110"
 DEFAULT_DESKTOP_BACKGROUND = "https://uhdwallpapers.org/uploads/converted/20/06/25/macos-big-sur-wwdc-2560x1440_785884-mm-90.jpg"
 class DesktopBackground(QObject):
     def __init__(self, path):
@@ -52,7 +53,7 @@ class DesktopBrowserSection(FileViewerBrowser):
         super(DesktopBrowserSection, self).__init__(accent_color)
 
     def initOrchardMenu(self):
-        self.orchardMenu = QMenu()
+        self.orchardMenu = FigDMenu()
         if hasattr(self, "widget"):
             self.viewMenu = self.orchardMenu.addMenu("View")
             self.sortMenu = self.orchardMenu.addMenu("Sort by")
@@ -128,6 +129,29 @@ class DesktopBrowserSection(FileViewerBrowser):
 
         return self.orchardMenu
 
+# desktop battery worker.
+class DesktopBatteryWorker(QTimer):
+    batteryChanged = pyqtSignal(int, bool, int, int, int)
+    def __init__(self, *args, **kwargs):
+        super(DesktopBatteryWorker, self).__init__(*args, **kwargs)
+        self.start(2000)
+        self.timeout.connect(self.emitChange)
+
+    def emitChange(self):
+        import psutil
+        from fig_dash.utils import secs_to_htime
+
+        b = psutil.sensors_battery()
+        if b.power_plugged is None:
+            power_plugged = False
+        else: power_plugged = b.power_plugged
+        timeleft = secs_to_htime(b.secsleft)
+        self.batteryChanged.emit(
+            int(b.percent),
+            power_plugged, 
+            *timeleft, 
+        ) 
+
 # desktop clock worker.
 class DesktopClockWorker(QObject):
     dateChanged = pyqtSignal(str)
@@ -149,24 +173,22 @@ class DesktopClockWorker(QObject):
         timeNow = now.strftime("%-I:%M:%S %p")
         # millis = int(now.strftime("%f")) % 1000
         if self.tod_ctr % 10 == 0:
-            hr = int(now.strftime("%H"))
-            self.emitTimeOfDay(hr)
-            self.setDay(now)
+            self.emitDay(now)
         self.tod_ctr += 1
+        self.emitTimeOfDay(int(now.strftime("%H")))
         self.timeChanged.emit(timeNow)
 
-    def setDay(self, now: datetime.datetime):
+    def emitDay(self, now: datetime.datetime):
         dateNow = now.strftime("%a %b %d %Y")
         if self.date != dateNow:
             self.dateChanged.emit(dateNow)
             # print(f"self.dateChanged.emit({dateNow})")
     def emitTimeOfDay(self, hr: int):
         timeOfDay = self.getTimeOfDay(hr)
-        if timeOfDay != self.timeOfDay:
-            tod_icon = FigD.icon(f"system/datetime/{timeOfDay}.png")
-            print(f"self.timeOfDayChanged.emit({tod_icon})")
-            self.timeOfDayChanged.emit(tod_icon)
-            self.timeOfDay = timeOfDay
+        # if timeOfDay != self.timeOfDay:
+        tod_icon = FigD.icon(f"system/datetime/{timeOfDay}.png")
+        self.timeOfDayChanged.emit(tod_icon)
+        self.timeOfDay = timeOfDay
 
     def getTimeOfDay(self, hr: int):
         if 6<=hr<=11: timeOfDay="morning"
@@ -189,6 +211,9 @@ class DebugDesktopView(DebugWebView):
         )
         self.clipboardManager = None
         browser.widget = self
+        # battery worker.
+        self._desktop_battery_backend = DesktopBatteryWorker()
+        self._desktop_battery_backend.batteryChanged.connect(self.updateBatteryLevel)
         # desktop clock.
         self._desktop_clock_backend = DesktopClockWorker()
         self._desktop_clock_backend.dateChanged.connect(self.updateDate)
@@ -282,6 +307,36 @@ class DebugDesktopView(DebugWebView):
         self.EscKey.connect(self.EscHandler)
         self.open("~/Desktop")
 
+    def updateBatteryLevel(self, percent: int, is_plugged: bool, 
+                           hrs: int, mins: int, secs: int):
+        if hrs == 0 and mins == 0 and secs == 0:
+            timeStr = f"{percent}%"
+        else: timeStr = f"{hrs}:{str(mins).rjust(2,'0')}, {str(percent).rjust(2,'0')}%"
+        # timeStr = "12:00, 100%"
+        CODE = f"battery_level.textContent = '{timeStr}';"
+        # print("timeStr:", timeStr)
+        self.browser.page().runJavaScript(CODE)
+        if is_plugged:
+            batteryIcon = "battery-charging-{}.svg"
+        else: batteryIcon = "battery-{}.svg"
+        if 0 <= percent < 20:
+            batteryIcon = batteryIcon.format(20)
+        elif 20 <= percent < 30:
+            batteryIcon = batteryIcon.format(30)
+        elif 30 <= percent < 50:
+            batteryIcon = batteryIcon.format(50)
+        elif 50 <= percent < 60:
+            batteryIcon = batteryIcon.format(60)
+        elif 60 <= percent < 80:
+            batteryIcon = batteryIcon.format(80)
+        elif 80 <= percent < 90:
+            batteryIcon = batteryIcon.format(90)
+        else: batteryIcon = batteryIcon.format("full")
+        batteryIcon = FigD.iconUrl("desktop/battery/"+batteryIcon)
+        self.browser.page().runJavaScript(f"""
+        batteryIcon.src = "{batteryIcon}";
+        """)
+
     def showClipboard(self, x: int, y: int):
         if self.clipboardManager is None:
             from fig_dash.theme import FigDAccentColorMap
@@ -291,7 +346,7 @@ class DebugDesktopView(DebugWebView):
             self.clipboardManager = QMenu()
             self.clipboardManager = styleContextMenu(
                 self.clipboardManager,
-                accent_color, margin=2,
+                accent_color, margin=0,
             )
             clipboard = DashClipboardUI(accent_color=accent_color)
             clipboard.setMinimumHeight(400)
@@ -318,16 +373,16 @@ class DebugDesktopView(DebugWebView):
         date.textContent = "{date}" """)
 
     def updateTimeOfDay(self, timeOfDay: str):
-        print(timeOfDay)
         page = self.browser.page()
-        if page: page.runJavaScript(f"""
-        .textContent = "{timeOfDay}" """)        
+        if page:
+            page.runJavaScript(f"""
+            timeOfDay.src = "{QUrl.fromLocalFile(timeOfDay).toString()}" """)        
 
     def moveSelectionUp(self):
         self.browser.page().runJavaScript("""
         var selItems = document.getElementsByClassName("selected file_item");
         var id = selItems[selItems.length-1].id;
-        var numItemsInRow = Math.floor(window.innerWidth/120);
+        var numItemsInRow = Math.floor(window.innerWidth/"""+DESKTOP_STEP_SIZE+""");
         var itemSelPtr = document.getElementById(id);
         for (var i=0; i<numItemsInRow; i++) {
             itemSelPtr = itemSelPtr.previousSibling;
@@ -341,7 +396,7 @@ class DebugDesktopView(DebugWebView):
         self.browser.page().runJavaScript("""
         var selItems = document.getElementsByClassName("selected file_item");
         var id = selItems[selItems.length-1].id;
-        var numItemsInRow = Math.floor(window.innerWidth/120);
+        var numItemsInRow = Math.floor(window.innerWidth/"""+DESKTOP_STEP_SIZE+""");
         var itemSelPtr = document.getElementById(id);
         for (var i=0; i<numItemsInRow; i++) {
             itemSelPtr = itemSelPtr.nextSibling;
@@ -727,8 +782,11 @@ class DebugDesktopView(DebugWebView):
             "HIDDEN_FLAG_LIST": hidden_flag_list,
             "NUM_ITEMS": len(listed),
             "CSS_GRAD": self.css_grad,
+            "DESKTOP_LOGO": FigD.iconUrl("tray_icon.png"),
             "DESKTOP_DATETIME": datetime.datetime.now().strftime("%a %b %d %Y %-I:%M:%S %p"),
             "DESKTOP_DOCK_CSS": DesktopDockCSS.render(DESKTOP_BACKGROUND=self.background_image),
+            "DESKTOP_WIFI_ICON": FigD.iconUrl("desktop/wifi/perm-scan-wifi.svg"),
+            "DESKTOP_BATTERY_ICON": FigD.iconUrl("desktop/battery/battery-unknown.svg"),
             "DESKTOP_CALENDAR_ICON": FigD.iconUrl("system/datetime/calendar.png"),
             "DESKTOP_CLOCK_TIME_OF_DAY": FigD.iconUrl("system/datetime/morning.png"),
         }
@@ -866,6 +924,9 @@ class FigDesktopWindow(QMainWindow):
         # self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowIcon(FigD.Icon("fig.svg"))
 
+    def changeZoom(self):
+        pass
+
     def keyPressEvent(self, event):
         return super(FigDesktopWindow, self).keyPressEvent(event)
 
@@ -892,10 +953,15 @@ def test_desktop():
         # background=FigD.wallpaper("cutefish/wallpaper-9.jpg")
         # background="https://wallpaperaccess.com/full/2641074.gif"
         # "https://preview.redd.it/0bb6dqsiab451.gif?s=b0c65596a54a30708da26669da6e79abf3be1680"
+        # "https://wallpaperaccess.com/full/2825704.gif"
+        # "https://media1.giphy.com/media/iqKCbuETi3dOAg9xWB/giphy.gif"
+        # "https://wallpapercave.com/uwp/uwp1373025.gif"
+        # "https://resi.ze-robot.com/dl/bl/blisswindows-xp-4k-enhanced-with-topaz-gigapixel-a.i-3840%C3%972160.jpg"
     )
     figd_window = wrapFigDWindow(desktop, size=(25,25), icon="fig.svg", 
                                  title="Desktop", app_name="Fig Desktop",
-                                 add_tabs=False, width=1600, height=1000)
+                                 add_tabs=False, width=1600, height=1000,
+                                 always_on_top=False)
     figd_window.showFullScreen()
     app.exec()
 

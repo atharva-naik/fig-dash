@@ -41,6 +41,7 @@ if platform.system() == "Linux":
 else:
     FILE_VIEWER_TRASH_PATH = None
 FILE_VIEWER_CACHE_PATH = os.path.expanduser("~/.cache/fig_dash/fileviewer/thumbnails")
+FILE_VIEWER_STEP_SIZE = "115"
 class FileViewerEventHandler(QObject):
     def __init__(self, fileviewer):
         super(FileViewerEventHandler, self).__init__()
@@ -370,12 +371,22 @@ class FileViewerBrowser(DebugWebBrowser):
     def initOrchardMenu(self):
         self.orchardMenu = QMenu()
         if hasattr(self, "widget"):
+            self.viewMenu = self.orchardMenu.addMenu("View")
+            self.sortMenu = self.orchardMenu.addMenu("Sort by")
+            self.orchardMenu.addAction(
+                FigD.Icon("textedit/reload.svg"),
+                "Refresh", self.reload, 
+                QKeySequence.Refresh,
+            )
+            self.orchardMenu.addSeparator()
             self.orchardMenu.addAction(
                 FigD.Icon("system/fileviewer/new_tab_icon.svg"), 
                 "New Folder", partial(self.widget.createDialogue, "folder")
             )
-            self.orchardMenu.addAction(
-                FigD.Icon("system/fileviewer/file.svg"), "New File",
+            self.newFileMenu = self.orchardMenu.addMenu("New File")
+            self.newFileMenu = styleContextMenu(self.newFileMenu)
+            self.newFileMenu.addAction(
+                FigD.Icon("system/fileviewer/file.svg"), "Empty Text File",
                 partial(self.widget.createDialogue, "file")
             )
             self.orchardMenu.addSeparator()
@@ -385,17 +396,53 @@ class FileViewerBrowser(DebugWebBrowser):
             "Open in Terminal", blank, QKeySequence("Ctrl+Alt+T")
         )
         self.orchardMenu.addSeparator()
-        self.orchardMenu.addAction(FigD.Icon("textedit/paste.svg"), "Paste")
-        self.orchardMenu.addAction("Paste shortcut")
+        self.pasteItem = self.orchardMenu.addAction(
+            FigD.Icon("textedit/paste.svg"), 
+            "Paste", blank, QKeySequence.Paste,
+        )
+        self.pasteShortcutToItem = self.orchardMenu.addAction(
+            FigD.Icon("system/fileviewer/paste_shortcut.ico"), 
+            "Paste shortcut"
+        )
+        self.pasteItem.setEnabled(False)
+        self.pasteShortcutToItem.setEnabled(False)
+        self.undoDelete = self.orchardMenu.addAction(
+            "Undo Delete", blank, QKeySequence.Undo,
+        )
+        self.undoDelete.setEnabled(False)
         self.orchardMenu.addSeparator()
         self.orchardMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties")
-        self.orchardMenu = styleContextMenu(
-            self.orchardMenu, 
-            accent_color=self.accent_color
-        )
+        self.orchardMenu = styleContextMenu(self.orchardMenu)
 
         return self.orchardMenu
+    # def initOrchardMenu(self):
+    #     self.orchardMenu = QMenu()
+    #     if hasattr(self, "widget"):
+    #         self.orchardMenu.addAction(
+    #             FigD.Icon("system/fileviewer/new_tab_icon.svg"), 
+    #             "New Folder", partial(self.widget.createDialogue, "folder")
+    #         )
+    #         self.orchardMenu.addAction(
+    #             FigD.Icon("system/fileviewer/file.svg"), "New File",
+    #             partial(self.widget.createDialogue, "file")
+    #         )
+    #         self.orchardMenu.addSeparator()
+    #     self.orchardMenu.addAction("Restore Missing Files...      ")
+    #     self.orchardMenu.addAction(
+    #         FigD.Icon("system/fileviewer/terminal.svg"), 
+    #         "Open in Terminal", blank, QKeySequence("Ctrl+Alt+T")
+    #     )
+    #     self.orchardMenu.addSeparator()
+    #     self.orchardMenu.addAction(FigD.Icon("textedit/paste.svg"), "Paste")
+    #     self.orchardMenu.addAction("Paste shortcut")
+    #     self.orchardMenu.addSeparator()
+    #     self.orchardMenu.addAction(FigD.Icon("system/fileviewer/properties.svg"), "Properties")
+    #     self.orchardMenu = styleContextMenu(
+    #         self.orchardMenu, 
+    #         accent_color=self.accent_color
+    #     )
 
+    #     return self.orchardMenu
     def initItemMenu(self, data: QWebEngineContextMenuData):
         self.itemMenu = QMenu()
         basename = os.path.basename(data.mediaUrl().toString())
@@ -403,7 +450,7 @@ class FileViewerBrowser(DebugWebBrowser):
         if stem == "inode-directory":
             self.itemMenu.addAction(
                 FigD.Icon("tray/open.svg"), 
-                "&Open", blank, QKeySequence.Open
+                "Open", blank, QKeySequence("Enter")
             )
             self.itemMenu.addAction(
                 FigD.Icon("system/fileviewer/open_in_tab.png"), 
@@ -413,7 +460,7 @@ class FileViewerBrowser(DebugWebBrowser):
             self.itemMenu.addAction(
                 FigD.Icon("tray/open.svg"), 
                 "&Open With default", blank, 
-                QKeySequence.Open
+                QKeySequence("Enter")
             )
         self.itemMenu.addSeparator()
         self.itemMenu.addAction("Open With")
@@ -3144,7 +3191,7 @@ class FileViewerWidget(FigDMainWindow):
         self.foldersearchbar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         # statusbar.
         self.status = FileViewerStatus(self, self.webview)
-        self.status.setFixedHeight(20)
+        self.status.setFixedHeight(24)
         # clipboard access.
         self.clipboard = QApplication.clipboard()
         # terminal.
@@ -3267,7 +3314,7 @@ class FileViewerWidget(FigDMainWindow):
         self.browser.page().runJavaScript("""
         var selItems = document.getElementsByClassName("selected file_item");
         var id = selItems[selItems.length-1].id;
-        var numItemsInRow = Math.floor(window.innerWidth/130);
+        var numItemsInRow = Math.floor(window.innerWidth/"""+FILE_VIEWER_STEP_SIZE+""");
         var itemSelPtr = document.getElementById(id);
         for (var i=0; i<numItemsInRow; i++) {
             itemSelPtr = itemSelPtr.previousSibling;
@@ -3281,7 +3328,7 @@ class FileViewerWidget(FigDMainWindow):
         self.browser.page().runJavaScript("""
         var selItems = document.getElementsByClassName("selected file_item");
         var id = selItems[selItems.length-1].id;
-        var numItemsInRow = Math.floor(window.innerWidth/130);
+        var numItemsInRow = Math.floor(window.innerWidth/"""+FILE_VIEWER_STEP_SIZE+""");
         var itemSelPtr = document.getElementById(id);
         for (var i=0; i<numItemsInRow; i++) {
             itemSelPtr = itemSelPtr.nextSibling;
@@ -3308,7 +3355,7 @@ class FileViewerWidget(FigDMainWindow):
         ensureInView(document.getElementById(id));""")
 
     def getWindowTitle(self):
-        return f"File Viewer ({Path(self.folder).name})"
+        return f"File Explorer ({Path(self.folder).name})"
 
     def initFolderSearchBar(self) -> QWidget:
         fsbar_wrapper = QWidget()
@@ -3855,9 +3902,8 @@ selItemSpan.style.webkitLineClamp = 10;""").render(ID=item)
                 h=self.height(),
             )
             self.keypress_search.setText(letter.lower())
-        except (TypeError, ValueError) as e:
-            print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e)
-            # fail silently.
+        except (TypeError, ValueError) as e: pass
+            # print("\x1b[31;1mfileviewer.keyPressEvent\x1b[0m", e) # fail silently.
         return super(FileViewerWidget, self).keyPressEvent(event)
 
     def onUrlChange(self):
@@ -3963,7 +4009,7 @@ def fileviewer_window_factory(**args):
         "font_color": "#fff", "parentless": True, "accent_color": accent_color,
     }
     fileviewer = fileviewer_factory(path=path, **widget_args)
-    title = f"File Viewer ({Path(path).name})"
+    title = f"File Explorer ({Path(path).name})"
     window = wrapFigDWindow(fileviewer, icon=icon, width=800, height=700, title=title,
                             accent_color=accent_color, font_color="#69bfee", tab_title="Home",
                             tab_icon=FigD.icon("system/fileviewer/new_tab_icon.svg"),
@@ -3981,10 +4027,8 @@ def test_fileviewer():
     from fig_dash.ui import FigDAppContainer
     app = FigDAppContainer(sys.argv)
     # open path.
-    try: 
-        path = os.path.expanduser(sys.argv[1])
-    except IndexError: 
-        path = os.path.expanduser("~")
+    try: path = os.path.expanduser(sys.argv[1])
+    except IndexError: path = os.path.expanduser("~")
     window = fileviewer_window_factory(path=path)
     window.show()
     app.exec()

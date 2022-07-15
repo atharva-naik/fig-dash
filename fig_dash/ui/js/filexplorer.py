@@ -160,7 +160,7 @@ main .boxes {
     flex-wrap: wrap;
     justify-content: left;
     border-radius: 0.15em;
-    padding: 1em 0;
+    padding: 0;
     user-select: none;
     word-wrap: break-word;
 }
@@ -326,6 +326,8 @@ var fileViewerMimeTypes = {{ FILEVIEWER_MIMETYPES }};
         divElement.setAttributeNode(hiddenFileFlag)
         divElement.className = "file_item";
         divElement.style.textAlign = 'center';
+        divElement.style.margin = "5px";
+        divElement.style.padding = "0px";
         // divElement.style.cursor = 'move';
         
         // drag and drop events.
