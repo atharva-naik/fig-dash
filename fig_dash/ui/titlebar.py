@@ -1069,7 +1069,7 @@ class WindowTitleBar(QToolBar):
                 )
             if hasattr(self.window, "toggleAlwaysOnTop"):
                 alwaysOnTop = contextMenu.addAction(
-                    "Always On Top", 
+                    'Always on top "Hint"', 
                     self.window.toggleAlwaysOnTop,
                 )
                 alwaysOnTop.setCheckable(True)
