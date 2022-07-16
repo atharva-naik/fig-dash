@@ -1,3 +1,31 @@
+from typing import *
+from PyQt5.QtCore import QUrl
+
+# check if a given URL has a vaild top-level domain
+def isValidTLD(url: Union[str, QUrl], verbose: bool=False) -> bool:
+    """check if a given URL has a vaild top-level domain
+
+    Args:
+        url (Union[str, QUrl]): url string/QUrl object.
+
+    Returns:
+        bool: output indicates if the potential URL has a valid top level domain.
+    """
+    if isinstance(url, QUrl):
+        qurl = url
+        urlString = url.toString()
+    else: 
+        qurl = QUrl(url)
+        urlString = url
+    tld = qurl.topLevelDomain()
+    if verbose:
+        print(f"tld: {tld}")
+        print(f"url: {urlString}")
+    if tld == "": return False
+    elif urlString.endswith(tld):
+        return True
+    else: return False
+
 def repair_url(url):
     stripped_url = url.strip(":").strip("/")
     if not stripped_url.startswith("http://"):

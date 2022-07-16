@@ -1488,6 +1488,7 @@ ZUERICH
 ZW'''.split()
 VALID_TLDS = [tld.lower() for tld in VALID_TLDS]
 import os
+from typing import *
 from PyQt5.QtCore import QUrl
 
 class UrlOrQuery:

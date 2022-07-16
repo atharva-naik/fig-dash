@@ -1467,6 +1467,11 @@ class ImageViewerBrowser(DebugWebBrowser):
 		    ) 
             showNavPane.setCheckable(True)
             showNavPane.setChecked(self.widget.isNavBarVisible())
+            menu.addAction(
+				FigD.Icon("lineedit/search_image.svg"),
+				"Search Google with this image",
+				self.widget.searchWithGoogle,
+			)
 
         return menu
 
@@ -1545,6 +1550,10 @@ class ImageViewerWidget(FigDMainWidget):
         layout.setContentsMargins(margin, 0, margin, margin)
         layout.setSpacing(0)
         self.centralLayout = layout
+		# image search worker.
+        from fig_dash.api.browser.imagesearch import GoogleImageSearchBackend
+        self.imageSearchWorker = GoogleImageSearchBackend()
+        self.imageSearchWorker.urlFetched.connect(self.openWebPage)
         # build layout.
         self.debug_webview = ImageViewerWebView(imageviewer=self)
         self.browser = self.debug_webview.browser
@@ -1566,7 +1575,7 @@ class ImageViewerWidget(FigDMainWidget):
         self.ShiftF.activated.connect(self.navbar.toggle)
         self.searchbar = self.navbar.searchbar
         self.searchbar.returnPressed.connect(self.searchImage)
-        self.searchbar.imageSearch.triggered.connect(self.toggleImageSearchMode)
+        self.searchbar.connect("imageSearch", self.toggleImageSearchMode)
         self.side_panel.filters_panel.imageChanged.connect(self._decide_on_save)
 		
         self.metadata_panel = ImageViewerMetaDataPanel(accent_color=accent_color)
@@ -1666,19 +1675,35 @@ class ImageViewerWidget(FigDMainWidget):
 		# if the input is a file path.
         if os.path.exists(query_or_url):
             if self.isImageSearchMode():
-                with open(query_or_url, "rb") as f:
-                    BASE64 = str(base64.encodebytes(f.read()))
-                url = f"https://www.google.com/search?tbs=sbi:{BASE64}&hl={self.searchbar.lang()}" 
-                print(url)
-                self.openWebPage(url)
+                self.imageSearchWorker.start(path=query_or_url)
             else:
                 self.open(query_or_url)
             return
 		# if the input is an URL.
         url = QUrl.fromUserInput(query_or_url)
-        if url.toString() != "":
+        from fig_dash.api.browser.url.validate import isValidTLD
+        if url.toString() != "" and isValidTLD(url):
             self.searchbar.append(url)
             self.openUrl(url)
+            print(f"url: {url}")
+        else: # search on google images
+            if query_or_url.startswith("data:image/"): 
+                import base64
+                import tempfile
+                ext = query_or_url.split(";")[0].split("data:image/")[-1]
+                content = base64.decodebytes(query_or_url.split(",")[-1].encode("ascii"))
+                #with tempfile.NamedTemporaryFile(suffix="."+suffix) as f:
+                #     f.write(content)
+                self.open(FigD.createTempPath(content, mode="wb", ext=ext))
+            else:
+                import urllib.parse
+                url = QUrl(f"https://www.google.com/search?q={urllib.parse.quote_plus(query_or_url)}&tbm=isch&sclient=img")
+                self.openWebPage(url)
+
+    def searchWithGoogle(self):
+        """search currently opened file/URL with google image search."""
+        if self.path_ptr: self.imageSearchWorker.start(path=self.path_ptr)
+        else: self.imageSearchWorker.start(url=self.browser.url().toString())
 
     def saveImage(self):
         if self.save_ptr is None:

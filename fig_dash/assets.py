@@ -7,6 +7,7 @@ FigDLoad("fig_dash::ui::assets")
 import os
 import jinja2
 import logging
+from typing import *
 
 # asset management related class.
 class AssetManager:
@@ -140,14 +141,15 @@ class AssetManager:
         
         return QUrl.fromLocalFile(tempPath)
 
-    def createTempPath(self, content: str, ext: str="html") -> str:
+    def createTempPath(self, content: Union[str, bytes], 
+                       mode: str="w", ext: str="html") -> str:
         os.makedirs(self.temp_foldir, exist_ok=True)
         tempPath = os.path.join(
             self.temp_foldir,
             f"{self.temp_file_ctr}.{ext}"
         )
         self.temp_file_ctr += 1
-        with open(tempPath, "w") as f:
+        with open(tempPath, mode) as f:
             f.write(content)
         
         return tempPath

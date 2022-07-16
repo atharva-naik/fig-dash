@@ -3118,6 +3118,15 @@ class FigDTabWidget(QTabWidget):
             self.currentWidget().changeZoom(zoomValue)
 
 # search and navigation bar.
+IMAGE_SEARCH_ICON_TEMPLATE = jinja2.Template(r"""
+<svg focusable="false" height="24px" preserveaspectratio="xMidYMid meet" style="pointer-events: none; display: block; width: 100%; height: 100%;" version="1.1" viewbox="0 0 24 24" width="24px" xmlns="http://www.w3.org/2000/svg">
+ <g>
+  <circle fill="{{ ACCENT_COLOR }}" cx="12" cy="12" r="3.2">
+  </circle>
+  <path fill="{{ ACCENT_COLOR }}" d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z">
+  </path>
+ </g>
+</svg>""")
 class FigDSearchBar(QLineEdit):
 	def __init__(self, accent_color: str="gray", 
                  placeholder_text: str="Search",
@@ -3125,14 +3134,23 @@ class FigDSearchBar(QLineEdit):
 		super(FigDSearchBar, self).__init__(parent)
 		self.accent_color = accent_color
         # create actions.
+		self.action_slots = {}
+		self.action_icon_templates = {}
+		self.action_icon_templates["imageSearch"] = IMAGE_SEARCH_ICON_TEMPLATE
 		self.voiceSearch = self.addAction(
 			FigD.Icon("lineedit/mic.svg"),
 			QLineEdit.TrailingPosition
 		)
 		self.imageSearch = self.addAction(
-            FigD.Icon("lineedit/search_image.svg"), 
-            QLineEdit.TrailingPosition
+            QIcon(FigD.createTempPath(
+                IMAGE_SEARCH_ICON_TEMPLATE.render(
+                    ACCENT_COLOR="#949494",
+                ), ext="svg"
+            )),
+            QLineEdit.TrailingPosition,
         )
+		self.imageSearch.setCheckable(True)
+		self.imageSearch.setChecked(False)
 		self.translate = self.addAction(
             FigD.Icon("lineedit/trans.svg"), 
             QLineEdit.TrailingPosition
@@ -3183,6 +3201,29 @@ class FigDSearchBar(QLineEdit):
 		# set completer.
 		self.setCompleter(self.qcompleter)
 		self.setMinimumWidth(600)
+
+	def connect(self, action: str, slot):
+		self.action_slots[action] = slot
+		getattr(self, action).triggered.connect(
+            partial(self.trigger, action)
+        )
+
+	def trigger(self, text: str):
+		print(f"triggered {text}")
+		action: QAction = getattr(self, text)
+		if action.isChecked():
+			if text in self.action_icon_templates:
+				accent_color = extractFromAccentColor(self.accent_color)
+		else: # print(f"accent_color: {self.accent_color}") 
+			if text in self.action_icon_templates:
+				accent_color = "#949494"
+		rendered = self.action_icon_templates[text].render(
+			ACCENT_COLOR=accent_color,
+		)
+		action.setIcon(QIcon(
+			FigD.createTempPath(rendered, ext="svg")
+		))
+		self.action_slots[text]()		
 
 	def lang(self):
 		return self._search_lang
