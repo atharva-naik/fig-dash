@@ -1,14 +1,47 @@
+import re
 import enum
-import datetime
+# import datetime
 import dataclasses
 from typing import *
 from datetime import date as dt
 from dateutil.relativedelta import relativedelta
+# fig-dash imports.
+from fig_dash.assets import FigD
 
 TODAY_MINUS_18 = dt.today()-relativedelta(years=18)
 # email address class.
+@dataclasses.dataclass(frozen=True)
 class PeopleAppEmailAddress:
-    pass
+    username: str
+    company: str
+    domain: str
+
+    @classmethod
+    def fromString(cls, rawStr: str):
+        if cls.isValid(None, rawStr):
+            args = cls.parse(None, rawStr)
+            obj = cls(*args)
+
+            return obj
+        else: return None
+
+    def toString(self):
+        return f"{self.username}@{self.company}.{self.domain}"
+
+    def ifExists(self, callback):
+        pass
+
+    def parse(self, rawStr: str) -> Tuple[str,str,str]:
+        domain, compAndDom = rawStr.split("@")
+        company, domain = compAndDom.split(".")
+
+        return (domain, company, domain)
+
+    def isValid(self, rawStr: str) -> bool:
+        regex = re.compile(r'([A-Za-z0-9]+[.-_])*[A-Za-z0-9]+@[A-Za-z0-9-]+(\.[A-Z|a-z]{2,})+')
+        if re.fullmatch(regex, rawStr):
+            return True
+        else: return False
 
 # contact number class.
 class PeopleAppContactNumber:
@@ -99,7 +132,9 @@ class PeopleAppEducationItem:
 
 # profile picture.
 class PeopleAppProfilePicture:
-    pass
+    @classmethod 
+    def Default(cls):
+        return FigD.icon("default_profile_pic.png")
 
 # relationship status.
 class PeopleAppRelationshipStatus(enum.Enum):
