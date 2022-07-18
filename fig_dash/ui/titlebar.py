@@ -838,22 +838,20 @@ class TitleBarQuickAccess(QWidget):
             background: rgba(255, 255, 255, 0.5);
         }""")
         self.customizeBtn = QToolButton()
+        self.customizeBtn.setIcon(FigD.Icon("textedit/customize.svg"))
+        self.customizeBtn.setIconSize(QSize(15,15))
         self.hboxlayout.addWidget(self.customizeBtn)
+        self.mode = FigD.QuickAccessOnTitleBar
         self.customizeBtn.clicked.connect(
             self.showCustomizeMenu
         )
-        self.customizeMenu = QMenu()
-        self.customizeMenu.setWindowFlags(Qt.Popup)
-        self.customizeMenu = styleContextMenu(
-            self.customizeMenu,
-            self.accent_color,
-        )
-        self.toggle_actions = []
         self.btns = {}
         undoBtn = QToolButton()
         redoBtn = QToolButton()
-        undoBtn.setIcon(FigD.Icon("textedit/undo.svg"))
-        redoBtn.setIcon(FigD.Icon("textedit/redo.svg"))
+        undoBtn.setIcon(FigD.Icon("textedit/undo1.svg"))
+        undoBtn.setIconSize(QSize(18,18))
+        redoBtn.setIcon(FigD.Icon("textedit/redo1.svg"))
+        redoBtn.setIconSize(QSize(18,18))
         self.addBtn("Undo", undoBtn)
         self.addBtn("Redo", redoBtn)
 
@@ -861,18 +859,62 @@ class TitleBarQuickAccess(QWidget):
         return self.btns[name]
 
     def showCustomizeMenu(self):
-        self.customizeMenu.show()
+        self.customizeMenu = QMenu()
+        self.customizeMenu = styleContextMenu(
+            self.customizeMenu,
+            self.accent_color,
+        )
+        pos = self.customizeBtn.mapToGlobal(QPoint(0, 0))
+        for i, name in enumerate(self.btns):
+            toggleBtn = self.customizeMenu.addAction(
+                name, partial(
+                    self.toggleBtn, i
+                )
+            )
+            toggleBtn.setCheckable(True)
+            toggleBtn.setChecked(
+                self.btns[name].isVisible()
+            )
+        self.customizeMenu.addSeparator()
+        self.customizeMenu.addAction("More Commands...")
+        self.customizeMenu.addSeparator()
+        self.moveToTitleBar = self.customizeMenu.addAction(
+            "Move to title bar", 
+            self.changeView,
+        )
+        self.floatBar = self.customizeMenu.addAction(
+            "Float bar",
+            self.changeView,
+        )
+        self.moveToTitleBar.setCheckable(True)
+        self.moveToTitleBar.setChecked(True)
+        self.floatBar.setCheckable(True)
+        self.customizeMenu.popup(pos)
+
+    def changeView(self):
+        if self.mode == FigD.QuickAccessOnTitleBar:
+            print("float bar")
+            self.mode = FigD.QuickAccessFloating
+            self.moveToTitleBar.setChecked(False)
+        else: 
+            print("move to title bar")
+            self.mode = FigD.QuickAccessOnTitleBar
+            self.floatBar.setChecked(False)
 
     def toggleBtn(self, i: int):
-        self.toggle_actions[i].setCheckable(
-            not(self.toggle_actions[i].isCheckable())
-        )
+        name = list(self.btns.keys())[i]
+        if self.btns[name].isVisible():
+            print(f"hiding {name}")
+            self.btns[name].hide()
+        else: 
+            print(f"showing {name}")
+            self.btns[name].show()
 
     def showBtn(self, i: int):
-        self.toggle_actions[i].setCheckable(True)
+        self.btns[list(self.btns.keys())[i]].show()
 
     def hideBtn(self, i: int):
-        self.toggle_actions[i].setCheckable(False)
+        self.btns[list(self.btns.keys())[i]].hide()
 
     def addBtn(self, name: str, btn: QToolButton):
         self.btns[name] = btn
@@ -880,18 +922,14 @@ class TitleBarQuickAccess(QWidget):
             self.hboxlayout.count()-1, 
             btn, 0, Qt.AlignVCenter,
         )
-        toggleBtn = self.customizeMenu.addAction(name)
-        toggleBtn.setCheckable(True)
-        toggleBtn.setChecked(True)
-        self.toggle_actions.append(toggleBtn)
 
 # Titlebar main window/app menu button.
 class TitleBarMenuBtn(QToolButton):
     def __init__(self, parent: Union[None, QWidget]=None):
         super(TitleBarMenuBtn, self).__init__(parent)
-        self.setText("Menu")
+        # self.setText("Menu")
         self.setIcon(FigD.Icon("titlebar/menu.svg"))
-        self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        # self.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.setStyleSheet(title_btn_style)
         self.clicked.connect(self.onClickEvent)
 
@@ -1125,7 +1163,9 @@ class WindowTitleBar(QToolBar):
         self.addWidget(self.menuBtn)
         self.addWidget(self.menuDropdownBtn)
         # quick access toolbar.
-        self.quick_access_toolbar = TitleBarQuickAccess()
+        self.quick_access_toolbar = TitleBarQuickAccess(
+            accent_color=background,
+        )
         self.addWidget(self.quick_access_toolbar)
         self.addWidget(self.accentColorBtn)
         self.addWidget(self.shortcutsBtn)

@@ -1468,9 +1468,8 @@ class ImageViewerBrowser(DebugWebBrowser):
             showNavPane.setCheckable(True)
             showNavPane.setChecked(self.widget.isNavBarVisible())
             menu.addAction(
-				FigD.Icon("lineedit/search_image.svg"),
-				"Search Google with this image",
-				self.widget.searchWithGoogle,
+				FigD.Icon("lineedit/google_image_search.svg"),
+				"Search on Google", self.widget.searchWithGoogle,
 			)
 
         return menu

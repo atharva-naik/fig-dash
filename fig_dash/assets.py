@@ -5,9 +5,15 @@ from fig_dash import FigDLoad
 FigDLoad("fig_dash::ui::assets")
 
 import os
+import enum
 import jinja2
 import logging
 from typing import *
+
+# title bar enum
+class FigDTitleBarEnum(enum.Enum):
+    QuickAccessOnTitleBar = 1
+    QuickAccessFloating = 2
 
 # asset management related class.
 class AssetManager:
@@ -26,6 +32,11 @@ class AssetManager:
         # PyQt5 font databse.
         import coloredlogs
         coloredlogs.install(level="debug", logger=self.logger)
+        # set attributes of asset manager from all collapsible enums.
+        for enum_ in [FigDTitleBarEnum]:
+            for attr in dir(enum_):
+                if attr.startswith("__") and attr.endswith("__"): continue
+                setattr(self, attr, getattr(enum_, attr))
         
     def info(self, *args, **kwargs):
         self.logger.info(*args, **kwargs)

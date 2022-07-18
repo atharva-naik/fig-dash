@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from email.policy import default
 from fig_dash import FigDLoad
 FigDLoad("fig_dash::utils")
 
@@ -209,3 +210,70 @@ def has_transparency(img):
             return True
 
     return False
+
+# class to document objects.
+class ObjectDocumenter:
+    def _serialize_param(self, param) -> dict:
+        import inspect
+        assert isinstance(param, inspect.Parameter)
+        return {
+            "default": "" if param.default == inspect._empty else str(param.default),
+            "kind": str(param.kind),
+            "annotation": "" if param.annotation == inspect._empty else str(param.annotation),
+            "isdefault": False if param.default == inspect._empty else True
+        }
+
+    def __call__(self, obj, to_string=False) -> Union[List[dict], str]:
+        import inspect
+        functions = []
+        # function, builtin_function_or_method
+        fn_type_list = [
+            "<class 'builtin_function_or_method'>", 
+            "<class 'function'>", "<class 'method'>", 
+        ]
+        for attr_name in dir(obj):
+            if attr_name.startswith("__") and attr_name.endswith("__"): continue
+            attr = getattr(obj, attr_name)
+            # print("getting documentation for:", attr_name)
+            if str(type(attr)) in fn_type_list:
+                try: 
+                    signature = inspect.signature(attr)
+                    return_annotation = "" if signature.return_annotation == inspect._empty else str(signature.return_annotation)
+                    params = {k: self._serialize_param(p) for k,p in dict(signature.parameters).items()}
+                    functions.append({
+                        "name": attr_name, 
+                        "parameters": params,
+                        "docstring": attr.__doc__,
+                        "return_annotation": return_annotation,
+                    })
+                except ValueError:
+                    functions.append({
+                        "name": attr_name, 
+                        "parameters": {},
+                        "docstring": attr.__doc__,
+                        "return_annotation": "UNKNOWN",
+                    })
+        if to_string:
+            return self._serialize_function_docs(functions)
+        else: return functions
+
+    def _serialize_function_docs(self, funcs: List[dict]) -> str:
+        docs = ""
+        for func in funcs:
+            paramStrs = []
+            for name, pdict in func["parameters"].items():
+                paramStr = name
+                if pdict["annotation"] != "":
+                    paramStr += f": {pdict['annotation']}"
+                if pdict["isdefault"]:
+                    paramStr += f"={pdict['default']}"  
+                paramStrs.append(paramStr)
+            paramsStr = ", ".join(paramStrs)
+            docs += f"def {func['name']}({paramsStr})"
+            if func['return_annotation'] != "":
+                docs += f" -> {func['return_annotation']}:\n"
+            else: docs += ":\n"
+            docs += f'''    """{func['docstring']}"""\n'''
+            docs += "\n"
+
+        return docs
